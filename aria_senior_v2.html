@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="description" content="Aria Kids — Apprendre en jouant, du CP à la Terminale. Par Forgelis.">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Aria Senior</title>
+<link rel="manifest" href="manifest_senior.json">
+<meta name="theme-color" content="#2563EB">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --void:   #05070F;
+  --deep:   #080C18;
+  --surface:#0D1225;
+  --card:   #111827;
+  --border: rgba(255,255,255,0.07);
+  --border2:rgba(255,255,255,0.12);
+  --blue:   #4F8EF7;
+  --blue2:  #3B6EE8;
+  --glow:   rgba(79,142,247,0.18);
+  --glow2:  rgba(79,142,247,0.08);
+  --violet: #9B6DFF;
+  --green:  #34D399;
+  --amber:  #FBBF24;
+  --red:    #F87171;
+  --text:   #F0F4FF;
+  --text2:  rgba(240,244,255,0.55);
+  --text3:  rgba(240,244,255,0.25);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html, body { height:100%; overflow:hidden; }
+
+body {
+  font-family:'Inter', sans-serif;
+  background:var(--void);
+  color:var(--text);
+  height:100vh;
+  overflow:hidden;
+  position:relative;
+}
+
+/* ── AMBIENT BACKGROUND ── */
+.ambient {
+  position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden;
+}
+.orb {
+  position:absolute; border-radius:50%; filter:blur(80px); opacity:.35;
+  animation:drift 12s ease-in-out infinite alternate;
+}
+.orb1 { width:400px;height:400px;background:radial-gradient(circle,#3B6EE8,transparent);top:-80px;left:-80px; }
+.orb2 { width:300px;height:300px;background:radial-gradient(circle,#9B6DFF,transparent);bottom:-60px;right:-60px;animation-delay:-6s; }
+.orb3 { width:200px;height:200px;background:radial-gradient(circle,#4F8EF7,transparent);top:40%;left:60%;opacity:.2;animation-delay:-3s; }
+@keyframes drift { from{transform:translate(0,0) scale(1)} to{transform:translate(20px,30px) scale(1.08)} }
+
+/* ── SCREENS ── */
+.screen { display:none; height:100vh; flex-direction:column; position:relative; z-index:1; }
+.screen.active { display:flex; }
+
+/* ══════════════════════════════════
+   ONBOARDING
+══════════════════════════════════ */
+#s-onboard { align-items:center; justify-content:center; padding:24px; }
+
+.ob-container {
+  width:100%; max-width:380px;
+  display:flex; flex-direction:column; height:100%;
+  max-height:720px;
+}
+
+/* Brand mark */
+.ob-mark {
+  display:flex; align-items:center; gap:10px; margin-bottom:32px;
+}
+.ob-mark-logo {
+  width:36px; height:36px; border-radius:10px; position:relative;
+  background:linear-gradient(135deg, var(--blue2), var(--violet));
+  display:flex; align-items:center; justify-content:center;
+}
+.ob-mark-logo::after {
+  content:''; position:absolute; inset:-1px; border-radius:11px;
+  background:linear-gradient(135deg, var(--blue), var(--violet));
+  z-index:-1; opacity:.5; filter:blur(6px);
+}
+.ob-mark-name {
+  font-family:'Space Grotesk', sans-serif;
+  font-size:1rem; font-weight:600; color:var(--text);
+  letter-spacing:-.3px;
+}
+.ob-mark-version {
+  margin-left:auto; font-size:.65rem; font-weight:500; color:var(--text3);
+  background:var(--card); border:1px solid var(--border);
+  padding:3px 8px; border-radius:50px; letter-spacing:.5px;
+}
+
+/* Progress dots */
+.ob-dots { display:flex; gap:6px; margin-bottom:28px; }
+.ob-dot {
+  height:3px; border-radius:2px; transition:all .4s cubic-bezier(.4,0,.2,1);
+  background:var(--border2);
+}
+.ob-dot.done { background:var(--blue); }
+.ob-dot.active { background:var(--blue); flex-grow:1; }
+.ob-dot.future { flex-grow:0; width:20px; }
+
+/* Step */
+.ob-step { display:none; flex:1; flex-direction:column; animation:fadeUp .3s ease; }
+.ob-step.active { display:flex; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+.ob-step-num {
+  font-size:.65rem; font-weight:600; letter-spacing:2px; text-transform:uppercase;
+  color:var(--blue); margin-bottom:10px; opacity:.8;
+}
+.ob-step-title {
+  font-family:'Space Grotesk', sans-serif;
+  font-size:1.6rem; font-weight:700; line-height:1.2;
+  color:var(--text); margin-bottom:8px; letter-spacing:-.5px;
+}
+.ob-step-desc {
+  font-size:.85rem; font-weight:400; color:var(--text2);
+  line-height:1.6; margin-bottom:28px;
+}
+
+/* Input */
+.ob-input {
+  width:100%; background:var(--card); border:1px solid var(--border2);
+  border-radius:14px; padding:15px 18px;
+  font-family:'Inter', sans-serif; font-size:.95rem; font-weight:400;
+  color:var(--text); outline:none; margin-bottom:16px;
+  transition:all .2s; letter-spacing:-.1px;
+}
+.ob-input::placeholder { color:var(--text3); }
+.ob-input:focus {
+  border-color:rgba(79,142,247,.5);
+  box-shadow:0 0 0 4px rgba(79,142,247,.08), inset 0 0 0 1px rgba(79,142,247,.2);
+}
+
+/* Age block */
+.age-block { margin-bottom:20px; }
+.age-ctrl { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.age-dec, .age-inc {
+  width:44px; height:44px; flex-shrink:0; border-radius:12px; border:none; cursor:pointer;
+  background:var(--card); color:var(--text2); font-size:1.2rem;
+  border:1px solid var(--border2); transition:all .15s;
+  display:flex; align-items:center; justify-content:center;
+}
+.age-dec:hover, .age-inc:hover { border-color:var(--blue); color:var(--blue); background:var(--glow2); }
+.age-dec:active, .age-inc:active { transform:scale(.92); }
+.age-field {
+  flex:1; background:var(--card); border:1px solid var(--border2); border-radius:14px;
+  padding:12px 16px; font-family:'Space Grotesk', sans-serif; font-size:1.6rem;
+  font-weight:700; color:var(--text); outline:none; text-align:center;
+  transition:all .2s;
+}
+.age-field:focus { border-color:rgba(79,142,247,.5); box-shadow:0 0 0 4px rgba(79,142,247,.08); }
+.age-field::-webkit-inner-spin-button { -webkit-appearance:none; }
+.age-tag {
+  display:inline-flex; align-items:center; gap:7px;
+  background:rgba(79,142,247,.1); border:1px solid rgba(79,142,247,.2);
+  padding:6px 14px; border-radius:50px; transition:all .3s;
+}
+.age-tag-dot { width:5px; height:5px; border-radius:50%; background:var(--blue); }
+.age-tag-txt { font-size:.78rem; font-weight:500; color:rgba(240,244,255,.7); }
+
+/* Choice */
+.ob-choices { display:flex; flex-direction:column; gap:8px; margin-bottom:20px; }
+.ob-choice {
+  background:var(--card); border:1px solid var(--border); border-radius:14px;
+  padding:14px 16px; display:flex; align-items:center; gap:14px;
+  cursor:pointer; transition:all .2s;
+}
+.ob-choice:hover { border-color:var(--border2); }
+.ob-choice.sel { border-color:rgba(79,142,247,.4); background:rgba(79,142,247,.06); }
+.ob-choice-icon {
+  width:38px; height:38px; border-radius:10px; background:var(--surface);
+  display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0;
+}
+.ob-choice.sel .ob-choice-icon { background:rgba(79,142,247,.12); }
+.ob-choice-body { flex:1; }
+.ob-choice-title { font-size:.88rem; font-weight:500; color:var(--text); }
+.ob-choice-sub   { font-size:.72rem; font-weight:400; color:var(--text3); margin-top:2px; }
+.ob-choice-radio {
+  width:18px; height:18px; border-radius:50%; border:1.5px solid var(--border2); flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; transition:all .2s;
+}
+.ob-choice.sel .ob-choice-radio { background:var(--blue); border-color:var(--blue); }
+.ob-choice.sel .ob-choice-radio::after { content:''; width:6px; height:6px; border-radius:50%; background:#fff; }
+
+/* Summary */
+.ob-summary {
+  background:var(--card); border:1px solid var(--border); border-radius:16px;
+  overflow:hidden; margin-bottom:20px;
+}
+.ob-sum-row {
+  display:flex; align-items:center; gap:12px; padding:13px 16px;
+  border-bottom:1px solid var(--border);
+}
+.ob-sum-row:last-child { border-bottom:none; }
+.ob-sum-ico { font-size:.9rem; width:18px; text-align:center; flex-shrink:0; opacity:.6; }
+.ob-sum-key { font-size:.78rem; font-weight:400; color:var(--text3); flex:1; }
+.ob-sum-val { font-size:.82rem; font-weight:500; color:var(--text2); }
+
+/* CTA */
+.ob-cta {
+  width:100%; padding:15px; border-radius:14px; border:none; cursor:pointer;
+  background:linear-gradient(135deg, var(--blue2) 0%, var(--violet) 100%);
+  color:#fff; font-family:'Inter', sans-serif; font-size:.9rem; font-weight:600;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  transition:all .2s; position:relative; overflow:hidden; margin-top:auto;
+  letter-spacing:-.1px;
+}
+.ob-cta::before {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(135deg, rgba(255,255,255,.1), transparent);
+}
+.ob-cta:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(59,110,232,.3); }
+.ob-cta:active { transform:translateY(0) scale(.98); }
+
+/* ══════════════════════════════════
+   SWITCHER
+══════════════════════════════════ */
+#s-switcher {
+  background:var(--void);
+}
+
+.sw-top {
+  padding:32px 24px 24px; border-bottom:1px solid var(--border);
+}
+.sw-brand { display:flex; align-items:center; gap:9px; margin-bottom:24px; }
+.sw-brand-logo {
+  width:28px; height:28px; border-radius:8px;
+  background:linear-gradient(135deg, var(--blue2), var(--violet));
+  display:flex; align-items:center; justify-content:center; font-size:.8rem;
+}
+.sw-brand-name { font-family:'Space Grotesk', sans-serif; font-size:.88rem; font-weight:600; color:var(--text2); }
+.sw-title { font-family:'Space Grotesk', sans-serif; font-size:1.5rem; font-weight:700; color:var(--text); letter-spacing:-.4px; }
+.sw-sub   { font-size:.82rem; color:var(--text3); margin-top:4px; }
+
+.sw-body { flex:1; padding:20px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
+
+.sw-card {
+  background:var(--card); border:1px solid var(--border); border-radius:16px;
+  padding:16px; display:flex; align-items:center; gap:14px; cursor:pointer;
+  transition:all .2s;
+}
+.sw-card:hover { border-color:var(--border2); }
+.sw-card.sel { border-color:rgba(79,142,247,.4); background:rgba(79,142,247,.05); }
+.sw-card-ava {
+  width:44px; height:44px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Space Grotesk', sans-serif;
+  font-size:1.1rem; font-weight:700; color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  letter-spacing:-.5px;
+}
+.sw-card.sel .sw-card-ava { border-color:rgba(79,142,247,.3); }
+.sw-card-info { flex:1; }
+.sw-card-name { font-size:.92rem; font-weight:500; color:var(--text); }
+.sw-card-meta { font-size:.72rem; color:var(--text3); margin-top:2px; }
+.sw-card-badge {
+  font-size:.65rem; font-weight:600; padding:3px 9px; border-radius:50px; letter-spacing:.3px;
+}
+.b-sr { background:rgba(155,109,255,.12); color:#B79EFF; border:1px solid rgba(155,109,255,.2); }
+.b-ad { background:rgba(52,211,153,.1); color:#6EE7B7; border:1px solid rgba(52,211,153,.15); }
+.sw-card-check {
+  width:20px; height:20px; border-radius:50%; border:1px solid var(--border2); flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; transition:all .2s;
+}
+.sw-card.sel .sw-card-check { background:var(--blue); border-color:var(--blue); }
+.sw-card.sel .sw-card-check::after { content:'✓'; font-size:.6rem; color:#fff; font-weight:600; }
+
+.sw-footer { padding:0 20px 28px; display:flex; flex-direction:column; gap:8px; }
+.sw-confirm {
+  width:100%; padding:14px; border-radius:14px; border:none; cursor:pointer;
+  background:var(--blue2); color:#fff;
+  font-family:'Inter', sans-serif; font-size:.88rem; font-weight:600;
+  display:flex; align-items:center; justify-content:center; gap:8px; transition:all .2s;
+  box-shadow:0 4px 16px rgba(59,110,232,.25);
+}
+.sw-confirm:hover { background:var(--blue); transform:translateY(-1px); }
+.sw-confirm:active { transform:translateY(0); }
+.sw-add {
+  width:100%; padding:12px; border-radius:14px; border:1px dashed var(--border2);
+  background:transparent; color:var(--text3);
+  font-family:'Inter', sans-serif; font-size:.82rem; font-weight:400;
+  cursor:pointer; transition:all .2s;
+  display:flex; align-items:center; justify-content:center; gap:6px;
+}
+.sw-add:hover { border-color:var(--blue); color:var(--blue); }
+
+/* ══════════════════════════════════
+   MAIN INTERFACE
+══════════════════════════════════ */
+#s-main { background:var(--void); overflow:hidden; }
+
+/* Top bar */
+.bar {
+  padding:14px 20px; display:flex; align-items:center; justify-content:space-between;
+  border-bottom:1px solid var(--border); background:rgba(8,12,24,.8);
+  backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  position:relative; z-index:10;
+}
+.bar-left { display:flex; align-items:center; gap:10px; }
+.bar-logo {
+  width:28px; height:28px; border-radius:8px;
+  background:linear-gradient(135deg, var(--blue2), var(--violet));
+  display:flex; align-items:center; justify-content:center; font-size:.8rem;
+}
+.bar-name { font-family:'Space Grotesk', sans-serif; font-size:.9rem; font-weight:600; color:var(--text); letter-spacing:-.2px; }
+.bar-right { display:flex; align-items:center; gap:8px; }
+.bar-status {
+  display:flex; align-items:center; gap:6px;
+  font-size:.7rem; font-weight:500; color:var(--text3); padding:4px 10px;
+  background:var(--card); border:1px solid var(--border); border-radius:50px;
+}
+.sdot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.sdot.r { background:var(--green); animation:p 3s infinite; }
+.sdot.l { background:var(--amber); animation:p .8s infinite; }
+.sdot.t { background:var(--violet); animation:p 1s infinite; }
+@keyframes p { 0%,100%{opacity:1} 50%{opacity:.25} }
+.bar-btn {
+  background:var(--card); border:1px solid var(--border); border-radius:8px;
+  padding:6px 10px; color:var(--text3); font-family:'Inter', sans-serif;
+  font-size:.7rem; font-weight:500; cursor:pointer; transition:all .2s;
+  display:flex; align-items:center; gap:5px;
+}
+.bar-btn:hover { border-color:var(--border2); color:var(--text2); }
+
+/* Main content */
+.main-content {
+  flex:1; display:flex; flex-direction:column;
+  padding:16px; gap:10px; overflow:hidden;
+}
+
+/* Chat panel */
+.chat-panel {
+  flex:1; display:flex; flex-direction:column;
+  background:var(--card); border:1px solid var(--border); border-radius:20px;
+  overflow:hidden; min-height:0;
+}
+
+.chat-scroll {
+  flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column;
+  gap:10px; scroll-behavior:smooth;
+}
+.chat-scroll::-webkit-scrollbar { width:4px; }
+.chat-scroll::-webkit-scrollbar-track { background:transparent; }
+.chat-scroll::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+
+/* Messages */
+.ma { display:flex; gap:9px; align-items:flex-start; animation:mIn .25s ease; }
+.ma-logo {
+  width:26px; height:26px; flex-shrink:0; border-radius:8px;
+  background:linear-gradient(135deg, var(--blue2), var(--violet));
+  display:flex; align-items:center; justify-content:center; font-size:.72rem;
+}
+.ma-bbl {
+  background:var(--surface); border:1px solid var(--border); border-radius:4px 14px 14px 14px;
+  padding:11px 14px; font-size:.85rem; font-weight:400; line-height:1.65;
+  color:var(--text2); max-width:86%; letter-spacing:-.1px;
+}
+.ma-bbl.typing { display:flex; gap:5px; align-items:center; padding:14px; }
+.td { width:5px; height:5px; border-radius:50%; background:var(--text3); animation:tda 1.2s infinite; }
+.td:nth-child(2){animation-delay:.2s}.td:nth-child(3){animation-delay:.4s}
+@keyframes tda { 0%,80%,100%{transform:scale(.5);opacity:.3} 40%{transform:scale(1);opacity:1} }
+
+.mu { display:flex; justify-content:flex-end; animation:mIn .25s ease; }
+.mu-bbl {
+  background:linear-gradient(135deg, var(--blue2), var(--violet));
+  color:rgba(255,255,255,.9); border-radius:14px 4px 14px 14px;
+  padding:11px 14px; font-size:.85rem; font-weight:400; max-width:80%; line-height:1.55;
+}
+@keyframes mIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+/* Mic section */
+.mic-section {
+  border-top:1px solid var(--border); padding:16px; display:flex; flex-direction:column;
+  align-items:center; gap:10px; background:rgba(5,7,15,.4);
+}
+
+/* Orb mic */
+.mic-orb-wrap { position:relative; display:flex; align-items:center; justify-content:center; }
+.mic-ring1 {
+  position:absolute; width:72px; height:72px; border-radius:50%;
+  border:1px solid rgba(79,142,247,.15); opacity:0; transition:opacity .3s;
+}
+.mic-ring2 {
+  position:absolute; width:88px; height:88px; border-radius:50%;
+  border:1px solid rgba(79,142,247,.08); opacity:0; transition:opacity .3s;
+}
+.mic-orb-wrap.on .mic-ring1 { opacity:1; animation:ring1 2s ease-in-out infinite; }
+.mic-orb-wrap.on .mic-ring2 { opacity:1; animation:ring2 2s ease-in-out infinite .5s; }
+@keyframes ring1 { 0%,100%{transform:scale(1);opacity:.6} 50%{transform:scale(1.1);opacity:.2} }
+@keyframes ring2 { 0%,100%{transform:scale(1);opacity:.3} 50%{transform:scale(1.08);opacity:.1} }
+
+.mic-orb {
+  width:60px; height:60px; border-radius:50%; border:none; cursor:pointer;
+  background:var(--surface); border:1px solid var(--border2);
+  font-size:1.5rem; display:flex; align-items:center; justify-content:center;
+  transition:all .25s; position:relative; z-index:1;
+  box-shadow:0 0 0 0 rgba(79,142,247,0);
+}
+.mic-orb:hover { border-color:rgba(79,142,247,.4); box-shadow:0 0 0 8px rgba(79,142,247,.05); }
+.mic-orb:active { transform:scale(.94); }
+.mic-orb.on {
+  background:linear-gradient(145deg, var(--blue2), var(--violet));
+  border-color:transparent;
+  box-shadow:0 0 0 8px rgba(79,142,247,.1), 0 8px 24px rgba(59,110,232,.3);
+}
+
+/* Wave bars */
+.wave-bars { display:flex; align-items:center; gap:3px; height:16px; }
+.wb { width:3px; border-radius:2px; background:var(--blue); opacity:.2; transition:opacity .3s; }
+.wave-bars.on .wb { opacity:.7; animation:wv .9s ease-in-out infinite; }
+.wb:nth-child(1){animation-delay:0s;height:6px}  .wb:nth-child(2){animation-delay:.07s;height:10px}
+.wb:nth-child(3){animation-delay:.14s;height:14px}.wb:nth-child(4){animation-delay:.21s;height:10px}
+.wb:nth-child(5){animation-delay:.28s;height:6px}
+@keyframes wv { 0%,100%{height:3px;opacity:.3} 50%{height:14px;opacity:.9} }
+
+.mic-hint { font-size:.7rem; font-weight:500; color:var(--text3); letter-spacing:.3px; }
+
+/* Actions */
+.actions-section { display:flex; flex-direction:column; gap:8px; }
+.actions-row { display:flex; gap:8px; }
+.act {
+  flex:1; background:var(--card); border:1px solid var(--border); border-radius:14px;
+  padding:12px 8px; display:flex; flex-direction:column; align-items:center; gap:5px;
+  cursor:pointer; transition:all .2s; font-family:'Inter', sans-serif;
+}
+.act:hover {
+  border-color:rgba(79,142,247,.35); background:rgba(79,142,247,.05);
+  transform:translateY(-2px); box-shadow:0 4px 14px rgba(79,142,247,.12);
+}
+.act:hover .act-lbl { color:var(--blue); }
+.act:active { transform:translateY(0) scale(.97); }
+.act-ico { font-size:1.25rem; }
+.act-lbl { font-size:.65rem; font-weight:500; color:var(--text3); letter-spacing:.2px; }
+
+/* Bottom row */
+.bottom-row { display:flex; gap:8px; align-items:center; }
+.cancel {
+  height:44px; padding:0 14px; border-radius:12px; border:1px solid var(--border);
+  background:transparent; color:var(--text3); font-family:'Inter', sans-serif;
+  font-size:.75rem; font-weight:500; cursor:pointer; transition:all .2s;
+  display:flex; align-items:center; gap:6px; white-space:nowrap;
+}
+.cancel:hover { border-color:var(--border2); color:var(--text2); }
+
+.input-row {
+  flex:1; display:flex; align-items:center; gap:0;
+  background:var(--card); border:1px solid var(--border); border-radius:12px;
+  overflow:hidden; transition:border-color .2s, box-shadow .2s;
+}
+.input-row:focus-within { border-color:rgba(79,142,247,.35); box-shadow:0 0 0 3px rgba(79,142,247,.07); }
+.txt {
+  flex:1; background:transparent; border:none; outline:none;
+  padding:0 14px; height:44px;
+  font-family:'Inter', sans-serif; font-size:.85rem; font-weight:400; color:var(--text);
+}
+.txt::placeholder { color:var(--text3); }
+.send {
+  width:36px; height:36px; margin:4px; border-radius:9px; border:none;
+  background:var(--blue2); color:#fff; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; font-size:.8rem;
+  transition:all .15s; flex-shrink:0;
+}
+.send:hover { background:var(--blue); }
+.send:active { transform:scale(.9); }
+
+/* Profile footer */
+.pf {
+  display:flex; align-items:center; gap:10px; padding:10px 16px;
+  background:var(--card); border:1px solid var(--border); border-radius:14px;
+}
+.pf-ava {
+  width:32px; height:32px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Space Grotesk', sans-serif;
+  font-size:.85rem; font-weight:700; color:#fff; letter-spacing:-.3px;
+}
+.pf-info { flex:1; }
+.pf-name { font-size:.78rem; font-weight:500; color:var(--text2); }
+.pf-role { font-size:.65rem; color:var(--text3); margin-top:1px; }
+.pf-btn {
+  font-size:.68rem; font-weight:500; color:var(--blue);
+  background:rgba(79,142,247,.1); border:1px solid rgba(79,142,247,.15);
+  padding:4px 10px; border-radius:50px; cursor:pointer; transition:all .15s;
+  font-family:'Inter', sans-serif;
+}
+.pf-btn:hover { background:rgba(79,142,247,.18); }
+
+
+
+
+/* ── MON COMPTE ── */
+.account-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:500; align-items:center; justify-content:center; padding:24px; }
+.account-modal.show { display:flex; }
+.account-card { background:var(--card); border:1px solid var(--border); border-radius:22px; padding:24px; max-width:330px; width:100%; max-height:85vh; overflow-y:auto; }
+.account-title { font-size:1.05rem; font-weight:700; color:var(--text); margin-bottom:4px; }
+.account-sub { font-size:.75rem; color:var(--text3); margin-bottom:18px; }
+.account-section { border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:12px; }
+.account-section-title { font-size:.68rem; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.8px; margin-bottom:10px; }
+.account-row { display:flex; align-items:center; justify-content:space-between; padding:7px 0; }
+.account-row-label { font-size:.8rem; color:var(--text3); }
+.account-row-value { font-size:.8rem; font-weight:600; color:var(--text); }
+.account-btn { width:100%; padding:11px; border-radius:11px; border:1px solid var(--border); background:transparent; color:var(--text3); font-family:inherit; font-size:.8rem; font-weight:600; cursor:pointer; margin-top:7px; transition:all .2s; }
+.account-btn:hover { border-color:var(--border2); color:var(--text); }
+.account-btn.danger { border-color:rgba(239,68,68,.35); color:#F87171; }
+.account-btn.danger:hover { background:rgba(239,68,68,.1); }
+.account-close { width:100%; padding:13px; border-radius:13px; border:none; background:linear-gradient(135deg,var(--blue2,#2563EB),var(--violet,#7C3AED)); color:#fff; font-family:inherit; font-size:.85rem; font-weight:600; cursor:pointer; margin-top:4px; }
+
+/* ── TRIAL BANNER ── */
+.trial-banner {
+  background:linear-gradient(135deg,#7C3AED,#2563EB);
+  padding:8px 16px; display:flex; align-items:center; gap:10px;
+}
+.trial-left  { flex:1; display:flex; flex-direction:column; gap:3px; }
+.trial-top   { display:flex; align-items:center; justify-content:space-between; }
+.trial-label { font-size:.65rem; font-weight:700; color:rgba(255,255,255,.8); letter-spacing:.5px; text-transform:uppercase; }
+.trial-days  { font-size:.72rem; font-weight:900; color:#fff; }
+.trial-track { height:4px; background:rgba(255,255,255,.2); border-radius:2px; overflow:hidden; }
+.trial-fill  { height:100%; border-radius:2px; background:#fff; transition:width .5s; }
+.trial-fill.urgent { background:#FCD34D; }
+.trial-cta {
+  background:#fff; color:#7C3AED; border:none; border-radius:50px;
+  padding:6px 12px; font-family:inherit; font-size:.72rem; font-weight:900;
+  cursor:pointer; white-space:nowrap; transition:all .2s; flex-shrink:0;
+}
+.trial-cta:hover { background:#F3EFFE; transform:scale(1.03); }
+
+/* Trial expired modal */
+.trial-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:400; align-items:center; justify-content:center; padding:24px; }
+.trial-modal.show { display:flex; animation:fadeIn .2s ease; }
+.trial-card { background:var(--card); border-radius:22px; padding:28px 24px; max-width:320px; width:100%; text-align:center; }
+.trial-card-ico   { font-size:3rem; margin-bottom:12px; }
+.trial-card-title { font-size:1.2rem; font-weight:700; color:var(--text); margin-bottom:6px; }
+.trial-card-desc  { font-size:.85rem; color:var(--text3); line-height:1.6; margin-bottom:20px; }
+.trial-card-price {
+  background:linear-gradient(135deg,var(--blue2),var(--violet));
+  color:#fff; border:none; border-radius:14px; padding:14px;
+  width:100%; font-family:inherit; font-size:.95rem; font-weight:700;
+  cursor:pointer; margin-bottom:8px; transition:all .2s;
+}
+.trial-card-price:hover { transform:translateY(-1px); }
+.trial-card-free {
+  background:transparent; border:1px solid var(--border); border-radius:14px;
+  padding:12px; width:100%; font-family:inherit; font-size:.85rem; font-weight:600;
+  color:var(--text3); cursor:pointer; transition:all .2s;
+}
+.trial-card-free:hover { border-color:var(--border2); color:var(--text); }
+
+/* ── CREDIT SYSTEM ── */
+.credit-bar {
+  padding:8px 16px; background:var(--card);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:10px;
+}
+.credit-left { flex:1; display:flex; flex-direction:column; gap:3px; }
+.credit-top  { display:flex; align-items:center; justify-content:space-between; }
+.credit-label{ font-size:.65rem; font-weight:600; color:var(--text3); letter-spacing:.5px; text-transform:uppercase; }
+.credit-nums { font-size:.72rem; font-weight:700; }
+.credit-track{ height:5px; background:var(--border2); border-radius:3px; overflow:hidden; }
+.credit-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,var(--blue),var(--violet)); transition:width .5s; }
+.credit-fill.low  { background:linear-gradient(90deg,#F59E0B,#EF4444); }
+.credit-bonus { display:flex; align-items:center; gap:4px; font-size:.68rem; font-weight:700; color:var(--violet); background:var(--violet-pale); padding:3px 8px; border-radius:50px; white-space:nowrap; }
+.credit-buy { font-size:.65rem; font-weight:700; color:var(--blue); background:var(--blue-pale); border:1px solid rgba(59,110,232,.2); padding:4px 9px; border-radius:50px; cursor:pointer; font-family:inherit; white-space:nowrap; transition:all .2s; }
+.credit-buy:hover { background:var(--blue); color:#fff; }
+
+/* Model selector */
+.model-selector { display:flex; gap:5px; padding:0 12px 8px; }
+.model-btn {
+  flex:1; padding:7px 4px; border-radius:10px; border:1.5px solid var(--border);
+  background:var(--card); cursor:pointer; font-family:inherit;
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+  transition:all .18s;
+}
+.model-btn.active { border-color:var(--blue); background:var(--blue-pale); }
+.model-btn:hover  { border-color:var(--border2); }
+.model-ico  { font-size:.9rem; }
+.model-name { font-size:.6rem; font-weight:800; color:var(--text3); }
+.model-cost { font-size:.55rem; font-weight:700; color:var(--text3); }
+.model-btn.active .model-name,
+.model-btn.active .model-cost { color:var(--blue); }
+
+/* Low credit warning */
+.credit-warning {
+  margin:0 12px 8px; background:#FEF3C7; border:1.5px solid #F59E0B;
+  border-radius:12px; padding:8px 12px; font-size:.75rem; font-weight:700;
+  color:#92400E; display:none; align-items:center; gap:7px;
+}
+.credit-warning.show { display:flex; }
+
+/* Recharge modal */
+.recharge-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:300; align-items:center; justify-content:center; padding:20px; }
+.recharge-modal.show { display:flex; animation:fadeIn .2s ease; }
+.recharge-card { background:var(--card); border-radius:20px; padding:24px; max-width:320px; width:100%; }
+.recharge-title { font-size:1rem; font-weight:700; color:var(--text); margin-bottom:4px; }
+.recharge-sub   { font-size:.78rem; color:var(--text3); margin-bottom:18px; }
+.pack-list { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
+.pack-item { background:var(--bg); border:1.5px solid var(--border); border-radius:14px; padding:13px 15px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:all .18s; }
+.pack-item:hover { border-color:var(--blue); background:var(--blue-pale); }
+.pack-ico  { font-size:1.4rem; }
+.pack-info { flex:1; }
+.pack-name { font-size:.85rem; font-weight:700; color:var(--text); }
+.pack-desc { font-size:.7rem; color:var(--text3); margin-top:1px; }
+.pack-price{ font-size:.9rem; font-weight:900; color:var(--blue); }
+.recharge-close { width:100%; padding:12px; border-radius:12px; border:1px solid var(--border); background:transparent; color:var(--text3); font-family:inherit; font-size:.85rem; font-weight:600; cursor:pointer; }
+
+/* Scrollbar global */
+::-webkit-scrollbar { width:0; }
+
+/* ── iPhone safe area ── */
+body { padding-bottom: env(safe-area-inset-bottom); }
+</style>
+</head>
+<body>
+
+<div class="ambient">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+
+<!-- ══ ONBOARDING ══ -->
+<div class="screen active" id="s-onboard">
+<div class="ob-container">
+
+  <div class="ob-mark">
+    <div class="ob-mark-logo">🎙</div>
+    <span class="ob-mark-name">Aria Senior</span>
+    <span class="ob-mark-version">v1.0</span>
+  </div>
+
+  <div class="ob-dots">
+    <div class="ob-dot active" id="d0"></div>
+    <div class="ob-dot future" id="d1"></div>
+    <div class="ob-dot future" id="d2"></div>
+    <div class="ob-dot future" id="d3"></div>
+  </div>
+
+  <!-- 1 — Prénom -->
+  <div class="ob-step active" id="ob-s1">
+    <div class="ob-step-num">01 — Bienvenue</div>
+    <div class="ob-step-title">Comment vous appelez-vous ?</div>
+    <div class="ob-step-desc">Aria utilise votre prénom pour rendre chaque échange plus personnel.</div>
+    <input class="ob-input" type="text" id="ob-name" placeholder="Votre prénom…" autocomplete="off">
+    <div style="flex:1"></div>
+    <button type="button" class="ob-cta" onclick="obGo(2)">Continuer →</button>
+  </div>
+
+  <!-- 2 — Âge -->
+  <div class="ob-step" id="ob-s2">
+    <div class="ob-step-num">02 — Personnalisation</div>
+    <div class="ob-step-title" id="ob-q2">Quel est votre âge ?</div>
+    <div class="ob-step-desc">Aria ajuste son interface et sa façon de parler selon votre âge.</div>
+    <div class="age-block">
+      <div class="age-ctrl">
+        <button type="button" class="age-dec" onclick="chAge(-1)">−</button>
+        <input class="age-field" type="number" id="age-val" value="70" min="4" max="110" oninput="syncAge()">
+        <button type="button" class="age-inc" onclick="chAge(1)">+</button>
+      </div>
+      <div class="age-tag">
+        <div class="age-tag-dot"></div>
+        <span class="age-tag-txt" id="age-tag-txt">Senior · Interface simplifiée</span>
+      </div>
+    </div>
+    <div style="flex:1"></div>
+    <button type="button" class="ob-cta" onclick="obGo(3)">Continuer →</button>
+  </div>
+
+  <!-- 3 — Utilisation -->
+  <div class="ob-step" id="ob-s3">
+    <div class="ob-step-num">03 — Utilisation</div>
+    <div class="ob-step-title">Seul ou en famille ?</div>
+    <div class="ob-step-desc">En famille, chaque membre dispose de son propre profil adapté à son âge.</div>
+    <div class="ob-choices">
+      <div class="ob-choice sel" id="c-solo" onclick="pickM('solo')">
+        <div class="ob-choice-icon">👤</div>
+        <div class="ob-choice-body">
+          <div class="ob-choice-title">Seul(e)</div>
+          <div class="ob-choice-sub">Un seul profil sur ce PC</div>
+        </div>
+        <div class="ob-choice-radio"></div>
+      </div>
+      <div class="ob-choice" id="c-fam" onclick="pickM('famille')">
+        <div class="ob-choice-icon">👨‍👩‍👧</div>
+        <div class="ob-choice-body">
+          <div class="ob-choice-title">En famille</div>
+          <div class="ob-choice-sub">Plusieurs profils — chacun son interface</div>
+        </div>
+        <div class="ob-choice-radio"></div>
+      </div>
+    </div>
+    <div style="flex:1"></div>
+    <button type="button" class="ob-cta" onclick="obGo(4)">Continuer →</button>
+  </div>
+
+  <!-- 4 — Récap -->
+  <div class="ob-step" id="ob-s4">
+    <div class="ob-step-num">04 — Confirmation</div>
+    <div class="ob-step-title">Votre profil</div>
+    <div class="ob-step-desc">Tout peut être modifié dans les paramètres à tout moment.</div>
+    <div class="ob-summary">
+      <div class="ob-sum-row"><span class="ob-sum-ico">👤</span><span class="ob-sum-key">Prénom</span><span class="ob-sum-val" id="s-name">—</span></div>
+      <div class="ob-sum-row"><span class="ob-sum-ico">🎂</span><span class="ob-sum-key">Âge</span><span class="ob-sum-val" id="s-age">—</span></div>
+      <div class="ob-sum-row"><span class="ob-sum-ico">✦</span><span class="ob-sum-key">Interface</span><span class="ob-sum-val" id="s-iface">—</span></div>
+      <div class="ob-sum-row"><span class="ob-sum-ico">👥</span><span class="ob-sum-key">Utilisation</span><span class="ob-sum-val" id="s-multi">—</span></div>
+      <div class="ob-sum-row"><span class="ob-sum-ico">◈</span><span class="ob-sum-key">Plan</span><span class="ob-sum-val">Gratuit</span></div>
+    </div>
+    <div style="flex:1"></div>
+    <button type="button" class="ob-cta" onclick="finishOb()">Démarrer Aria →</button>
+  </div>
+
+</div>
+</div>
+
+<!-- ══ SWITCHER ══ -->
+<div class="screen" id="s-switcher">
+  <div class="sw-top">
+    <div class="sw-brand">
+      <div class="sw-brand-logo">🎙</div>
+      <span class="sw-brand-name">Aria Senior</span>
+    </div>
+    <div class="sw-title">Qui est là ?</div>
+    <div class="sw-sub">Sélectionnez votre profil</div>
+  </div>
+  <div class="sw-body">
+    <div class="sw-card sel" onclick="selP(this,'Marie','72 ans','sr')">
+      <div class="sw-card-ava" style="background:linear-gradient(135deg,#3B6EE8,#9B6DFF)">M</div>
+      <div class="sw-card-info"><div class="sw-card-name">Marie</div><div class="sw-card-meta">72 ans · Aujourd'hui</div></div>
+      <span class="sw-card-badge b-sr">Senior</span>
+      <div class="sw-card-check"></div>
+    </div>
+    <div class="sw-card" onclick="selP(this,'Pierre','58 ans','ad')">
+      <div class="sw-card-ava" style="background:linear-gradient(135deg,#0F9D6E,#0EA5A0)">P</div>
+      <div class="sw-card-info"><div class="sw-card-name">Pierre</div><div class="sw-card-meta">58 ans · Hier</div></div>
+      <span class="sw-card-badge b-ad">Adulte</span>
+      <div class="sw-card-check"></div>
+    </div>
+  </div>
+  <div class="sw-footer">
+    <button type="button" class="sw-confirm" onclick="confirmP()">C'est moi — Démarrer</button>
+    <button type="button" class="sw-add">+ Ajouter un profil</button>
+  </div>
+</div>
+
+<!-- ══ MAIN ══ -->
+<div class="screen" id="s-main">
+
+  <div class="bar">
+    <div class="bar-left">
+      <div class="bar-logo">🎙</div>
+      <span class="bar-name" id="bar-name">Aria · Marie</span>
+    </div>
+    <div class="bar-right">
+      <div class="bar-status">
+        <div class="sdot r" id="sdot"></div>
+        <span id="stxt">Prêt</span>
+      </div>
+      <button type="button" class="bar-btn" onclick="goTo('s-switcher')">⇄ Changer</button>
+    </div>
+  </div>
+
+
+
+  <!-- Trial banner -->
+  <div class="trial-banner" id="trial-banner">
+    <div class="trial-left">
+      <div class="trial-top">
+        <span class="trial-label">🎁 Essai Pro gratuit</span>
+        <span class="trial-days"><span id="trial-days">11</span> jours restants</span>
+      </div>
+      <div class="trial-track"><div class="trial-fill" id="trial-fill" style="width:78%"></div></div>
+    </div>
+    <button type="button" class="trial-cta" onclick="showTrialModal()">Passer Pro →</button>
+  </div>
+
+  <!-- Credit bar -->
+  <div class="credit-bar">
+    <div class="credit-left">
+      <div class="credit-top">
+        <span class="credit-label">Crédits aujourd'hui</span>
+        <span class="credit-nums"><span id="cr-used">87</span> / <span id="cr-total">100</span> · 🔄 <span id="cr-reset">demain à minuit</span></span>
+      </div>
+      <div class="credit-track"><div class="credit-fill" id="cr-fill" style="width:87%"></div></div>
+    </div>
+    <div class="credit-bonus" id="cr-bonus">🎁 320</div>
+    <button type="button" class="credit-buy" onclick="showRecharge()">+ Recharger</button>
+  </div>
+
+  <div class="main-content">
+
+    <div class="chat-panel">
+      <div class="chat-scroll" id="chat"></div>
+      <div class="mic-section">
+        <div class="mic-orb-wrap" id="mic-wrap">
+          <div class="mic-ring1"></div>
+          <div class="mic-ring2"></div>
+          <button type="button" class="mic-orb" id="mic-btn" onclick="toggleMic()">🎙</button>
+        </div>
+        <div class="wave-bars" id="waves">
+          <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+          <div class="wb"></div><div class="wb"></div>
+        </div>
+        <span class="mic-hint" id="mic-hint">Appuyez pour parler</span>
+      </div>
+    </div>
+
+    <div class="actions-section" id="acts"></div>
+
+    <!-- Low credit warning -->
+    <div class="credit-warning" id="cr-warning">⚠️ Il ne vous reste que <span id="cr-warn-num">10</span> crédits aujourd'hui. Rechargez pour continuer.</div>
+
+    <!-- Model selector -->
+    <div class="model-selector">
+      <button type="button" class="model-btn active" id="m-lite" onclick="selectModel('lite',this)">
+        <span class="model-ico">⚡</span>
+        <span class="model-name">Aria Lite</span>
+        <span class="model-cost">1 crédit</span>
+      </button>
+      <button type="button" class="model-btn" id="m-smart" onclick="selectModel('smart',this)">
+        <span class="model-ico">🧠</span>
+        <span class="model-name">Aria Smart</span>
+        <span class="model-cost">3 crédits</span>
+      </button>
+      <button type="button" class="model-btn" id="m-expert" onclick="selectModel('expert',this)">
+        <span class="model-ico">🚀</span>
+        <span class="model-name">Aria Expert</span>
+        <span class="model-cost">10 crédits</span>
+      </button>
+    </div>
+
+    <div class="bottom-row">
+      <button type="button" class="cancel" onclick="cancelAct()">✕ Annuler</button>
+      <div class="input-row">
+        <input class="txt" type="text" id="txt" placeholder="Écrivez à Aria…" onkeydown="if(event.key==='Enter')send()">
+        <button type="button" class="send" onclick="send()">➤</button>
+      </div>
+    </div>
+
+    <div class="pf">
+      <div class="pf-ava" id="pf-ava" style="background:linear-gradient(135deg,#3B6EE8,#9B6DFF)">M</div>
+      <div class="pf-info">
+        <div class="pf-name" id="pf-name">Marie · 72 ans</div>
+        <div class="pf-role" id="pf-role">Senior · Interface simplifiée</div>
+      </div>
+      <button type="button" class="pf-btn" onclick="showAccount()">Mon compte</button>
+      <button type="button" class="pf-btn" onclick="goTo('s-switcher')">Changer</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// Palette de couleurs pour les avatars
+const AVA_COLORS = [
+  'linear-gradient(135deg,#3B6EE8,#9B6DFF)',
+  'linear-gradient(135deg,#0F9D6E,#0EA5A0)',
+  'linear-gradient(135deg,#E8823B,#E84F6E)',
+  'linear-gradient(135deg,#9B6DFF,#E84F9B)',
+  'linear-gradient(135deg,#3BE8B0,#3B6EE8)',
+];
+function avaColor(name){ return AVA_COLORS[name.charCodeAt(0)%AVA_COLORS.length]; }
+function avaInitial(name){ return name.charAt(0).toUpperCase(); }
+
+// ── State ──
+let age=70, isMulti=false, obName='', obCur=1;
+let curP={name:'Marie',age:'72 ans',type:'sr'};
+let micOn=false, isThinking=false, recognition=null;
+
+// ── Nav ──
+function goTo(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── Onboarding progress dots ──
+function updateDots(step){
+  ['d0','d1','d2','d3'].forEach((id,i)=>{
+    const d=document.getElementById(id);
+    d.className='ob-dot '+(i<step?'done':i===step?'active':'future');
+  });
+}
+
+function obGo(n){
+  if(n===2){
+    const v=document.getElementById('ob-name').value.trim();
+    if(!v){document.getElementById('ob-name').style.borderColor='rgba(248,113,113,.4)';return;}
+    obName=v;
+    document.getElementById('ob-q2').textContent=`${v}, quel est votre âge ?`;
+  }
+  if(n===4){
+    document.getElementById('s-name').textContent=obName;
+    document.getElementById('s-age').textContent=age+' ans';
+    document.getElementById('s-iface').textContent=profLabel(age);
+    document.getElementById('s-multi').textContent=isMulti?'En famille':'Seul(e)';
+  }
+  document.getElementById('ob-s'+obCur).classList.remove('active');
+  obCur=n; updateDots(n-1);
+  document.getElementById('ob-s'+obCur).classList.add('active');
+}
+
+function chAge(d){
+  const inp=document.getElementById('age-val');
+  age=Math.max(4,Math.min(110,age+d));
+  inp.value=age; updateAgeTag();
+}
+function syncAge(){
+  age=Math.max(4,Math.min(110,parseInt(document.getElementById('age-val').value)||25));
+  updateAgeTag();
+}
+function updateAgeTag(){
+  document.getElementById('age-tag-txt').textContent=profLabel(age);
+}
+function profLabel(a){
+  if(a<=10)return'Junior Enfant · Jeux éducatifs';
+  if(a<=17)return'Junior Ado · Aide aux devoirs';
+  if(a<=60)return'Adulte · Interface standard';
+  if(a<=75)return'Senior · Interface simplifiée';
+  return'Senior+ · Accessibilité maximale';
+}
+function profType(a){
+  if(a<=10)return'je'; if(a<=17)return'ja';
+  if(a<=60)return'ad'; return'sr';
+}
+function pickM(v){
+  isMulti=v==='famille';
+  document.getElementById('c-solo').classList.toggle('sel',!isMulti);
+  document.getElementById('c-fam').classList.toggle('sel',isMulti);
+}
+function finishOb(){
+  curP={name:obName,age:age+' ans',type:profType(age)};
+  resetChat(); apply(); goTo('s-main');
+}
+
+// ── Switcher ──
+function selP(el,n,ag,t){
+  document.querySelectorAll('.sw-card').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel'); curP={name:n,age:ag,type:t};
+}
+function confirmP(){ resetChat(); apply(); goTo('s-main'); }
+
+// ── Apply ──
+function apply(){
+  const p=curP;
+  const ava=document.getElementById('pf-ava');
+  ava.textContent=avaInitial(p.name);
+  ava.style.background=avaColor(p.name);
+  document.getElementById('bar-name').textContent=`Aria · ${p.name}`;
+  document.getElementById('pf-name').textContent=`${p.name} · ${p.age}`;
+  document.getElementById('pf-role').textContent=profLabel(parseInt(p.age)||70);
+  renderActs(p.type);
+  const w={
+    sr:`Bonjour ${p.name}. Je suis là pour vous aider. Parlez-moi ou tapez votre demande.`,
+    ad:`Bonjour ${p.name} ! Comment puis-je vous aider aujourd'hui ?`,
+    ja:`Salut ${p.name} ! Qu'est-ce que je peux faire pour toi ?`,
+    je:`Coucou ${p.name} ! 🎉 Tu veux jouer ou faire tes devoirs ?`,
+  };
+  addAria(w[p.type]||w.ad);
+}
+
+function renderActs(type){
+  const z=document.getElementById('acts');
+  if(type==='sr'){
+    z.innerHTML=`<div class="actions-row">
+      <button type="button" class="act" onclick="ask('Aide-moi avec mes emails.')" style="padding:16px 8px"><span class="act-ico" style="font-size:1.6rem">📧</span><span class="act-lbl" style="font-size:.72rem">Emails</span></button>
+      <button type="button" class="act" onclick="ask('Que peux-tu faire pour moi ?')" style="padding:16px 8px"><span class="act-ico" style="font-size:1.6rem">❓</span><span class="act-lbl" style="font-size:.72rem">Aide</span></button>
+    </div>`;
+  } else if(type==='ad'){
+    z.innerHTML=`<div class="actions-row">
+      <button type="button" class="act" onclick="ask('Aide-moi avec mes emails.')"><span class="act-ico">📧</span><span class="act-lbl">Email</span></button>
+      <button type="button" class="act" onclick="ask('Ouvre internet.')"><span class="act-ico">🌐</span><span class="act-lbl">Internet</span></button>
+      <button type="button" class="act" onclick="ask('Mes fichiers.')"><span class="act-ico">📁</span><span class="act-lbl">Fichiers</span></button>
+      <button type="button" class="act" onclick="ask('Que peux-tu faire ?')"><span class="act-ico">❓</span><span class="act-lbl">Aide</span></button>
+    </div>`;
+  } else {
+    z.innerHTML=`<div class="actions-row">
+      <button type="button" class="act" onclick="ask('Aide-moi avec mes devoirs.')"><span class="act-ico">📚</span><span class="act-lbl">Devoirs</span></button>
+      <button type="button" class="act" onclick="ask('Lance un jeu de maths.')"><span class="act-ico">🔢</span><span class="act-lbl">Maths</span></button>
+      <button type="button" class="act" onclick="ask('Aide-moi en anglais.')"><span class="act-ico">🇬🇧</span><span class="act-lbl">Anglais</span></button>
+      <button type="button" class="act" onclick="ask('Aide-moi.')"><span class="act-ico">❓</span><span class="act-lbl">Aide</span></button>
+    </div>`;
+  }
+}
+
+// ── Replies ──
+function smartReply(msg,p){
+  const m=msg.toLowerCase(),n=p.name;
+  if(/^(bonjour|salut|coucou|bonsoir|hello|hey)/.test(m)) return `Bonjour ${n}. Comment puis-je vous aider ?`;
+  if(/email|mail|message|courrier/.test(m)) return `J'ouvre votre messagerie, ${n}. Vous avez 3 nouveaux messages.`;
+  if(/internet|navigateur|web|site|google/.test(m)) return `J'ouvre votre navigateur. Où souhaitez-vous aller, ${n} ?`;
+  if(/fichier|document|photo|image/.test(m)) return `Voici vos fichiers récents, ${n}. Lequel cherchez-vous ?`;
+  if(/météo|temps|pluie|soleil|chaud|froid/.test(m)) return `Il fait 19°C, partiellement nuageux. Bonne journée ${n} !`;
+  if(/rappel|médicament|pilule|rdv|rendez/.test(m)) return `Quel rappel souhaitez-vous créer, ${n} ? Dites-moi l'heure.`;
+  if(/volume|son|musique|silence/.test(m)) return `Je règle le volume pour vous, ${n}.`;
+  if(/merci|super|parfait|bravo|génial/.test(m)) return `Avec plaisir, ${n}. Je suis là si vous avez besoin.`;
+  if(/au revoir|bye|bonne nuit|à bientôt/.test(m)) return `Au revoir ${n}. Bonne journée. 👋`;
+  if(/aide|help|que.*fai|comment/.test(m)) return `Je peux vous aider à :\n• Lire vos emails\n• Naviguer sur internet\n• Gérer vos fichiers\n• Créer des rappels\n\nQue souhaitez-vous faire ?`;
+  if(/aria|qui es|c'est quoi/.test(m)) return `Je suis Aria, votre assistant vocal. Développé par Forgelis pour simplifier l'usage du PC.`;
+  const c=m.match(/(\d+)\s*([\+\-\*x])\s*(\d+)/);
+  if(c){const a=+c[1],o=c[2],b=+c[3];const r=o==='+'?a+b:o==='-'?a-b:a*b;return`${a} ${o} ${b} = ${r}`;}
+  return `Je comprends, ${n}. Dans la version complète, je m'en occupe immédiatement.`;
+}
+
+// ── Chat ──
+function resetChat(){ document.getElementById('chat').innerHTML=''; }
+
+function addAria(txt){
+  const c=document.getElementById('chat');
+  const d=document.createElement('div'); d.className='ma';
+  d.innerHTML=`<div class="ma-logo">✦</div><div class="ma-bbl">${txt.replace(/\n/g,'<br>')}</div>`;
+  c.appendChild(d); c.scrollTop=c.scrollHeight;
+}
+function addUser(txt){
+  const c=document.getElementById('chat');
+  const d=document.createElement('div'); d.className='mu';
+  d.innerHTML=`<div class="mu-bbl">${txt}</div>`;
+  c.appendChild(d); c.scrollTop=c.scrollHeight;
+}
+function showTyping(){
+  const c=document.getElementById('chat');
+  const d=document.createElement('div'); d.className='ma'; d.id='typing';
+  d.innerHTML=`<div class="ma-logo">✦</div><div class="ma-bbl typing"><div class="td"></div><div class="td"></div><div class="td"></div></div>`;
+  c.appendChild(d); c.scrollTop=c.scrollHeight;
+}
+function removeTyping(){ const t=document.getElementById('typing'); if(t) t.remove(); }
+
+// ── Status ──
+function setStatus(s){
+  const dot=document.getElementById('sdot'), txt=document.getElementById('stxt'),
+        w=document.getElementById('waves'), m=document.getElementById('mic-btn'),
+        mw=document.getElementById('mic-wrap'), h=document.getElementById('mic-hint');
+  dot.className='sdot '+(s==='l'?'l':s==='t'?'t':'r');
+  if(s==='l'){
+    w.classList.add('on'); m.classList.add('on'); mw.classList.add('on');
+    txt.textContent="J'écoute"; h.textContent="J'écoute… Parlez !";
+  } else if(s==='t'){
+    w.classList.add('on'); txt.textContent='Réflexion…'; h.textContent='Aria réfléchit…';
+  } else {
+    w.classList.remove('on'); m.classList.remove('on'); mw.classList.remove('on');
+    txt.textContent='Prêt'; h.textContent='Appuyez pour parler';
+    m.textContent='🎙';
+  }
+}
+
+function ask(msg){ if(isThinking)return; addUser(msg); reply(msg); }
+function reply(msg){
+  if(intercepterNote(msg)) return;
+  // ── Mode réel : pont Python → vraie IA ──
+  if(window.pywebview && window.pywebview.api){
+    if(!consumeCredits()) return;
+    isThinking=true; setStatus('t'); showTyping();
+    window.pywebview.api.ask_aria(msg, currentModel, ARIA_PRODUCT).then(res=>{
+      removeTyping(); isThinking=false; setStatus('o');
+      if(res && res.ok){
+        addAria(res.reply);
+        speak(res.reply);
+      } else if(res && res.error==='no_credits'){
+        addAria('Vous n\'avez plus de crédits aujourd\'hui. Rechargez ou attendez minuit pour vos crédits gratuits.');
+      } else if(res && res.error==='no_key'){
+        addAria(res.reply);
+      } else {
+        ariaServiceDown();
+      }
+    }).catch(()=>{ removeTyping(); isThinking=false; setStatus('o'); ariaServiceDown(); });
+    return;
+  }
+  // ── Mode relais (mobile / PWA) : vraie IA via serveur sans état ──
+  if(ARIA_RELAY_URL){
+    if(!consumeCredits()) return;
+    isThinking=true; setStatus('t'); showTyping();
+    chatHistory.push({role:'user', content:msg});
+    fetch(ARIA_RELAY_URL + '/ask', {
+      method:'POST',
+      headers:(function(){
+        const h = {'Content-Type':'application/json'};
+        try{ const k = localStorage.getItem('aria_byok'); if(k) h['X-Aria-Key'] = k; const l = localStorage.getItem('aria_licence'); if(l) h['X-Aria-Licence'] = l; }catch(e){}
+        return h;
+      })(),
+      body: JSON.stringify({
+        message: msg, model: currentModel, product: ARIA_PRODUCT,
+        profile: curP, history: chatHistory.slice(-10)
+      })
+    }).then(r=>r.json()).then(res=>{
+      removeTyping(); isThinking=false; setStatus('o');
+      if(res && res.reply){
+        chatHistory.push({role:'assistant', content:res.reply});
+        addAria(res.reply); speak(res.reply);
+        saveState();
+      } else { ariaServiceDown(); }
+    }).catch(()=>{ removeTyping(); isThinking=false; setStatus('o'); ariaServiceDown(); });
+    return;
+  }
+  // ── Mode démo (navigateur) ──
+  if(!consumeCredits()) return;
+  isThinking=true; setStatus('t'); showTyping();
+  setTimeout(()=>{
+    removeTyping(); isThinking=false; setStatus('o');
+    const r=smartReply(msg,curP); addAria(r);
+  },700+Math.random()*500);
+}
+
+function send(){
+  const v=document.getElementById('txt').value.trim();
+  if(!v||isThinking)return; addUser(v); document.getElementById('txt').value=''; reply(v);
+}
+function cancelAct(){
+  isThinking=false; if(recognition)try{recognition.stop();}catch(e){}
+  micOn=false; setStatus('r'); removeTyping();
+  addAria("D'accord. Que souhaitez-vous faire ?");
+}
+
+// ── Mic ──
+function toggleMic(){
+  if(!speechSupported){
+    addAria('Le micro n\'est pas disponible sur ce navigateur. Sur iPhone, utilisez Safari. Sur Mac ou PC, utilisez Chrome.');
+    return;
+  }
+  if(!isPro){
+    addAria('🎙️ Le contrôle vocal complet fait partie d\'Aria Pro. Avec Pro, vous pilotez tout à la voix — emails, rappels, questions. Essayez gratuitement pendant 14 jours.');
+    showTrialModal();
+    return;
+  }
+
+  if(micOn){ if(recognition)try{recognition.stop();}catch(e){} micOn=false; setStatus('r'); return; }
+  if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){
+    addAria("Reconnaissance vocale non disponible. Tapez votre demande."); return;
+  }
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  recognition=new SR(); recognition.lang='fr-FR'; recognition.continuous=false; recognition.interimResults=false;
+  recognition.onresult=e=>{ const t=e.results[0][0].transcript; addUser(t); reply(t); };
+  recognition.onerror=()=>{ micOn=false; setStatus('r'); };
+  recognition.onend=()=>{ micOn=false; setStatus('r'); };
+  try{ recognition.start(); micOn=true; setStatus('l'); document.getElementById('mic-btn').textContent='⏹'; }
+  catch(e){ addAria("Problème micro. Tapez votre demande."); }
+}
+
+
+
+
+
+
+// ── Lecture vocale des réponses (synthèse native) ──
+let ttsOn = true;
+function speak(texte){
+  if(!ttsOn || !window.speechSynthesis) return;
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(texte.replace(/<br>/g,' '));
+    u.lang = 'fr-FR';
+    u.rate = 0.95;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+function toggleTTS(){
+  ttsOn = !ttsOn;
+  const b = document.getElementById('tts-btn');
+  if(b) b.textContent = ttsOn ? 'Activée' : 'Désactivée';
+  if(!ttsOn && window.speechSynthesis) speechSynthesis.cancel();
+}
+
+// ── Mon compte (résiliation 3 clics + RGPD self-service) ──
+function showAccount(){
+  document.getElementById('acc-plan').textContent = isPro ? (trialDaysLeft>0 ? 'Essai Pro — '+trialDaysLeft+' jours restants' : 'Pro — 9,99€/mois') : 'Gratuit';
+  document.getElementById('acc-billing').textContent = (isPro && trialDaysLeft<=0) ? 'Le 11 de chaque mois' : 'Aucun (essai)';
+  document.getElementById('account-modal').classList.add('show');
+}
+function hideAccount(){ document.getElementById('account-modal').classList.remove('show'); }
+function seniorCancelFlow(){
+  hideAccount();
+  document.getElementById('cancel-modal-senior').classList.add('show');
+}
+function seniorConfirmCancel(){ isPaidPro = false; currentModel = "lite";
+  document.getElementById('cancel-modal-senior').classList.remove('show');
+  isPro = false; dailyCredits = 10; trialDaysLeft = 0;
+  const tb = document.getElementById('trial-banner'); if(tb) tb.style.display='none';
+  updateCreditBar();
+  addAria('Votre abonnement est résilié. Vous êtes maintenant sur le plan Gratuit avec 10 crédits par jour. Aucun prélèvement ne sera effectué. Vous pouvez repasser Pro à tout moment.');
+}
+function seniorExportData(){
+  const data = {
+    profil: curP, credits_bonus: bonusCredits,
+    export_date: new Date().toISOString(),
+    note: 'Toutes vos données Aria sont stockées uniquement sur votre appareil.'
+  };
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'aria_senior_mes_donnees.json';
+  a.click();
+}
+function seniorDeleteData(){
+  if(confirm('Supprimer définitivement toutes vos données Aria de cet appareil ? Cette action est irréversible.')){
+    if(confirm('Vraiment sûr ? Profil et réglages seront effacés.')){
+      bonusCredits=0; dailyUsed=0;
+      alert('Toutes vos données ont été supprimées de cet appareil, conformément au RGPD.');
+      location.reload();
+    }
+  }
+}
+
+// ── Offline / API down detection ──
+window.addEventListener('offline', ()=>{
+  addAria('📡 Votre connexion internet est coupée. Vérifiez votre box ou votre WiFi. Je reste là, prêt à vous aider dès le retour du réseau.');
+});
+window.addEventListener('online', ()=>{
+  addAria('✅ La connexion est revenue. Tout fonctionne à nouveau normalement.');
+});
+function ariaServiceDown(){
+  addAria('Le service rencontre un souci technique de notre côté. Vos crédits ne sont pas consommés. Réessayez dans quelques minutes.');
+}
+
+
+
+// ════════════════════════════════════════════
+// NOTES & RAPPELS — stockage local, zéro serveur
+// ════════════════════════════════════════════
+let ariaRappels = JSON.parse(localStorage.getItem('aria_rappels_senior') || '[]');
+
+function ariaNote(texte, dateRappel=null){
+  const note = {
+    id: Date.now(),
+    texte,
+    cree: new Date().toISOString(),
+    rappel: dateRappel,
+    fait: false
+  };
+  ariaRappels.push(note);
+  localStorage.setItem('aria_rappels_senior', JSON.stringify(ariaRappels));
+  return note;
+}
+
+function ariaSupprimerNote(id){
+  ariaRappels = ariaRappels.filter(n => n.id !== id);
+  localStorage.setItem('aria_rappels_senior', JSON.stringify(ariaRappels));
+}
+
+function ariaVerifierRappels(){
+  const maintenant = Date.now();
+  ariaRappels.forEach(n => {
+    if(n.rappel && !n.fait && new Date(n.rappel).getTime() <= maintenant){
+      n.fait = true;
+      addAria('⏰ Rappel : ' + n.texte); speak('Rappel : ' + n.texte);
+      setTimeout(()=>{ n.fait = true; }, 1000);
+    }
+  });
+  localStorage.setItem('aria_rappels_senior', JSON.stringify(ariaRappels));
+}
+// Vérification toutes les 60 secondes
+setInterval(ariaVerifierRappels, 60000);
+ariaVerifierRappels();
+
+function parseRappelDepuisMessage(msg){
+  const m = msg.toLowerCase();
+  let texte = msg;
+  let dateRappel = null;
+  const maintenant = new Date();
+
+  // Détection des mots-clés temporels
+  if(m.includes('dans 1h') || m.includes('dans une heure')){
+    dateRappel = new Date(maintenant.getTime() + 3600000).toISOString();
+  } else if(m.includes('dans 2h')){
+    dateRappel = new Date(maintenant.getTime() + 7200000).toISOString();
+  } else if(m.includes('dans 30 min') || m.includes('dans trente')){
+    dateRappel = new Date(maintenant.getTime() + 1800000).toISOString();
+  } else if(m.includes('demain')){
+    const dem = new Date(maintenant); dem.setDate(dem.getDate()+1); dem.setHours(9,0,0,0);
+    dateRappel = dem.toISOString();
+  } else if(m.includes('ce soir')){
+    const soir = new Date(maintenant); soir.setHours(19,0,0,0);
+    dateRappel = soir.toISOString();
+  } else if(m.includes('lundi')){ dateRappel = _prochainJour(1).toISOString(); }
+    else if(m.includes('mardi')){ dateRappel = _prochainJour(2).toISOString(); }
+    else if(m.includes('mercredi')){ dateRappel = _prochainJour(3).toISOString(); }
+    else if(m.includes('jeudi')){ dateRappel = _prochainJour(4).toISOString(); }
+    else if(m.includes('vendredi')){ dateRappel = _prochainJour(5).toISOString(); }
+
+  // Extraire le texte de la note
+  texte = msg.replace(/^(aria,?\s*)?(note|rappelle-moi|rappelle moi|mémorise|retiens)\s*(que\s*)?/i, '').trim();
+  return { texte, dateRappel };
+}
+
+function _prochainJour(jourVoulu){
+  const d = new Date(); let j = d.getDay();
+  let diff = jourVoulu - j; if(diff <= 0) diff += 7;
+  d.setDate(d.getDate() + diff); d.setHours(9,0,0,0);
+  return d;
+}
+
+function intercepterNote(msg){
+  const m = msg.toLowerCase();
+  const estNote = /^(aria,?\s*)?(note|rappelle|mémorise|retiens|n'oublie pas)/i.test(msg);
+  if(!estNote) return false;
+  const { texte, dateRappel } = parseRappelDepuisMessage(msg);
+  ariaNote(texte, dateRappel);
+  const quand = dateRappel
+    ? ' Je te rappellerai ' + new Date(dateRappel).toLocaleString('fr-FR', {weekday:'long',hour:'2-digit',minute:'2-digit'})
+    : '';
+  addAria('📝 Noté !' + quand + (quand?' .':' Tu peux retrouver tes notes en me demandant \'mes notes\'.'));speak('Noté' + (quand?' Rappel programmé.':''));
+  return true;
+}
+
+
+// ── Rappels récurrents (quotidiens / hebdomadaires) ──
+function ariaRappelRecurrent(texte, heure, jours='tous'){
+  // jours : 'tous' | 'lundi,mercredi,vendredi' | 'semaine' | 'weekend'
+  const rappel = {
+    id: Date.now(), texte, heure, jours,
+    type: 'recurrent', actif: true,
+    cree: new Date().toISOString()
+  };
+  ariaRappels.push(rappel);
+  localStorage.setItem('aria_rappels_senior', JSON.stringify(ariaRappels));
+  return rappel;
+}
+
+function verifierRecurrents(){
+  const maintenant = new Date();
+  const hActuelle = maintenant.getHours() + ':' + String(maintenant.getMinutes()).padStart(2,'0');
+  const jourSemaine = maintenant.getDay(); // 0=dim, 1=lun...
+  const joursNoms = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+
+  ariaRappels.forEach(n => {
+    if(n.type !== 'recurrent' || !n.actif) return;
+    // Vérifier si l'heure correspond (à la minute près)
+    if(n.heure !== hActuelle) return;
+    // Vérifier le jour
+    const ok = n.jours === 'tous' ||
+      (n.jours === 'semaine' && jourSemaine >= 1 && jourSemaine <= 5) ||
+      (n.jours === 'weekend' && (jourSemaine === 0 || jourSemaine === 6)) ||
+      n.jours.split(',').includes(joursNoms[jourSemaine]);
+    if(!ok) return;
+    // Éviter double-déclenchement dans la même minute
+    const cleDeclenche = 'declenche_' + n.id + '_' + hActuelle + '_' + maintenant.toDateString();
+    if(sessionStorage.getItem(cleDeclenche)) return;
+    sessionStorage.setItem(cleDeclenche, '1');
+    addAria('⏰ Rappel : ' + n.texte);
+    speak('Rappel : ' + n.texte);
+  });
+}
+// Vérification toutes les 30 secondes (plus précis pour les rappels à la minute)
+setInterval(verifierRecurrents, 30000);
+
+function parseRappelRecurrent(msg){
+  const m = msg.toLowerCase();
+  // Détecter "tous les jours", "chaque matin", "chaque soir"...
+  const estRecurrent = /tous les jours|chaque (matin|soir|jour|lundi|mardi|mercredi|jeudi|vendredi)|toutes les semaines|chaque semaine/.test(m);
+  if(!estRecurrent) return null;
+
+  // Extraire l'heure
+  const heureMatch = m.match(/à (\d{1,2})h(\d{0,2})/);
+  let heure = '08:00';
+  if(heureMatch){
+    const h = heureMatch[1].padStart(2,'0');
+    const min = (heureMatch[2]||'00').padStart(2,'0');
+    heure = h + ':' + min;
+  } else if(m.includes('matin')) heure = '08:00';
+  else if(m.includes('midi')) heure = '12:00';
+  else if(m.includes('soir')) heure = '19:00';
+
+  // Extraire les jours
+  let jours = 'tous';
+  if(m.includes('semaine') && !m.includes('week')) jours = 'semaine';
+  else if(m.includes('weekend') || m.includes('week-end')) jours = 'weekend';
+  else {
+    const joursDetectes = [];
+    ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'].forEach(j => {
+      if(m.includes(j)) joursDetectes.push(j);
+    });
+    if(joursDetectes.length) jours = joursDetectes.join(',');
+  }
+
+  const texte = msg.replace(/^(aria,?\s*)?(rappelle-moi|rappelle moi)\s*/i,'')
+                   .replace(/tous les jours|chaque (matin|soir|jour)|à \d{1,2}h\d{0,2}/gi,'').trim();
+  return { texte, heure, jours };
+}
+
+// Enrichir intercepterNote pour les récurrents
+const _intercepterNoteOrig = intercepterNote;
+function intercepterNote(msg){
+  const recurrent = parseRappelRecurrent(msg);
+  if(recurrent && recurrent.texte){
+    ariaRappelRecurrent(recurrent.texte, recurrent.heure, recurrent.jours);
+    const desc = recurrent.jours === 'tous' ? 'tous les jours' :
+                 recurrent.jours === 'semaine' ? 'les jours de semaine' :
+                 recurrent.jours === 'weekend' ? 'le weekend' : recurrent.jours;
+    addAria('📅 Rappel récurrent créé : <b>' + recurrent.texte + '</b><br>' +
+            desc + ' à ' + recurrent.heure + '. Pour l\'arrêter, dites "supprime mon rappel médicaments".');
+    speak('Rappel récurrent programmé pour ' + desc + ' à ' + recurrent.heure);
+    return true;
+  }
+  return _intercepterNoteOrig(msg);
+}
+
+// ════════════════════════════════════════════
+// MOBILE / PWA — configuration
+// ════════════════════════════════════════════
+// URL du serveur relais pour la vraie IA sur mobile.
+// Vide = mode démo. Exemple : 'https://aria-relais.onrender.com'
+const ARIA_RELAY_URL = '';
+const ARIA_PRODUCT = 'senior';
+let chatHistory = [];
+
+// Enregistrement du service worker (PWA installable)
+if('serviceWorker' in navigator && location.protocol === 'https:'){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+// ── Persistance locale (architecture zéro serveur) ──
+function saveState(){
+  try{
+    const s = {
+      profil: curP, dailyUsed, bonusCredits,
+      day: new Date().toISOString().slice(0,10),
+      trialStart: localStorage.getItem('aria_trial_start') || new Date().toISOString().slice(0,10),
+    };
+    localStorage.setItem('aria_state_' + ARIA_PRODUCT, JSON.stringify(s));
+    if(!localStorage.getItem('aria_trial_start'))
+      localStorage.setItem('aria_trial_start', s.trialStart);
+  }catch(e){}
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem('aria_state_' + ARIA_PRODUCT);
+    if(!raw) return false;
+    const s = JSON.parse(raw);
+    if(s.profil && s.profil.name) curP = s.profil;
+    bonusCredits = s.bonusCredits || 0;
+    // crédits journaliers : reset si nouveau jour
+    const today = new Date().toISOString().slice(0,10);
+    dailyUsed = (s.day === today) ? (s.dailyUsed || 0) : 0;
+    // essai 14 jours basé sur le premier lancement
+    const start = localStorage.getItem('aria_trial_start');
+    if(start){
+      const ecoules = Math.floor((Date.now() - new Date(start).getTime()) / 86400000);
+      trialDaysLeft = Math.max(0, 14 - ecoules);
+      if(trialDaysLeft <= 0){ isPro = false; dailyCredits = 10; }
+    }
+    return !!(s.profil && s.profil.name);
+  }catch(e){ return false; }
+}
+
+
+// ── Rappel de fin d'essai (J-2 avant expiration) ──
+function rappelFinEssai(){
+  if(!isPro || trialDaysLeft <= 0) return;
+  if(trialDaysLeft === 2){
+    addAria('⏳ Votre essai Pro se termine dans 2 jours. Pour continuer à profiter d\'Aria Smart et du micro vocal, passez au plan Pro.'); showTrialModal();
+  } else if(trialDaysLeft === 1){
+    addAria('⚠️ Dernier jour d\'essai. Demain, vous repasserez au plan Gratuit (10 crédits, clavier uniquement). Passez Pro pour continuer.');
+  }
+}
+// Vérifier au chargement (une seule fois par session)
+if(!sessionStorage.getItem('essai_rappele')){
+  setTimeout(rappelFinEssai, 3000);
+  sessionStorage.setItem('essai_rappele','1');
+}
+
+// ── Trial System ──
+let trialDaysLeft = 11;
+let trialTotal    = 14;
+let isPro         = true;
+let isPaidPro     = false; // vrai uniquement après abonnement payant // during trial, user has Pro access
+
+function updateTrialBanner(){
+  const banner = document.getElementById('trial-banner');
+  const fill   = document.getElementById('trial-fill');
+  const days   = document.getElementById('trial-days');
+  if(!banner) return;
+  days.textContent = trialDaysLeft;
+  const pct = (trialDaysLeft / trialTotal) * 100;
+  fill.style.width = pct + '%';
+  fill.className = 'trial-fill' + (trialDaysLeft <= 3 ? ' urgent' : '');
+  // Auto show modal at day 1
+  if(trialDaysLeft <= 1){ setTimeout(showTrialModal, 2000); }
+}
+
+function showTrialModal(){ document.getElementById('trial-modal').classList.add('show'); }
+function hideTrialModal(){ 
+  document.getElementById('trial-modal').classList.remove('show');
+  // Downgrade to free if they decline
+  dailyCredits = 10;
+  updateCreditBar();
+updateTrialBanner();
+  addAria('Vous êtes maintenant sur le plan Gratuit — 10 crédits par jour. Passez Pro à tout moment pour retrouver les 100 crédits journaliers.');
+}
+function activatePro(){ isPaidPro = true;
+  document.getElementById('trial-modal').classList.remove('show');
+  document.getElementById('trial-banner').style.display='none';
+  isPro = true; dailyCredits = 100;
+  updateCreditBar();
+updateTrialBanner();
+  addAria('✅ Bienvenue dans Aria Senior Pro ! Vous bénéficiez de 100 crédits par jour. Merci pour votre confiance !');
+}
+
+// ── Credit System ──
+let dailyCredits = 100;   // Pro plan
+let dailyUsed    = 13;    // already used today
+let bonusCredits = 320;
+let currentModel = 'lite';
+const MODEL_COST = {lite:1, smart:3, expert:10};
+
+
+
+function updateModelLocks(){
+  const btns = document.querySelectorAll('.model-btn');
+  btns.forEach((b,i)=>{
+    const cost = b.querySelector('.model-cost');
+    if(!cost) return;
+    if(i===0){ b.style.opacity='1'; cost.textContent='1 crédit'; return; }
+    if(isPaidPro){
+      b.style.opacity='1';
+      cost.textContent = (i===1?'3 crédits':'10 crédits');
+    } else {
+      b.style.opacity='.45';
+      cost.textContent = '🔒 Pro';
+    }
+  });
+}
+function updateMicHint(){
+  const h = document.getElementById('mic-hint');
+  if(h) h.textContent = isPro ? "Appuyez pour parler" : "🔒 Vocal — fonction Pro";
+}
+function updateCreditBar(){
+  const remaining = dailyCredits - dailyUsed;
+  const pct = Math.max(0, (remaining/dailyCredits)*100);
+  document.getElementById('cr-used').textContent = remaining;
+  document.getElementById('cr-total').textContent = dailyCredits;
+  document.getElementById('cr-bonus').textContent = '🎁 '+bonusCredits;
+  const fill = document.getElementById('cr-fill');
+  fill.style.width = pct+'%';
+  fill.className = 'credit-fill'+(pct<=20?' low':'');
+  updateMicHint();
+  updateModelLocks();
+  const warn = document.getElementById('cr-warning');
+  document.getElementById('cr-warn-num').textContent = remaining;
+  warn.className = 'credit-warning'+(remaining<=10&&remaining>0?' show':'');
+}
+
+function selectModel(m, el){
+  if((m==='smart'||m==='expert') && !isPaidPro){
+    addAria('🔒 Aria Smart et Aria Expert sont réservés aux abonnés Pro. Pendant l\'essai, vous profitez d\'Aria Lite sans limite de fonctionnalités.');
+    showTrialModal();
+    return;
+  }
+  currentModel = m;
+  document.querySelectorAll('.model-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function consumeCredits(){ setTimeout(saveState, 50);
+  const cost = MODEL_COST[currentModel]||1;
+  const remaining = dailyCredits - dailyUsed;
+  if(remaining >= cost){
+    dailyUsed += cost;
+  } else if(bonusCredits >= cost){
+    bonusCredits -= cost;
+  } else {
+    addAria('⚠️ Vous n\'avez plus de crédits aujourd\'hui. Rechargez ou attendez minuit pour vos crédits gratuits.');
+    return false;
+  }
+  updateCreditBar();
+updateTrialBanner();
+  return true;
+}
+
+function showRecharge(){ document.getElementById('recharge-modal').classList.add('show'); }
+function hideRecharge(){ document.getElementById('recharge-modal').classList.remove('show'); }
+function buyPack(credits, price){ setTimeout(saveState, 50);
+  bonusCredits += credits;
+  updateCreditBar();
+updateTrialBanner();
+  hideRecharge();
+  addAria(`✅ ${credits} crédits bonus ajoutés ! Vous pouvez continuer à utiliser Aria. Merci ${curP.name} !`);
+}
+
+// Init — restauration de session si disponible
+loadState();
+apply();
+updateCreditBar();
+updateTrialBanner();
+</script>
+
+
+
+<!-- Mon compte -->
+<div class="account-modal" id="account-modal">
+  <div class="account-card">
+    <div class="account-title">⚙️ Mon compte</div>
+    <div class="account-sub">Abonnement et données personnelles</div>
+
+    <div class="account-section">
+      <div class="account-section-title">💳 Abonnement</div>
+      <div class="account-row"><span class="account-row-label">Plan actuel</span><span class="account-row-value" id="acc-plan">Essai Pro</span></div>
+      <div class="account-row"><span class="account-row-label">Prochain prélèvement</span><span class="account-row-value" id="acc-billing">Aucun (essai)</span></div>
+      <button type="button" class="account-btn" onclick="hideAccount();showTrialModal()">Gérer mon abonnement</button>
+      <button type="button" class="account-btn danger" onclick="seniorCancelFlow()">Résilier mon abonnement</button>
+    </div>
+
+    <div class="account-section">
+      <div class="account-section-title">🔊 Confort</div>
+      <div class="account-row">
+        <span class="account-row-label">Lecture vocale des réponses</span>
+        <button type="button" class="account-btn" id="tts-btn" style="width:auto;margin:0;padding:6px 14px" onclick="toggleTTS()">Activée</button>
+      </div>
+    </div>
+
+    <div class="account-section">
+      <div class="account-section-title">🔒 Mes données (RGPD)</div>
+      <div class="account-row"><span class="account-row-label">Stockage</span><span class="account-row-value">Sur cet appareil uniquement</span></div>
+      <button type="button" class="account-btn" onclick="seniorExportData()">Exporter mes données</button>
+      <button type="button" class="account-btn danger" onclick="seniorDeleteData()">Supprimer toutes mes données</button>
+    </div>
+
+    <button type="button" class="account-close" onclick="hideAccount()">Fermer</button>
+  </div>
+</div>
+
+<!-- Confirmation résiliation -->
+<div class="account-modal" id="cancel-modal-senior">
+  <div class="account-card" style="text-align:center">
+    <div style="font-size:2.4rem;margin-bottom:10px">💙</div>
+    <div class="account-title">Résilier votre abonnement ?</div>
+    <div class="account-sub" style="line-height:1.6">Vous repasserez au plan Gratuit (10 crédits par jour). Vos réglages restent sur votre appareil. Aucun prélèvement ne sera effectué.</div>
+    <button type="button" class="account-btn danger" onclick="seniorConfirmCancel()">Oui, résilier maintenant</button>
+    <button type="button" class="account-close" onclick="document.getElementById('cancel-modal-senior').classList.remove('show')" style="margin-top:8px">Non, je garde mon abonnement</button>
+  </div>
+</div>
+
+<!-- Trial modal -->
+<div class="trial-modal" id="trial-modal">
+  <div class="trial-card">
+    <div class="trial-card-ico">⭐</div>
+    <div class="trial-card-title">Votre essai se termine bientôt</div>
+    <div class="trial-card-desc">Continuez avec 100 crédits par jour, et débloquez Aria Smart — des réponses encore plus précises.</div>
+    <div style="background:var(--blue-pale);border-radius:12px;padding:12px;margin-bottom:16px">
+      <div style="font-size:1.5rem;font-weight:900;color:var(--blue)">9,99€ <span style="font-size:.8rem;font-weight:600;color:var(--text3)">/mois</span></div>
+      <div style="font-size:.72rem;color:var(--text3);margin-top:2px">Sans engagement · Annulable à tout moment</div>
+    </div>
+    <button type="button" class="trial-card-price" onclick="activatePro()">✓ Passer Pro maintenant</button>
+    <button type="button" class="trial-card-free" onclick="hideTrialModal()">Continuer avec le plan Gratuit</button>
+  </div>
+</div>
+
+<!-- Recharge modal -->
+<div class="recharge-modal" id="recharge-modal">
+  <div class="recharge-card">
+    <div class="recharge-title">🎁 Acheter des crédits bonus</div>
+    <div class="recharge-sub">Sans expiration — utilisables quand vous voulez</div>
+    <div class="pack-list">
+      <div class="pack-item" onclick="buyPack(200,1.99)">
+        <span class="pack-ico">☕</span>
+        <div class="pack-info"><div class="pack-name">Petit café</div><div class="pack-desc">+200 crédits bonus</div></div>
+        <span class="pack-price">1,99€</span>
+      </div>
+      <div class="pack-item" onclick="buyPack(500,3.99)">
+        <span class="pack-ico">🍕</span>
+        <div class="pack-info"><div class="pack-name">Régulier</div><div class="pack-desc">+500 crédits bonus</div></div>
+        <span class="pack-price">3,99€</span>
+      </div>
+      <div class="pack-item" onclick="buyPack(1500,9.99)">
+        <span class="pack-ico">🚀</span>
+        <div class="pack-info"><div class="pack-name">Intensif</div><div class="pack-desc">+1500 crédits bonus</div></div>
+        <span class="pack-price">9,99€</span>
+      </div>
+    </div>
+    <button type="button" class="recharge-close" onclick="hideRecharge()">Fermer</button>
+  </div>
+</div>
+
+</body>
+</html>

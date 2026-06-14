@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aria Industrial — Forgelis</title>
+<meta name="theme-color" content="#0A0E1A">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --bg:#0A0E1A; --card:rgba(255,255,255,.04); --border:rgba(255,255,255,.09);
+  --steel:#64748B; --accent:#38BDF8; --accent2:#0EA5E9;
+  --text:#EDF2F7; --text2:rgba(237,242,247,.55); --text3:rgba(237,242,247,.35);
+  --green:#4ADE80; --amber:#FBBF24; --red:#F87171;
+}
+body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+.screen { display:none; min-height:100vh; }
+.screen.active { display:block; }
+
+/* ── Connexion entreprise ── */
+#s-login { display:none; align-items:center; justify-content:center; padding:24px; }
+#s-login.active { display:flex; }
+.login-card { width:100%; max-width:380px; }
+.brand { display:flex; align-items:center; gap:11px; margin-bottom:6px; }
+.brand-ico { width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#38BDF8,#6366F1);display:flex;align-items:center;justify-content:center;font-size:1.1rem; }
+.brand-n { font-family:'Space Grotesk',sans-serif; font-size:1.15rem; font-weight:700; }
+.brand-s { font-size:.7rem; color:var(--text3); margin-bottom:30px; }
+.lg-title { font-family:'Space Grotesk',sans-serif; font-size:1.5rem; font-weight:700; margin-bottom:6px; letter-spacing:-.3px; }
+.lg-sub { font-size:.83rem; color:var(--text2); line-height:1.6; margin-bottom:22px; }
+.lg-input { width:100%; background:var(--card); border:1.5px solid var(--border); border-radius:13px; padding:14px 17px; font-family:'Inter',sans-serif; font-size:.95rem; color:var(--text); outline:none; margin-bottom:12px; }
+.lg-input:focus { border-color:rgba(56,189,248,.5); }
+.lg-input::placeholder { color:var(--text3); }
+.lg-cta { width:100%; padding:14px; border-radius:13px; border:none; background:linear-gradient(135deg,#38BDF8,#6366F1); color:#fff; font-family:'Inter',sans-serif; font-size:.92rem; font-weight:600; cursor:pointer; transition:all .2s; }
+.lg-cta:hover { transform:translateY(-1px); }
+.lg-note { font-size:.67rem; color:var(--text3); text-align:center; margin-top:14px; line-height:1.5; }
+
+/* ── App ── */
+.topbar { display:flex; align-items:center; gap:10px; padding:13px 18px; border-bottom:1px solid var(--border); position:sticky; top:0; background:rgba(10,14,26,.92); backdrop-filter:blur(16px); z-index:50; }
+.tb-ico { width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#38BDF8,#6366F1);display:flex;align-items:center;justify-content:center;font-size:.85rem; }
+.tb-name { font-family:'Space Grotesk',sans-serif; font-size:.92rem; font-weight:700; flex:1; }
+.tb-role { font-size:.65rem; font-weight:600; color:var(--accent); background:rgba(56,189,248,.1); border:1px solid rgba(56,189,248,.25); padding:4px 11px; border-radius:50px; cursor:pointer; }
+.content { max-width:560px; margin:0 auto; padding:18px; display:flex; flex-direction:column; gap:14px; }
+
+.card { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:18px; }
+.card-label { font-size:.64rem; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:1.2px; margin-bottom:12px; display:flex; align-items:center; gap:7px; }
+
+/* Brief matinal */
+.brief-line { display:flex; gap:10px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,.05); font-size:.84rem; line-height:1.5; }
+.brief-line:last-child { border-bottom:none; }
+.brief-dot { flex-shrink:0; margin-top:5px; width:7px; height:7px; border-radius:50%; }
+.brief-play { margin-top:12px; display:flex; align-items:center; gap:9px; background:rgba(56,189,248,.08); border:1px solid rgba(56,189,248,.2); border-radius:12px; padding:10px 14px; cursor:pointer; font-size:.8rem; font-weight:600; color:var(--accent); transition:all .2s; }
+.brief-play:hover { background:rgba(56,189,248,.14); }
+
+/* Commande vocale */
+.voice-zone { text-align:center; padding:8px 0 4px; }
+.voice-btn { width:62px; height:62px; border-radius:50%; border:none; background:linear-gradient(145deg,#38BDF8,#6366F1); font-size:1.5rem; cursor:pointer; box-shadow:0 6px 24px rgba(56,189,248,.3); transition:all .2s; }
+.voice-btn:active { transform:scale(.93); }
+.voice-hint { font-size:.72rem; color:var(--text3); margin-top:9px; }
+.voice-examples { display:flex; flex-direction:column; gap:6px; margin-top:14px; }
+.voice-ex { font-size:.76rem; color:var(--text2); background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:10px; padding:9px 13px; cursor:pointer; text-align:left; transition:all .2s; font-family:'Inter',sans-serif; }
+.voice-ex:hover { border-color:rgba(56,189,248,.35); color:var(--text); }
+
+/* Réponse Aria */
+.aria-reply { display:none; background:rgba(56,189,248,.06); border:1px solid rgba(56,189,248,.2); border-radius:14px; padding:14px 16px; margin-top:12px; text-align:left; }
+.aria-reply.show { display:block; animation:slideIn .3s ease; }
+@keyframes slideIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.aria-reply-head { font-size:.68rem; font-weight:700; color:var(--accent); margin-bottom:6px; }
+.aria-reply-txt { font-size:.84rem; line-height:1.6; }
+.aria-confirm { display:flex; gap:8px; margin-top:11px; }
+.ac-btn { flex:1; padding:9px; border-radius:10px; font-family:'Inter',sans-serif; font-size:.78rem; font-weight:600; cursor:pointer; transition:all .2s; }
+.ac-yes { border:none; background:linear-gradient(135deg,#38BDF8,#6366F1); color:#fff; }
+.ac-no { border:1px solid var(--border); background:transparent; color:var(--text2); }
+
+/* File d'attente */
+.queue-item { display:flex; align-items:center; gap:11px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,.05); }
+.queue-item:last-child { border-bottom:none; }
+.q-status { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.q-info { flex:1; }
+.q-action { font-size:.8rem; font-weight:500; }
+.q-meta { font-size:.66rem; color:var(--text3); margin-top:2px; }
+.q-badge { font-size:.6rem; font-weight:700; padding:3px 9px; border-radius:50px; white-space:nowrap; }
+.qb-done { background:rgba(74,222,128,.12); color:var(--green); }
+.qb-wait { background:rgba(251,191,36,.12); color:var(--amber); }
+
+/* Journal */
+.log-item { display:flex; gap:10px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,.05); font-size:.76rem; }
+.log-item:last-child { border-bottom:none; }
+.log-time { color:var(--text3); flex-shrink:0; font-family:monospace; font-size:.7rem; margin-top:1px; }
+.log-txt { line-height:1.5; color:var(--text2); }
+.log-txt b { color:var(--text); font-weight:600; }
+
+/* Postes */
+.cat { border:1px solid var(--border); border-radius:14px; margin-bottom:9px; overflow:hidden; }
+.cat-head { display:flex; align-items:center; gap:11px; padding:13px 15px; cursor:pointer; transition:background .2s; }
+.cat-head:hover { background:rgba(255,255,255,.03); }
+.cat-ico { font-size:1.1rem; }
+.cat-name { flex:1; font-size:.85rem; font-weight:600; }
+.cat-count { font-size:.64rem; color:var(--text3); }
+.cat-arrow { font-size:.6rem; color:var(--text3); transition:transform .25s; }
+.cat.open .cat-arrow { transform:rotate(180deg); }
+.cat-body { display:none; padding:4px 15px 13px; }
+.cat.open .cat-body { display:block; }
+.poste { display:flex; align-items:center; gap:9px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.04); cursor:pointer; }
+.poste:last-child { border-bottom:none; }
+.poste:hover .p-name { color:var(--accent); }
+.p-name { font-size:.78rem; flex:1; transition:color .2s; }
+.p-lvl { font-size:.58rem; font-weight:700; color:var(--text3); background:rgba(255,255,255,.05); padding:2px 8px; border-radius:50px; }
+
+/* Modal fonctions du poste */
+.fmodal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:200; align-items:center; justify-content:center; padding:22px; }
+.fmodal.show { display:flex; }
+.fcard { background:#0F1422; border:1px solid var(--border); border-radius:20px; padding:22px; max-width:360px; width:100%; max-height:80vh; overflow-y:auto; }
+.f-title { font-family:'Space Grotesk',sans-serif; font-size:1.05rem; font-weight:700; margin-bottom:3px; }
+.f-sub { font-size:.7rem; color:var(--text3); margin-bottom:16px; }
+.f-section { font-size:.62rem; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:1px; margin:14px 0 8px; }
+.f-item { display:flex; gap:9px; font-size:.78rem; color:var(--text2); line-height:1.5; padding:5px 0; }
+.f-item::before { content:'·'; color:var(--accent); font-weight:700; }
+.f-close { width:100%; padding:12px; border-radius:12px; border:none; background:linear-gradient(135deg,#38BDF8,#6366F1); color:#fff; font-family:'Inter',sans-serif; font-size:.85rem; font-weight:600; cursor:pointer; margin-top:16px; }
+
+/* Tarifs */
+.tarif-row { display:flex; align-items:center; justify-content:space-between; padding:11px 0; border-bottom:1px solid rgba(255,255,255,.05); }
+.tarif-row:last-child { border-bottom:none; }
+.t-plan { font-size:.82rem; font-weight:600; }
+.t-detail { font-size:.66rem; color:var(--text3); margin-top:2px; }
+.t-price { font-family:'Space Grotesk',sans-serif; font-size:.95rem; font-weight:700; color:var(--accent); white-space:nowrap; }
+
+.footer-note { font-size:.65rem; color:var(--text3); text-align:center; padding:6px 0 22px; line-height:1.6; }
+.demo-badge { position:fixed; bottom:14px; right:14px; font-size:.6rem; font-weight:700; color:var(--amber); background:rgba(251,191,36,.1); border:1px solid rgba(251,191,36,.3); padding:5px 12px; border-radius:50px; z-index:100; }
+</style>
+</head>
+<body>
+
+<!-- ── CONNEXION ENTREPRISE ── -->
+<div class="screen active" id="s-login">
+  <div class="login-card">
+    <div class="brand"><div class="brand-ico">🏭</div><span class="brand-n">Aria Industrial</span></div>
+    <div class="brand-s">par Forgelis</div>
+    <div class="lg-title">Espace entreprise</div>
+    <div class="lg-sub">Connectez-vous avec le code de votre entreprise et votre profil identifié. Vos documents ne quittent jamais votre infrastructure.</div>
+    <input type="text" class="lg-input" id="lg-code" placeholder="Code entreprise (ex : FORG-2026)" autocomplete="off">
+    <input type="text" class="lg-input" id="lg-name" placeholder="Votre nom" autocomplete="off" onkeydown="if(event.key==='Enter')loginEnt()">
+    <button type="button" class="lg-cta" onclick="loginEnt()">Accéder à Aria →</button>
+    <div class="lg-note">🔒 Données chiffrées · Index local à votre entreprise · Journal d'actions inviolable · Conforme RGPD</div>
+  </div>
+</div>
+
+<!-- ── DASHBOARD ── -->
+<div class="screen" id="s-app">
+  <div class="topbar">
+    <div class="tb-ico">🏭</div>
+    <span class="tb-name">Aria Industrial · <span id="ent-name">—</span></span>
+    <button type="button" class="tb-role" id="role-btn" onclick="cycleRole()">👤 Dirigeant</button>
+  </div>
+
+  <div class="content">
+
+
+    <!-- Visite guidée prospects -->
+    <div class="card" style="border-color:rgba(56,189,248,.3)">
+      <div class="card-label" style="color:var(--accent)">🗺️ Découverte guidée — 2 minutes</div>
+      <div id="visite-titre" style="font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;margin-bottom:6px"></div>
+      <div id="visite-texte" style="font-size:.8rem;color:var(--text2);line-height:1.6;min-height:36px"></div>
+      <button type="button" id="visite-btn" onclick="lancerVisite()"
+        style="width:100%;margin-top:10px;padding:11px;border-radius:12px;border:none;
+        background:linear-gradient(135deg,#38BDF8,#6366F1);color:#fff;
+        font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer">
+        ▶ Lancer la visite guidée
+      </button>
+      <div id="visite-nav" style="display:none;gap:8px;margin-top:10px;align-items:center">
+        <button type="button" onclick="visitePrecedent()" style="padding:8px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:inherit;font-size:.78rem;cursor:pointer">←</button>
+        <span id="visite-prog" style="flex:1;text-align:center;font-size:.75rem;color:var(--text3)"></span>
+        <button type="button" onclick="visiteSuivant()" style="padding:8px 14px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-family:inherit;font-size:.78rem;font-weight:600;cursor:pointer">Suivant →</button>
+      </div>
+    </div>
+
+    <!-- Brief matinal -->
+    <div class="card" id="brief-card">
+      <div class="card-label">☀️ Brief du matin — <span id="brief-date">—</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--amber)"></span><span><b>3 devis</b> en attente de signature depuis plus de 7 jours — total 14 200 €</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--accent)"></span><span><b>Thomas Mercier</b> est en congés aujourd'hui — retour lundi 21</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--red)"></span><span>Le contrat <b>Dupont SARL</b> expire dans 5 jours — renouvellement à préparer</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--green)"></span><span>Facture <b>#2026-114</b> payée hier — 3 850 €</span></div>
+      <div class="brief-play" onclick="playBrief()">🔊 Écouter le brief vocal</div>
+    </div>
+
+    <!-- Commande vocale -->
+    <div class="card">
+      <div class="card-label">🎙️ Donner un ordre à Aria</div>
+      <div class="voice-zone">
+        <button type="button" class="voice-btn" onclick="demoVoice(0)">🎙️</button>
+        <div class="voice-hint">Maintenez pour parler — ou écrivez votre ordre :</div>
+        <div style="display:flex;gap:8px;margin-top:11px">
+          <input type="text" class="lg-input" id="order-input" placeholder="Ex : pose un RDV avec le client Morel jeudi 14h..." style="margin-bottom:0;font-size:.8rem;padding:11px 14px" onkeydown="if(event.key==='Enter')sendWritten()">
+          <button type="button" class="ac-btn ac-yes" style="flex:0 0 auto;padding:0 16px" onclick="sendWritten()">→</button>
+        </div>
+        <div style="font-size:.64rem;color:var(--text3);margin-top:8px">✍️ Tout ce qui peut être dit peut être écrit — même compréhension, mêmes actions.</div>
+        <div class="voice-hint" style="margin-top:12px">Ou essayez un exemple :</div>
+        <div class="voice-examples">
+          <button type="button" class="voice-ex" onclick="demoVoice(0)">« Pose 2 semaines de congés à Thomas du 14 au 28 juillet et préviens-le »</button>
+          <button type="button" class="voice-ex" onclick="demoVoice(1)">« Retrouve-moi le devis plomberie de mars pour le client Martin »</button>
+          <button type="button" class="voice-ex" onclick="demoVoice(2)">« Transmets à Sophie (RH) : analyser les 4 candidatures reçues cette semaine »</button>
+          <button type="button" class="voice-ex" onclick="demoVoice(3)">« Relance les factures impayées selon notre process habituel »</button>
+          <button type="button" class="voice-ex" onclick="demoVoice(4)">« Demande à Thomas de valider le bon de commande Acier+ »</button>
+          <button type="button" class="voice-ex" onclick="demoVoice(5)">« Aria, déclenche l'alerte niveau 2 — fuite hydraulique atelier 3 »</button>
+        </div>
+        <div class="aria-reply" id="aria-reply">
+          <div class="aria-reply-head">✦ ARIA</div>
+          <div class="aria-reply-txt" id="aria-reply-txt"></div>
+          <div class="aria-confirm" id="aria-confirm">
+            <button type="button" class="ac-btn ac-yes" onclick="confirmOrder()">✓ Je confirme</button>
+            <button type="button" class="ac-btn ac-no" onclick="cancelOrder()">Annuler</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- Messages & tâches déléguées -->
+    <div class="card">
+      <div class="card-label">📨 Messages & tâches déléguées — entre collaborateurs</div>
+      <div class="voice-examples" style="margin-top:0">
+        <button type="button" class="voice-ex" onclick="demoDeleg(0)">« Aria, laisse un message à Karim : le client Morel a rappelé, c'est urgent »</button>
+        <button type="button" class="voice-ex" onclick="demoDeleg(1)">« Aria, prépare une tâche pour Julie : envoyer le contrat signé au notaire — elle l'exécutera quand elle validera »</button>
+      </div>
+      <div class="aria-reply" id="deleg-reply">
+        <div class="aria-reply-head">✦ ARIA</div>
+        <div class="aria-reply-txt" id="deleg-reply-txt"></div>
+        <div class="aria-confirm" id="deleg-confirm">
+          <button type="button" class="ac-btn ac-yes" onclick="confirmDeleg()">✓ Je confirme</button>
+          <button type="button" class="ac-btn ac-no" onclick="document.getElementById('deleg-reply').classList.remove('show')">Annuler</button>
+        </div>
+      </div>
+
+      <div class="card-label" style="margin-top:16px">📥 Côté destinataire — « Mes tâches reçues » (vue de Julie)</div>
+      <div id="tasks-received">
+        <div class="queue-item" id="task-julie" style="display:none">
+          <span class="q-status" style="background:var(--accent)"></span>
+          <div class="q-info"><div class="q-action">Envoyer le contrat signé au notaire</div><div class="q-meta">Préparée par Claire (Secrétaire) · <span id="task-julie-status" style="color:var(--amber)">📬 Reçue</span></div></div>
+          <button type="button" class="ac-btn ac-yes" style="flex:0 0 auto;padding:7px 13px" onclick="execTask()">▶ Exécuter</button>
+        </div>
+        <div class="queue-item" id="task-demo">
+          <span class="q-status" style="background:var(--accent)"></span>
+          <div class="q-info"><div class="q-action">Relancer le fournisseur Acier+ sur le délai</div><div class="q-meta">Préparée par Marc (Chef d'atelier) hier 17:32 · <span style="color:var(--accent)">👁 Vue</span></div></div>
+          <button type="button" class="ac-btn ac-yes" style="flex:0 0 auto;padding:7px 13px" onclick="execTaskDemo(this)">▶ Exécuter</button>
+        </div>
+      </div>
+      <div style="font-size:.64rem;color:var(--text3);margin-top:10px">Accusés en temps réel : <span style="color:var(--amber)">📬 Reçue</span> → <span style="color:var(--accent)">👁 Vue</span> → ⚙️ En cours → <span style="color:var(--green)">✅ Fait</span> — l'expéditeur suit sans relancer.</div>
+      <div style="font-size:.66rem;color:var(--text3);margin-top:8px;line-height:1.5">La tâche déléguée contient l'ordre complet, déjà prêt. Le destinataire la déclenche d'un mot — « Aria, exécute la tâche de Claire » — ou d'un appui. Chaque étape est tracée au journal.</div>
+    </div>
+
+
+    <!-- Réunion → actions -->
+    <div class="card">
+      <div class="card-label">🗣️ Réunion → actions — les décisions deviennent des tâches</div>
+      <div style="font-size:.76rem;color:var(--text2);line-height:1.6;margin-bottom:11px">Dictez votre compte-rendu (ou collez-le) : Aria extrait les décisions et crée les tâches déléguées pour chaque personne citée.</div>
+      <button type="button" class="voice-ex" onclick="demoMeeting()">« Fin de réunion : Marc relance Acier+ avant mercredi, Julie prépare le contrat Dupont, et on fait un point vendredi 11h »</button>
+      <div class="aria-reply" id="meet-reply">
+        <div class="aria-reply-head">✦ ARIA — décisions détectées</div>
+        <div class="aria-reply-txt" id="meet-reply-txt"></div>
+        <div class="aria-confirm" id="meet-confirm">
+          <button type="button" class="ac-btn ac-yes" onclick="confirmMeeting()">✓ Créer les 2 tâches + le rappel</button>
+          <button type="button" class="ac-btn ac-no" onclick="document.getElementById('meet-reply').classList.remove('show')">Annuler</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- File d'attente -->
+    <div class="card">
+      <div class="card-label">⏳ File d'exécution</div>
+      <div id="queue-list">
+        <div class="queue-item">
+          <span class="q-status" style="background:var(--green)"></span>
+          <div class="q-info"><div class="q-action">Email de relance → Garage Lemoine</div><div class="q-meta">Exécuté à 08:42 · PC Accueil</div></div>
+          <span class="q-badge qb-done">Fait</span>
+        </div>
+        <div class="queue-item">
+          <span class="q-status" style="background:var(--amber)"></span>
+          <div class="q-info"><div class="q-action">Archiver dossier chantier Bellevue</div><div class="q-meta">En attente · PC Atelier éteint → exécution à l'allumage</div></div>
+          <span class="q-badge qb-wait">En file</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zone annulation 5 min -->
+    <div id="cancel-zone" style="display:none;margin-bottom:0">
+      <div style="font-size:.64rem;font-weight:700;color:#F87171;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">↩️ Annulation possible (5 min)</div>
+    </div>
+    <!-- Journal d'actions -->
+    <div class="card">
+      <div class="card-label" style="justify-content:space-between">
+      🛡️ Journal d'actions — inviolable
+      <span style="display:flex;gap:6px">
+        <button type="button" onclick="exporterJournal('csv')" style="font-size:.62rem;font-weight:700;color:var(--accent);background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);padding:3px 10px;border-radius:50px;cursor:pointer;font-family:inherit">Export CSV</button>
+        <button type="button" onclick="exporterJournal('txt')" style="font-size:.62rem;font-weight:700;color:var(--text2);background:rgba(255,255,255,.05);border:1px solid var(--border);padding:3px 10px;border-radius:50px;cursor:pointer;font-family:inherit">Export TXT</button>
+      </span>
+    </div>
+      <div id="log-list">
+        <div class="log-item"><span class="log-time">09:14</span><span class="log-txt"><b>Dirigeant</b> a validé le devis #D-227 (4 100 €) par commande vocale mobile</span></div>
+        <div class="log-item"><span class="log-time">08:42</span><span class="log-txt"><b>Aria</b> a envoyé la relance J+15 — facture #2026-098 (process automatique)</span></div>
+        <div class="log-item"><span class="log-time">08:00</span><span class="log-txt"><b>Aria</b> a généré le brief matinal — 4 points signalés</span></div>
+      </div>
+    </div>
+
+    <!-- Postes & rôles -->
+    <div class="card">
+      <div class="card-label">👥 Postes de l'entreprise — fonctions Aria par métier</div>
+      <div id="cats"></div>
+      <div style="font-size:.66rem;color:var(--text3);margin-top:10px;line-height:1.5">De l'artisan seul à la structure de 5000+ salariés — transport, logistique, santé, service public, industrie, tertiaire, commerce. Touchez un poste pour voir ses fonctions Aria. Chaque personne identifiée est nommée à son poste. Un poste absent ? Aria le crée à l'onboarding avec les fonctions de son niveau.</div>
+    </div>
+
+
+
+    <!-- Notes terrain & Chaîne hiérarchique -->
+    <div class="card">
+      <div class="card-label">📝 Notes terrain & Rappels</div>
+      <div style="font-size:.76rem;color:var(--text2);line-height:1.6;margin-bottom:10px">Pas le temps de noter sur le terrain ? Dictez à Aria — elle mémorise et rappelle au bon moment.</div>
+      <div class="voice-examples" style="margin-top:0">
+        <button type="button" class="voice-ex" onclick="(() => { noterInd('Commander les joints hydrauliques pour la presse 3', new Date(Date.now()+3600000).toISOString()); addAria_ind('📝 Noté. Je vous rappellerai dans 1h de commander les joints hydrauliques.'); })()">« Note : commander les joints hydrauliques pour la presse 3, rappelle-moi dans 1h »</button>
+        <button type="button" class="voice-ex" onclick="(() => { noterInd('Appeler le client Martin pour le devis toiture'); addAria_ind('📝 Noté dans vos mémos. Retrouvez-le en demandant « mes notes ».'); })()">« Note : appeler le client Martin pour le devis toiture »</button>
+      </div>
+    </div>
+
+    <!-- Chaîne hiérarchique -->
+    <div class="card">
+      <div class="card-label">🏛️ Chaîne hiérarchique — demandes & messages</div>
+      <div style="font-size:.76rem;color:var(--text2);line-height:1.6;margin-bottom:10px">Aria respecte et fait respecter la chaîne de commandement. Un salarié ne peut contacter que son responsable direct — jamais la direction sans passer par l'intermédiaire.</div>
+      <div class="voice-examples" style="margin-top:0">
+        <button type="button" class="voice-ex" onclick="demoChaine(0)">⛔ Employé → Patron direct (bloqué — non conforme)</button>
+        <button type="button" class="voice-ex" onclick="demoChaine(1)">✅ Employé → Son chef direct (autorisé)</button>
+        <button type="button" class="voice-ex" onclick="demoChaine(2)">✅ Manager → Directeur (autorisé)</button>
+        <button type="button" class="voice-ex" onclick="demoChaine(3)">⛔ Employé → RH directement (bloqué — service restreint)</button>
+        <button type="button" class="voice-ex" onclick="demoChaine(4)">✅ Manager → RH demande de formation (autorisé)</button>
+        <button type="button" class="voice-ex" onclick="demoChaine(5)">✅ Employé → RH problème de paie (autorisé — droit fondamental)</button>
+        <button type="button" class="voice-ex" onclick="demoChaine(6)">⛔ Employé → RH demande formation (bloqué — passe par le manager)</button>
+      </div>
+      <div style="font-size:.64rem;color:var(--text3);margin-top:10px;line-height:1.5">
+        Niveau 1 Dirigeant → accès total<br>
+        Niveaux 1-3 → peuvent contacter les RH (recrutement, formation, congés équipe)<br>
+        <b>Tous niveaux</b> → peuvent contacter les RH pour un <b>problème de paie</b> (droit fondamental art. L3243-2)<br>
+        Niveaux 4-6 → passent par leur responsable pour tout le reste<br>
+        Toute tentative hors règle est bloquée et tracée au journal
+      </div>
+    </div>
+
+    <!-- Modules de gestion -->
+    <div class="card">
+      <div class="card-label">🧩 Modules de gestion — pour tout poste qui gère</div>
+      <div style="font-size:.76rem;color:var(--text2);line-height:1.6;margin-bottom:12px">Inspirés des meilleurs outils du marché (Toast, Lightspeed, Procore, Skello, Salesforce) — mais unifiés et pilotables à la voix. Chaque module s'active selon le poste.</div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--accent)"></span><span><b>Stocks & inventaire</b> — inventaires vocaux, alertes ruptures/DLC/surstocks, valorisation</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--accent)"></span><span><b>Achats & fournisseurs</b> — commandes dictées ou automatiques, historique tarifs, relances livraisons</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--accent)"></span><span><b>Facturation & encaissement</b> — devis→facture→relance en un fil, exports comptables</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--accent)"></span><span><b>Planning & pointage</b> — plannings d'équipes, heures pointées à la voix, conflits détectés</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--accent)"></span><span><b>Chantiers & interventions</b> — avancement, rapports dictés sur site, photos liées aux dossiers</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--accent)"></span><span><b>Réservations & agenda</b> — RDV, tables, chambres, rappels automatiques aux clients</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--accent)"></span><span><b>CRM clients</b> — fiche client complète avant chaque échange, relances intelligentes</span></div>
+    </div>
+
+
+
+    <!-- Fonctions avancées -->
+    <div class="card">
+      <div class="card-label">🚀 Fonctions avancées</div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--red)"></span><span><b>Urgence & astreinte en cascade</b> — l'alerte remonte la chaîne personne par personne jusqu'à prise en charge, tout est horodaté (essayez l'exemple 🚨 ci-dessus)</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--accent)"></span><span><b>Intégration des nouveaux</b> — Aria devient le tuteur du nouvel embauché : parcours du poste, procédures expliquées à la demande, « qui fait quoi ici », savoir du prédécesseur déjà mémorisé</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--accent)"></span><span><b>KPI vocaux & prévisions</b> — « mon CA de la semaine contre l'an dernier » en 2 secondes · anticipation des ruptures de stock, charge d'équipe, chantier qui dérive</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--accent)"></span><span><b>Traduction automatique des consignes</b> — le chef dicte en français, chaque membre de l'équipe reçoit dans sa langue (BTP, restauration, logistique, propreté)</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--accent)"></span><span><b>Mode hors-ligne terrain</b> — cave, chantier, chambre froide, zone blanche : on dicte quand même, Aria synchronise au retour du réseau</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--accent)"></span><span><b>Sondage éclair d'équipe</b> — « demande qui peut venir samedi » → chacun répond d'un mot → résultat consolidé en 10 minutes</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--accent)"></span><span><b>Veille réglementaire sectorielle</b> — HACCP, sécurité chantier, normes transport : Aria alerte quand une obligation approche ou évolue</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--accent)"></span><span><b>Signature électronique intégrée</b> — le devis part, le client signe sur son téléphone, le document signé revient classé</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--text3)"></span><span><b>Standard d'accueil intelligent</b> <span style="font-size:.6rem;font-weight:700;color:var(--amber);background:rgba(251,191,36,.1);padding:2px 8px;border-radius:50px">BIENTÔT</span> — Aria répond aux appels clients, qualifie, prend le RDV, transmet au bon profil</span></div>
+    </div>
+
+    <!-- Connecteurs -->
+    <div class="card">
+      <div class="card-label">🔌 Connecté à votre existant</div>
+      <div style="font-size:.76rem;color:var(--text2);line-height:1.6;margin-bottom:11px">Aria ne vous demande pas de tout remplacer — elle se branche sur vos outils et les rend vocaux.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px">
+        <span style="font-size:.7rem;font-weight:600;color:var(--text2);background:rgba(255,255,255,.05);border:1px solid var(--border);padding:6px 13px;border-radius:50px">Sage</span>
+        <span style="font-size:.7rem;font-weight:600;color:var(--text2);background:rgba(255,255,255,.05);border:1px solid var(--border);padding:6px 13px;border-radius:50px">Cegid</span>
+        <span style="font-size:.7rem;font-weight:600;color:var(--text2);background:rgba(255,255,255,.05);border:1px solid var(--border);padding:6px 13px;border-radius:50px">Microsoft 365</span>
+        <span style="font-size:.7rem;font-weight:600;color:var(--text2);background:rgba(255,255,255,.05);border:1px solid var(--border);padding:6px 13px;border-radius:50px">Google Workspace</span>
+        <span style="font-size:.7rem;font-weight:600;color:var(--text2);background:rgba(255,255,255,.05);border:1px solid var(--border);padding:6px 13px;border-radius:50px">SharePoint</span>
+        <span style="font-size:.7rem;font-weight:600;color:var(--text2);background:rgba(255,255,255,.05);border:1px solid var(--border);padding:6px 13px;border-radius:50px">ERP métiers</span>
+        <span style="font-size:.7rem;font-weight:600;color:var(--text2);background:rgba(255,255,255,.05);border:1px solid var(--border);padding:6px 13px;border-radius:50px">Votre outil ? → sur mesure</span>
+      </div>
+    </div>
+
+    <!-- Système Aria -->
+    <div class="card">
+      <div class="card-label">⚙️ Le système Aria — autonome et évolutif</div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--green)"></span><span><b>Mises à jour automatiques</b> — silencieuses, sans interruption de service, hors heures d'activité</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--green)"></span><span><b>Auto-diagnostic & auto-réparation</b> — Aria surveille ses propres modules : en cas d'erreur, le module est redémarré, la dernière version stable restaurée, et le correctif appliqué — sans intervention</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--green)"></span><span><b>Notifications hors-ligne</b> — Push PWA (app fermée), Email et SMS selon le forfait. Le salarié est prévenu même s'il n'est pas connecté à Aria</span></div>
+      <div class="brief-line"><span class="brief-dot" style="background:var(--amber)"></span><span><b>Développement sur mesure</b> — une fonction absente de l'offre ? Décrivez-la à Aria, recevez un devis, la fonction est développée et livrée directement dans votre Aria. Facturé en supplément, propriété de votre licence</span></div>
+      <div style="font-size:.66rem;color:var(--text3);margin-top:10px;line-height:1.5">Exemple : « Aria, j'aimerais un module de consigne de bouteilles pour ma brasserie » → analyse → devis sous 48h → développement → activé dans votre compte.</div>
+    </div>
+
+
+    <!-- Connecteurs comptables -->
+    <div class="card">
+      <div class="card-label">🔌 Synchronisation comptable — votre logiciel + Aria</div>
+      <div style="font-size:.76rem;color:var(--text2);line-height:1.6;margin-bottom:11px">
+        Le comptable garde son logiciel habituel. Aria s'y connecte et le rend vocal. Les identifiants restent sur l'appareil — jamais chez Forgelis.
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px">
+        <span style="font-size:.72rem;font-weight:700;color:var(--text2);background:rgba(255,255,255,.05);border:1px solid var(--border);padding:6px 12px;border-radius:50px">🟣 Odoo</span>
+        <span style="font-size:.72rem;font-weight:700;color:var(--text2);background:rgba(255,255,255,.05);border:1px solid var(--border);padding:6px 12px;border-radius:50px">🟢 Sage</span>
+        <span style="font-size:.72rem;font-weight:700;color:var(--text2);background:rgba(255,255,255,.05);border:1px solid var(--border);padding:6px 12px;border-radius:50px">🔵 Cegid</span>
+        <span style="font-size:.72rem;font-weight:700;color:var(--text2);background:rgba(255,255,255,.05);border:1px solid var(--border);padding:6px 12px;border-radius:50px">🟩 QuickBooks</span>
+        <span style="font-size:.72rem;font-weight:700;color:var(--text2);background:rgba(255,255,255,.05);border:1px solid var(--border);padding:6px 12px;border-radius:50px">🟡 Pennylane</span>
+        <span style="font-size:.72rem;font-weight:700;color:var(--text2);background:rgba(255,255,255,.05);border:1px solid var(--border);padding:6px 12px;border-radius:50px">📊 Excel/CSV</span>
+        <span style="font-size:.7rem;font-weight:600;color:var(--amber);background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);padding:6px 12px;border-radius:50px">⚙️ Autre → sur mesure</span>
+      </div>
+      <div class="voice-examples" style="margin-top:0">
+        <button type="button" class="voice-ex" onclick="document.getElementById('role-btn').textContent='👤 Employe standard';demoCompta(0)">« Aria, quelles sont les factures impayées depuis plus de 30 jours ? »</button>
+        <button type="button" class="voice-ex" onclick="document.getElementById('role-btn').textContent='👤 Employe standard';demoCompta(1)">« Aria, crée une facture pour le client Durand, 2 400 euros HT »</button>
+        <button type="button" class="voice-ex" onclick="document.getElementById('role-btn').textContent='👤 Dirigeant';demoCompta(2)">« Aria, exporte le FEC de juin pour mon commissaire aux comptes »</button>
+        <button type="button" class="voice-ex" onclick="demoCompta(3)">« Aria, synchronise les paiements bancaires du mois »</button>
+      </div>
+      <button type="button" onclick="afficherConnecteurs()"
+        style="width:100%;margin-top:12px;padding:10px;border-radius:11px;
+        border:none;background:linear-gradient(135deg,#38BDF8,#6366F1);
+        color:#fff;font-family:inherit;font-size:.8rem;font-weight:600;cursor:pointer">
+        🔌 Voir tous les connecteurs disponibles
+      </button>
+      <div style="font-size:.64rem;color:var(--text3);margin-top:9px;line-height:1.5">
+        Configuration par la Direction · Comptable (niv.4) : consultation + saisie vocale · Export FEC : niv.1-2 uniquement · Identifiants : stockés sur l'appareil client uniquement
+      </div>
+    </div>
+
+    <!-- Tarification -->
+    <div class="card">
+      <div class="card-label">💼 Tarification — par personne identifiée</div>
+      <div class="tarif-row"><div><div class="t-plan">Solo</div><div class="t-detail">1 dirigeant + 2 postes · micro inclus</div></div><span class="t-price">29 €/mois</span></div>
+      <div class="tarif-row"><div><div class="t-plan">TPE</div><div class="t-detail">Jusqu'à 15 identifiés · brief + journal</div></div><span class="t-price">79 €/mois</span></div>
+      <div class="tarif-row"><div><div class="t-plan">PME</div><div class="t-detail">Jusqu'à 50 identifiés · automatisations</div></div><span class="t-price">199 €/mois</span></div>
+      <div class="tarif-row"><div><div class="t-plan">Fonctions sur mesure</div><div class="t-detail">Développées à la demande, livrées dans votre Aria</div></div><span class="t-price">Sur devis</span></div>
+      <div class="tarif-row"><div><div class="t-plan">ETI & Grands comptes (jusqu'à 5000+ identifiés)</div><div class="t-detail">Multi-sites · déploiement accompagné · clé API dédiée (BYOK)</div></div><span class="t-price">Sur devis</span></div>
+    </div>
+
+    <div class="footer-note">Aria Industrial · Sans installation physique — accès navigateur · Documents indexés via vos espaces partagés (Drive, OneDrive, SharePoint) ou agent léger serveur · Forgelis © 2026</div>
+  </div>
+</div>
+
+
+<!-- Modal connecteurs comptables -->
+<div class="fmodal" id="compta-modal" onclick="this.classList.remove('show')">
+  <div class="fcard" onclick="event.stopPropagation()" style="max-width:400px">
+    <div class="f-title">🔌 Connecteurs comptables</div>
+    <div class="f-sub">Synchronisation avec votre logiciel existant — clé du client, données chez le client</div>
+    <div id="compta-liste"></div>
+    <button type="button" class="f-close" onclick="document.getElementById('compta-modal').classList.remove('show')">Fermer</button>
+  </div>
+</div>
+
+<!-- Modal fonctions poste -->
+<div class="fmodal" id="fmodal" onclick="this.classList.remove('show')">
+  <div class="fcard" onclick="event.stopPropagation()">
+    <div class="f-title" id="f-title">Poste</div>
+    <div class="f-sub" id="f-sub">Niveau d'accès</div>
+    <div id="f-body"></div>
+    <button type="button" class="f-close" onclick="document.getElementById('fmodal').classList.remove('show')">Fermer</button>
+  </div>
+</div>
+
+<div class="demo-badge">DÉMO — Aperçu produit</div>
+
+<script>
+// ════════════════════════════════════════════
+// ARIA INDUSTRIAL — prototype v1
+// Design inspiré de Linear (sombre, précis) et Salesforce (rôles)
+// ════════════════════════════════════════════
+
+// ── Fonctions communes par niveau de responsabilité ──
+const FONCTIONS_BASE = ['Poser des questions à Aria sur ses propres dossiers', 'Recherche vocale dans les documents autorisés', 'Recevoir consignes et notifications', 'Laisser un message vocal à un collègue précis', 'Créer une tâche déléguée — exécutée à la demande du destinataire', 'Recevoir et déclencher les tâches qui lui sont déléguées', 'Parité vocal/écrit — chaque action possible à la voix l\'est aussi au clavier', 'Notes terrain dictées (mémos vocaux instantanés)', 'Rappels personnels programmés', 'Demandes à la hiérarchie via la chaîne de commandement'];
+const FONCTIONS_DOC = ['Créer, modifier et transférer des documents', 'Prendre et gérer des rendez-vous', 'Dicter des courriers et comptes-rendus'];
+const FONCTIONS_MGR = ['Brief matinal de son équipe', 'Transmettre des consignes à son équipe', 'Voir les disponibilités et congés de son équipe', 'Valider les demandes de son périmètre', 'Suppléance automatique — les tâches d\'un absent basculent vers son remplaçant', 'Réunions transformées en tâches déléguées', 'Sondage éclair d\'équipe', 'Astreinte en cascade de son périmètre'];
+const FONCTIONS_DIR = ['Accès global — tous services, tous documents', 'Brief matinal entreprise complet', 'Ordres vocaux à distance (mobile) sur tous les postes', 'Poser/valider congés et absences', 'Validation en chaîne (devis, contrats, embauches)', 'Journal d\'actions complet', 'Alertes échéances (contrats, factures, relances)', 'Automatisations (« fais comme d\'habitude »)', 'Rapports périodiques automatiques', 'Gestion des profils et niveaux d\'accès', 'Vue de charge — qui croule, qui est disponible, tâches dormantes', 'Suivi des statuts en temps réel (reçu / vu / en cours / fait)', 'KPI vocaux et prévisions (CA, stocks, charge)', 'Veille réglementaire sectorielle'];
+
+// ── 12 catégories — postes du garagiste à la grosse PME ──
+const CATEGORIES = [
+{ico:"👔",nom:"Direction & Pilotage",postes:[
+  ["Gérant / PDG / Artisan dirigeant",1,FONCTIONS_DIR],
+  ["Directeur général",1,FONCTIONS_DIR],
+  ["Directeur de business unit / division",2,FONCTIONS_MGR.concat(["Consolidation multi-équipes","Reporting direction générale"])],
+  ["Directeur de site / d'agence / d'établissement",2,FONCTIONS_MGR.concat(["Rapports de site","Coordination multi-équipes"])],
+  ["Chef de projet / PMO",3,FONCTIONS_MGR.concat(["Suivi jalons et livrables","Comptes-rendus de projet automatiques"])],
+  ["Assistant de direction",3,FONCTIONS_DOC.concat(["Gestion d'agenda du dirigeant","Préparation des briefs et dossiers"])],
+]},
+{ico:"🗂️",nom:"Administratif & Accueil",postes:[
+  ["Responsable administratif",3,FONCTIONS_MGR],
+  ["Secrétaire / Assistant administratif",4,FONCTIONS_DOC],
+  ["Office manager",3,FONCTIONS_DOC.concat(["Commandes fournitures","Coordination prestataires"])],
+  ["Agent d'accueil / Standardiste",5,FONCTIONS_BASE.concat(["Orientation des demandes vers le bon profil","Prise de messages dictés"])],
+  ["Archiviste / Gestionnaire documentaire",4,FONCTIONS_DOC.concat(["Classement et indexation assistés","Recherche d'archives instantanée"])],
+]},
+{ico:"🧑‍💼",nom:"Ressources Humaines",postes:[
+  ["DRH",2,FONCTIONS_MGR.concat(["Analyse des candidatures par Aria","Suivi congés et absences entreprise","Préparation contrats et avenants","Coffre-fort documents paie"])],
+  ["Responsable RH de site",3,FONCTIONS_MGR.concat(["Suivi des effectifs du site"])],
+  ["Chargé de recrutement",4,FONCTIONS_DOC.concat(["Analyse et tri des candidatures","Synthèses de CV par Aria","Planification des entretiens"])],
+  ["Gestionnaire de paie",4,FONCTIONS_DOC.concat(["Coffre-fort paie (accès restreint)","Alertes échéances déclaratives"])],
+  ["Responsable formation",4,FONCTIONS_DOC.concat(["Suivi du plan de formation","Relances inscriptions"])],
+  ["Gestionnaire planning / GTA",4,FONCTIONS_DOC.concat(["Plannings et roulements assistés","Détection des conflits d'horaires"])],
+]},
+{ico:"📈",nom:"Commercial & Marketing",postes:[
+  ["Directeur commercial",2,FONCTIONS_MGR.concat(["Pipeline et relances de l'équipe","Validation des remises"])],
+  ["Responsable grands comptes",3,FONCTIONS_DOC.concat(["Résumé complet du compte avant chaque échange","Suivi des contrats-cadres"])],
+  ["Commercial terrain / sédentaire",4,FONCTIONS_DOC.concat(["Résumé client avant rendez-vous","Dictée de comptes-rendus de visite","Relances devis automatiques"])],
+  ["Téléprospecteur",5,FONCTIONS_BASE.concat(["Fiches contact dictées","Scripts et argumentaires à la demande"])],
+  ["Chargé de marketing",4,FONCTIONS_DOC.concat(["Rédaction assistée de contenus","Calendrier de publications"])],
+  ["Community manager",4,FONCTIONS_DOC.concat(["Brouillons de posts par Aria","Veille des mentions"])],
+  ["Responsable e-commerce",4,FONCTIONS_DOC.concat(["Suivi commandes et litiges","Fiches produits assistées"])],
+]},
+{ico:"🧾",nom:"Finance & Comptabilité",postes:[
+  ["DAF",2,FONCTIONS_MGR.concat(["Tableaux de bord financiers","Alertes trésorerie et échéances","Validation des paiements"])],
+  ["Comptable",4,FONCTIONS_DOC.concat(["Détection factures en double","Relances impayés selon process (J+15, J+30)","Préparation des pièces pour l'expert-comptable","Synchronisation Odoo / Sage / Cegid / Pennylane / QuickBooks","Consultation soldes et balances par dictée vocale","Création de factures et avoirs à la voix","Export FEC pour commissaire aux comptes (niv.1-2)"])],
+  ["Aide-comptable",5,FONCTIONS_BASE.concat(["Classement des pièces","Saisie assistée"])],
+  ["Contrôleur de gestion",4,FONCTIONS_DOC.concat(["Rapports périodiques automatiques","Analyses d'écarts"])],
+  ["Auditeur / Contrôleur interne",4,FONCTIONS_DOC.concat(["Pistes d'audit via le journal d'actions","Échantillonnage de pièces"])],
+  ["Responsable facturation / recouvrement",4,FONCTIONS_DOC.concat(["Cycle de relances automatisé","Suivi des litiges de facturation"])],
+]},
+{ico:"⚖️",nom:"Juridique & Conformité",postes:[
+  ["Juriste",4,FONCTIONS_DOC.concat(["Alertes expiration de contrats","Recherche dans les contrats archivés"])],
+  ["Assistant juridique",5,FONCTIONS_DOC],
+  ["DPO",4,FONCTIONS_DOC.concat(["Détection de données personnelles dans les documents","Alertes durées de conservation RGPD","Journal d'actions complet en lecture"])],
+  ["Responsable conformité / contrôle",3,FONCTIONS_MGR.concat(["Suivi des obligations réglementaires"])],
+]},
+{ico:"💻",nom:"IT & Technique",postes:[
+  ["DSI / Responsable informatique",2,FONCTIONS_MGR.concat(["Gestion de l'agent Aria sur les postes","Supervision des accès"])],
+  ["Développeur",4,FONCTIONS_DOC.concat(["Documentation technique assistée"])],
+  ["Administrateur systèmes / réseau",4,FONCTIONS_DOC.concat(["Procédures d'exploitation vocales","Journal des interventions"])],
+  ["Technicien informatique / helpdesk",5,FONCTIONS_BASE.concat(["Tickets et interventions dictés"])],
+  ["Data analyst",4,FONCTIONS_DOC.concat(["Demandes de rapports en langage naturel"])],
+]},
+{ico:"🚚",nom:"Transport & Logistique",postes:[
+  ["Directeur d'exploitation transport",2,FONCTIONS_MGR.concat(["Vue flotte et tournées en cours","Alertes incidents et retards"])],
+  ["Exploitant / Dispatcheur",3,FONCTIONS_MGR.concat(["Affectation vocale des tournées","Qui est disponible pour quelle course","Replanification en cas d'imprévu"])],
+  ["Affréteur",4,FONCTIONS_DOC.concat(["Recherche transporteurs et historique tarifs","Confirmations d'affrètement dictées"])],
+  ["Gestionnaire de flotte",4,FONCTIONS_DOC.concat(["Échéances contrôles techniques et entretiens","Suivi consommations et sinistres"])],
+  ["Responsable d'entrepôt / de quai",3,FONCTIONS_MGR.concat(["Passation de consignes entre équipes","Plannings de quai"])],
+  ["Conducteur PL / SPL",5,FONCTIONS_BASE.concat(["Tournée du jour vocale","Signalement d'incident dicté en route","Heures et temps de conduite"])],
+  ["Chauffeur-livreur",5,FONCTIONS_BASE.concat(["Tournée du jour vocale","Preuve de livraison dictée"])],
+  ["Magasinier / Cariste / Préparateur",5,FONCTIONS_BASE.concat(["Recherche de références stock","Bons de sortie dictés"])],
+  ["Agent de transit / Déclarant en douane",4,FONCTIONS_DOC.concat(["Suivi des dossiers d'expédition","Alertes documents manquants"])],
+]},
+{ico:"🏭",nom:"Production & Industrie",postes:[
+  ["Directeur de production",2,FONCTIONS_MGR.concat(["Vue des lignes et équipes","Indicateurs de production vocaux"])],
+  ["Responsable production",3,FONCTIONS_MGR.concat(["Passation de consignes entre équipes","Qui est disponible pour quel poste"])],
+  ["Chef d'atelier / Chef d'équipe",3,FONCTIONS_MGR],
+  ["Opérateur de production",5,FONCTIONS_BASE.concat(["Consignes de prise de poste vocales","Signalement d'anomalie dicté"])],
+  ["Technicien de maintenance",4,FONCTIONS_DOC.concat(["Historique machine instantané","Comptes-rendus d'intervention dictés","Planification du préventif"])],
+  ["Responsable ordonnancement",4,FONCTIONS_DOC.concat(["Suivi des ordres de fabrication"])],
+]},
+{ico:"🏥",nom:"Santé & Médico-social",postes:[
+  ["Directeur d'établissement de santé",1,FONCTIONS_DIR.concat(["Vue des services et effectifs","Coffre-fort renforcé données patients"])],
+  ["Directeur des soins / Cadre supérieur",2,FONCTIONS_MGR.concat(["Coordination inter-services","Suivi des effectifs soignants"])],
+  ["Cadre de santé",3,FONCTIONS_MGR.concat(["Plannings et roulements du service","Transmissions entre équipes structurées"])],
+  ["Médecin / Praticien",4,FONCTIONS_DOC.concat(["Comptes-rendus dictés","Recherche dans les protocoles","Accès habilité uniquement — secret médical respecté"])],
+  ["Infirmier(ère)",4,FONCTIONS_BASE.concat(["Transmissions vocales entre équipes","Protocoles de service à la demande","Rappels de soins planifiés"])],
+  ["Aide-soignant(e)",5,FONCTIONS_BASE.concat(["Consignes de prise de poste","Signalements dictés au cadre"])],
+  ["Secrétaire médicale",4,FONCTIONS_DOC.concat(["Gestion des rendez-vous patients","Rappels automatiques de RDV","Frappe de comptes-rendus dictés"])],
+  ["Pharmacien / Préparateur",4,FONCTIONS_DOC.concat(["Suivi des stocks et péremptions","Alertes de réapprovisionnement"])],
+  ["Manipulateur radio / Technicien médical",4,FONCTIONS_BASE.concat(["Planning des examens","Protocoles techniques vocaux"])],
+  ["Brancardier / Agent hospitalier",5,FONCTIONS_BASE.concat(["Demandes de transport patient en vocal"])],
+  ["Responsable admissions / facturation",4,FONCTIONS_DOC.concat(["Suivi des dossiers d'admission","Relances organismes payeurs"])],
+  ["Aide à domicile / Auxiliaire de vie",5,FONCTIONS_BASE.concat(["Tournée du jour et consignes par bénéficiaire","Signalement vocal à la coordination"])],
+  ["Éducateur spécialisé / Travailleur social",4,FONCTIONS_DOC.concat(["Notes de suivi dictées","Coordination des dossiers"])],
+]},
+{ico:"🏛️",nom:"Service public & Collectivités",postes:[
+  ["Directeur général des services (DGS)",1,FONCTIONS_DIR.concat(["Vue de tous les services de la collectivité"])],
+  ["Secrétaire de mairie",3,FONCTIONS_DOC.concat(["Préparation des conseils et délibérations","Réponses aux administrés assistées"])],
+  ["Responsable des marchés publics",4,FONCTIONS_DOC.concat(["Alertes échéances de marchés","Suivi des procédures et pièces"])],
+  ["Agent d'état civil / Affaires générales",4,FONCTIONS_DOC.concat(["Recherche d'actes instantanée","File des demandes administrés"])],
+  ["Responsable urbanisme",3,FONCTIONS_DOC.concat(["Suivi des dossiers de permis","Alertes délais d'instruction"])],
+  ["Comptable public / Régisseur",4,FONCTIONS_DOC.concat(["Suivi des mandats et titres","Alertes échéances budgétaires"])],
+  ["Agent technique municipal",5,FONCTIONS_BASE.concat(["Interventions du jour vocales","Signalements terrain dictés"])],
+  ["Agent des espaces verts / voirie",5,FONCTIONS_BASE.concat(["Tournées d'entretien planifiées"])],
+  ["Policier municipal",4,FONCTIONS_BASE.concat(["Mains courantes dictées","Consignes de patrouille"])],
+  ["ATSEM / Agent périscolaire",5,FONCTIONS_BASE.concat(["Consignes du jour et effectifs enfants"])],
+  ["Directeur d'établissement scolaire",2,FONCTIONS_MGR.concat(["Communication aux familles assistée","Plannings et remplacements"])],
+  ["Enseignant / Formateur",4,FONCTIONS_DOC.concat(["Préparation de supports assistée","Suivi administratif allégé"])],
+]},
+{ico:"🔧",nom:"Artisanat & Commerce de proximité",postes:[
+  ["Garagiste / Mécanicien",4,FONCTIONS_DOC.concat(["Devis et ordres de réparation dictés","Historique véhicule client en vocal","Commande de pièces"])],
+  ["Plombier / Chauffagiste",4,FONCTIONS_DOC.concat(["Devis chantier dictés sur place","Photos liées au dossier client"])],
+  ["Électricien",4,FONCTIONS_DOC.concat(["Rapports d'intervention dictés","Normes et références à la demande"])],
+  ["Maçon / Conducteur de travaux",3,FONCTIONS_MGR.concat(["Suivi avancement chantier","Pointage équipe vocal","Commandes matériaux dictées"])],
+  ["Paysagiste",4,FONCTIONS_DOC.concat(["Planification des tournées d'entretien"])],
+  ["Coiffeur / Esthéticienne",4,FONCTIONS_DOC.concat(["Agenda clients et rappels automatiques","Fiches clientes"])],
+  ["Boulanger / Métiers de bouche",4,FONCTIONS_DOC.concat(["Commandes fournisseurs récurrentes","Planning de production"])],
+  ["Vendeur en boutique",5,FONCTIONS_BASE.concat(["Consignes du jour vocales","Vérification stock instantanée"])],
+  ["Fleuriste / Commerçant indépendant",4,FONCTIONS_DOC.concat(["Commandes et livraisons du jour","Relances clients dictées"])],
+]},
+{ico:"🎧",nom:"Support client & SAV",postes:[
+  ["Responsable SAV / centre de contacts",3,FONCTIONS_MGR.concat(["Litiges en cours et escalades","Charge des conseillers en temps réel"])],
+  ["Superviseur plateau",3,FONCTIONS_MGR],
+  ["Conseiller clientèle",4,FONCTIONS_DOC.concat(["Résumé du dossier client instantané","Réponses types personnalisées"])],
+  ["Technicien support",5,FONCTIONS_BASE.concat(["Base de connaissances vocale"])],
+]},
+{ico:"🦺",nom:"Qualité, Sécurité & Environnement",postes:[
+  ["Responsable QHSE",3,FONCTIONS_MGR.concat(["Registres et audits assistés","Alertes contrôles obligatoires"])],
+  ["Préventeur sécurité",4,FONCTIONS_DOC.concat(["Comptes-rendus d'incidents dictés","Suivi du document unique"])],
+  ["Responsable qualité",4,FONCTIONS_DOC.concat(["Suivi non-conformités"])],
+  ["Infirmier de santé au travail",4,FONCTIONS_DOC.concat(["Suivi des visites médicales","Registres confidentiels"])],
+]},
+{ico:"🧹",nom:"Propreté, Sécurité & Services généraux",postes:[
+  ["Responsable de site / services généraux",3,FONCTIONS_MGR.concat(["Plannings multi-sites","Suivi des prestations"])],
+  ["Chef d'équipe propreté",3,FONCTIONS_MGR.concat(["Consignes de chantier vocales","Pointage des passages"])],
+  ["Agent d'entretien",5,FONCTIONS_BASE.concat(["Consignes du jour par site","Signalement vocal d'anomalie"])],
+  ["Agent de sécurité / Rondier",5,FONCTIONS_BASE.concat(["Mains courantes dictées","Consignes de poste vocales"])],
+  ["Responsable sûreté",3,FONCTIONS_MGR.concat(["Coordination des équipes de sécurité"])],
+]},
+{ico:"📣",nom:"Communication",postes:[
+  ["Responsable communication",3,FONCTIONS_MGR.concat(["Communiqués assistés","Calendrier éditorial"])],
+  ["Chargé de communication",4,FONCTIONS_DOC],
+  ["Graphiste",4,FONCTIONS_DOC.concat(["Briefs créatifs structurés par Aria"])],
+]},
+{ico:"🍽️",nom:"Hôtellerie & Restauration",postes:[
+  ["Directeur de restaurant / d'hôtel",2,FONCTIONS_MGR.concat(["Tableau de bord du jour : couverts, CA, marges","Validation commandes fournisseurs","Plannings salle et cuisine"])],
+  ["Chef de cuisine",3,FONCTIONS_MGR.concat(["Stocks et inventaire vocaux — alertes DLC et ruptures","Commandes fournisseurs dictées","Fiches techniques et coût matière (food cost)","Suivi des pertes"])],
+  ["Second de cuisine / Chef de partie",4,FONCTIONS_BASE.concat(["Mise en place du jour vocale","Signalement rupture en direct"])],
+  ["Responsable de salle / Maître d'hôtel",3,FONCTIONS_MGR.concat(["Réservations et plan de salle","Brief de service vocal"])],
+  ["Serveur / Barman",5,FONCTIONS_BASE.concat(["Consignes du service vocales","86 (rupture plat) signalé à toute l'équipe"])],
+  ["Réceptionniste hôtel",4,FONCTIONS_DOC.concat(["Arrivées et départs du jour","Demandes clients transmises au bon service"])],
+  ["Gouvernante / Étages",3,FONCTIONS_MGR.concat(["Statut des chambres en temps réel","Consignes aux équipes d'étage"])],
+  ["Plongeur / Commis",5,FONCTIONS_BASE],
+]},
+{ico:"🏗️",nom:"BTP & Construction",postes:[
+  ["Directeur de travaux",2,FONCTIONS_MGR.concat(["Vue de tous les chantiers","Situations de travaux et avenants","Alertes retards et réserves"])],
+  ["Conducteur de travaux",3,FONCTIONS_MGR.concat(["Suivi avancement par chantier","Commandes matériaux dictées","Coordination sous-traitants","Pointage des équipes"])],
+  ["Chef de chantier",3,FONCTIONS_MGR.concat(["Consignes du jour aux équipes","Rapport de chantier dicté le soir","Signalement sécurité immédiat"])],
+  ["Économiste / Métreur",4,FONCTIONS_DOC.concat(["Devis et métrés assistés","Bibliothèque de prix consultable à la voix"])],
+  ["Bureau d'études / Dessinateur",4,FONCTIONS_DOC.concat(["Recherche dans les plans et CCTP","Suivi des indices de révision"])],
+  ["Chef d'équipe / Ouvrier qualifié",5,FONCTIONS_BASE.concat(["Consignes de chantier vocales","Heures pointées à la voix"])],
+  ["Grutier / Conducteur d'engins",5,FONCTIONS_BASE.concat(["Planning de levage du jour","Checklist sécurité vocale"])],
+  ["Géomètre",4,FONCTIONS_DOC.concat(["Relevés dictés sur le terrain"])],
+]},
+{ico:"🏪",nom:"Commerce & Distribution",postes:[
+  ["Directeur de magasin",2,FONCTIONS_MGR.concat(["CA et indicateurs du jour en vocal","Plannings et effectifs","Validation des commandes"])],
+  ["Chef de rayon / Responsable de département",3,FONCTIONS_MGR.concat(["Stocks et réassort de son rayon","Implantations et promotions"])],
+  ["Responsable approvisionnement / stocks",4,FONCTIONS_DOC.concat(["Inventaires vocaux","Alertes ruptures et surstocks","Commandes fournisseurs automatisables"])],
+  ["Hôte de caisse",5,FONCTIONS_BASE.concat(["Consignes du jour","Demande prix/stock instantanée"])],
+  ["Employé libre-service",5,FONCTIONS_BASE.concat(["Réassort prioritaire du jour"])],
+]},
+{ico:"🏦",nom:"Banque & Assurance",postes:[
+  ["Directeur d'agence bancaire",2,FONCTIONS_MGR.concat(["Portefeuille agence et objectifs","Conformité des dossiers"])],
+  ["Conseiller clientèle banque",4,FONCTIONS_DOC.concat(["Résumé client avant rendez-vous","Suivi des dossiers de crédit","Relances pièces manquantes"])],
+  ["Gestionnaire de sinistres",4,FONCTIONS_DOC.concat(["File des sinistres priorisée","Courriers types personnalisés","Relances experts"])],
+  ["Courtier / Agent général",4,FONCTIONS_DOC.concat(["Comparatifs contrats à la demande","Échéances de renouvellement"])],
+  ["Chargé de conformité bancaire",4,FONCTIONS_DOC.concat(["Alertes réglementaires","Contrôles périodiques tracés"])],
+]},
+{ico:"🏠",nom:"Immobilier",postes:[
+  ["Directeur d'agence immobilière",2,FONCTIONS_MGR.concat(["Portefeuille mandats et compromis en cours"])],
+  ["Agent immobilier / Négociateur",4,FONCTIONS_DOC.concat(["Fiches biens dictées avec visites","Relances acquéreurs et vendeurs","Préparation des compromis"])],
+  ["Gestionnaire locatif",4,FONCTIONS_DOC.concat(["Quittances et révisions de loyers","Suivi des impayés et relances","Gestion des interventions travaux"])],
+  ["Syndic de copropriété",4,FONCTIONS_DOC.concat(["Préparation des AG et convocations","Suivi des résolutions votées"])],
+]},
+{ico:"🌾",nom:"Agriculture & Agroalimentaire",postes:[
+  ["Exploitant agricole",1,FONCTIONS_DIR.concat(["Registres réglementaires tenus à la voix","Traçabilité parcelles et traitements"])],
+  ["Chef de culture / d'élevage",3,FONCTIONS_MGR.concat(["Consignes saisonnières aux équipes","Suivi sanitaire dicté"])],
+  ["Salarié agricole / Saisonnier",5,FONCTIONS_BASE.concat(["Tâches du jour par parcelle"])],
+  ["Responsable qualité agroalimentaire",4,FONCTIONS_DOC.concat(["Traçabilité lots et DLC","Registres HACCP vocaux"])],
+]},
+{ico:"🔬",nom:"R&D & Études",postes:[
+  ["Responsable R&D",2,FONCTIONS_MGR.concat(["Veille et synthèses techniques","Documentation projets confidentielle"])],
+  ["Ingénieur d'études",4,FONCTIONS_DOC.concat(["Recherche dans la documentation technique"])],
+  ["Technicien de laboratoire",5,FONCTIONS_BASE.concat(["Relevés et protocoles dictés"])],
+]},
+];
+
+const NIVEAUX = {1:'Dirigeant — accès global',2:'Directeur de service',3:'Manager',4:'Employé qualifié',5:'Employé standard',6:'Stagiaire / Externe'};
+
+// ── Rendu des catégories ──
+function renderCats(){
+  const root = document.getElementById('cats');
+  root.innerHTML = CATEGORIES.map((c,ci)=>`
+    <div class="cat" id="cat-${ci}">
+      <div class="cat-head" onclick="document.getElementById('cat-${ci}').classList.toggle('open')">
+        <span class="cat-ico">${c.ico}</span>
+        <span class="cat-name">${c.nom}</span>
+        <span class="cat-count">${c.postes.length} postes</span>
+        <span class="cat-arrow">▼</span>
+      </div>
+      <div class="cat-body">
+        ${c.postes.map((p,pi)=>`
+          <div class="poste" onclick="showPoste(${ci},${pi})">
+            <span class="p-name">${p[0]}</span>
+            <span class="p-lvl">Niv. ${p[1]}</span>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function showPoste(ci, pi){
+  const p = CATEGORIES[ci].postes[pi];
+  document.getElementById('f-title').textContent = p[0];
+  document.getElementById('f-sub').textContent = NIVEAUX[p[1]] + ' · Identifié par son nom (ex : « Sophie Bernard — ' + p[0] + ' »)';
+  const fonctions = p[2];
+  document.getElementById('f-body').innerHTML =
+    '<div class="f-section">Fonctions Aria de ce poste</div>' +
+    fonctions.map(f=>`<div class="f-item">${f}</div>`).join('') +
+    '<div class="f-section">Toujours inclus</div>' +
+    '<div class="f-item">Micro vocal (à partir du forfait Pro)</div>' +
+    '<div class="f-item">Toutes les actions tracées au journal</div>' +
+    '<div class="f-item">Accès limité à son périmètre — coffre-fort par rôle</div>';
+  document.getElementById('fmodal').classList.add('show');
+}
+
+
+// ════════════════════════════════════════════
+// NOTES & RAPPELS — Industrial (local, zéro serveur)
+// ════════════════════════════════════════════
+let notesInd = JSON.parse(localStorage.getItem('aria_notes_ind') || '[]');
+
+function noterInd(texte, rappel=null, auteur='moi'){
+  const n = {id:Date.now(), texte, auteur, cree:new Date().toISOString(), rappel, fait:false};
+  notesInd.push(n);
+  localStorage.setItem('aria_notes_ind', JSON.stringify(notesInd));
+  return n;
+}
+
+setInterval(()=>{
+  const now = Date.now();
+  notesInd.forEach(n=>{
+    if(n.rappel && !n.fait && new Date(n.rappel).getTime() <= now){
+      n.fait = true;
+      const h = new Date().toTimeString().slice(0,5);
+      document.getElementById('log-list').insertAdjacentHTML('afterbegin',
+        '<div class="log-item"><span class="log-time">'+h+'</span><span class="log-txt">⏰ <b>Rappel</b> : '+n.texte+'</span></div>');
+      notesInd = notesInd.filter(x=>x.id!==n.id);
+      localStorage.setItem('aria_notes_ind', JSON.stringify(notesInd));
+    }
+  });
+}, 30000);
+
+// ════════════════════════════════════════════
+// CHAÎNE HIÉRARCHIQUE — demandes & messages
+// ════════════════════════════════════════════
+// Règle : un salarié ne peut contacter que son N+1 direct.
+// Seul le dirigeant (niveau 1) peut contacter tout le monde.
+const NIVEAUX_ROLES = {
+  'Dirigeant': 1, 'Directeur': 2, 'Manager': 3,
+  'Employé qualifié': 4, 'Employé standard': 5, 'Stagiaire': 6
+};
+const ROLES_LABELS = ['Dirigeant','Directeur','Manager','Employé qualifié','Employé standard','Stagiaire'];
+
+function getNiveauRole(){
+  const btn = document.getElementById('role-btn');
+  const txt = btn ? btn.textContent.trim() : 'Employé standard';
+  for(const [k,v] of Object.entries(NIVEAUX_ROLES)){
+    if(txt.includes(k)) return v;
+  }
+  return 5;
+}
+
+// Services à accès restreint — seuls les niveaux autorisés peuvent les contacter
+const SERVICES_RESTREINTS = {
+  'RH': {
+    // RH général : réservé aux niveaux 1-3 (recrutement, formation, congés équipe...)
+    niveauxAutorises: [1, 2, 3],
+    message: "Les Ressources Humaines ne traitent que les demandes de la Direction et des Managers. Adressez votre demande à votre responsable direct, qui la transmettra si nécessaire."
+  },
+  'Paie': {
+    // EXCEPTION PAIE : tout salarié peut contacter les RH pour un problème de paie
+    // C'est un droit fondamental — art. L3243-2 Code du travail (remise bulletin de paie)
+    niveauxAutorises: [1, 2, 3, 4, 5, 6],
+    message: "",  // autorisé pour tous
+    motsCles: ['paie','salaire','bulletin','fiche de paie','virement salaire',
+               'remuneration','trop percu','erreur de paie','retenue','cotisation',
+               'net a payer','brut','prelevement salaire']
+  },
+  'Direction': {
+    niveauxAutorises: [1, 2],
+    message: "La Direction est accessible uniquement aux niveaux 1 et 2. Passez par votre manager."
+  }
+};
+
+function getServiceDestinataire(destinataireNom, texteMessage=''){
+  const n = destinataireNom.toUpperCase();
+  const m = texteMessage.toLowerCase();
+
+  // ── Paie : priorité absolue même si adressé aux RH ──
+  // Si le message contient un mot-clé paie → service Paie
+  const motsPaie = SERVICES_RESTREINTS.Paie.motsCles;
+  if(motsPaie.some(mot => m.includes(mot))){
+    return 'Paie';
+  }
+
+  // ── RH (hors paie) ──
+  if(n.includes('RH') || n.includes('RESSOURCES HUMAINES') || n.includes('RECRUTEMENT') ||
+     n.includes('FORMATION') || n.includes('CONGE') || n.includes('ABSENCE')) return 'RH';
+
+  // ── Direction ──
+  if(n.includes('DIRECTION') || n.includes('PDG') || n.includes('DG') ||
+     n.includes('DIRIGEANT')) return 'Direction';
+
+  return null;
+}
+
+function peutContacter(niveauEmetteur, niveauDestinataire, destinataireNom='', texteMessage=''){
+  // Vérifier d'abord si c'est un service restreint
+  const service = getServiceDestinataire(destinataireNom, texteMessage);
+  if(service && SERVICES_RESTREINTS[service]){
+    const regle = SERVICES_RESTREINTS[service];
+    if(!regle.niveauxAutorises.includes(niveauEmetteur)){
+      return {ok: false, message: regle.message};
+    }
+  }
+  // Dirigeant = accès total
+  if(niveauEmetteur === 1) return {ok: true};
+  // Règle générale : N+1 direct uniquement
+  if(niveauDestinataire === niveauEmetteur - 1) return {ok: true};
+  return {ok: false, message: 'Vous ne pouvez contacter que votre responsable direct (N+1). Passez par la chaîne hiérarchique.'};
+}
+
+function envoyerDemande(texteOrdre, destinataireNom, destinataireNiveau){
+  const monNiveau = getNiveauRole();
+  const res = peutContacter(monNiveau, destinataireNiveau, destinataireNom, texteOrdre);
+  if(!res.ok){
+    document.getElementById('aria-reply-txt').innerHTML =
+      '⛔ <b>Accès refusé.</b><br>' + res.message;
+    document.getElementById('aria-confirm').style.display='none';
+    document.getElementById('aria-reply').classList.add('show');
+    const h = new Date().toTimeString().slice(0,5);
+    document.getElementById('log-list').insertAdjacentHTML('afterbegin',
+      '<div class="log-item"><span class="log-time">'+h+'</span>'
+      +'<span class="log-txt" style="color:var(--amber)">⛔ Refus : '+destinataireNom+' — '+res.message.substring(0,60)+'...</span></div>');
+    return false;
+  }
+  return true;
+}
+
+// Démo : boutons de test chaîne hiérarchique
+function demoChaine(cas){
+  const scenarios = [
+    // Cas 1 : Employé → Patron (bloqué)
+    {emetteur:'Employé standard', destinataire:'Jean-Pierre Durand', niveau:1,
+     texte:'Demander une augmentation au dirigeant directement'},
+    // Cas 2 : Employé → son Manager (autorisé)
+    {emetteur:'Employe standard', destinataire:'Marc Leblanc (Chef atelier)', niveau:3,
+     texte:'Signaler un problème machine à mon responsable direct'},
+    // Cas 3 : Manager → Directeur (autorisé)
+    {emetteur:'Manager', destinataire:'Direction', niveau:2,
+     texte:'Remonter un besoin de recrutement a la direction'},
+    // Cas 4 : Employé → RH (bloqué — service restreint)
+    {emetteur:'Employe standard', destinataire:'RH - Sophie Bernard', niveau:3,
+     texte:'Demander un conge directement aux RH'},
+    // Cas 5 : Manager → RH hors paie (autorisé)
+    {emetteur:'Manager', destinataire:'RH - Sophie Bernard', niveau:3,
+     texte:'Transmettre une demande de formation aux RH pour mon equipe'},
+    // Cas 6 : Employé → RH problème de paie (AUTORISÉ — droit fondamental)
+    {emetteur:'Employe standard', destinataire:'RH - Sophie Bernard', niveau:3,
+     texte:'Mon salaire de juin est incorrect, je contacte les RH'},
+    // Cas 7 : Employé → RH demande formation (BLOQUÉ — hors paie)
+    {emetteur:'Employe standard', destinataire:'RH - Sophie Bernard', niveau:3,
+     texte:'Demander une formation en informatique aux RH'},
+  ];
+  const s = scenarios[cas];
+  document.getElementById('role-btn').textContent = '👤 '+s.emetteur;
+  // Recharger le niveau
+  const ok = envoyerDemande(s.texte, s.destinataire, s.niveau);
+  if(ok){
+    document.getElementById('aria-reply-txt').innerHTML =
+      'Je transmets votre demande à <b>'+s.destinataire+'</b> :<br>« '+s.texte+' »<br>Votre responsable sera notifié.';
+    document.getElementById('aria-confirm').style.display='flex';
+    document.getElementById('aria-reply').classList.add('show');
+  }
+}
+
+function addAria_ind(txt){
+  document.getElementById('aria-reply-txt').innerHTML = txt;
+  document.getElementById('aria-confirm').style.display='none';
+  document.getElementById('aria-reply').classList.add('show');
+}
+
+// ════════════════════════════════════════════
+// CONNECTEURS COMPTABLES — synchronisation avec logiciels tiers
+// ════════════════════════════════════════════
+// Architecture : Aria parle à l'API du logiciel comptable du client.
+// Le client fournit ses propres identifiants — Forgelis ne stocke rien.
+
+const CONNECTEURS_COMPTA = {
+  odoo: {
+    nom: "Odoo",
+    logo: "🟣",
+    auth: ["url_instance","database","api_key"],
+    fonctions: [
+      "Consulter les factures clients et fournisseurs",
+      "Créer une facture par dictée vocale",
+      "Relancer les impayés selon le process Aria",
+      "Importer les écritures comptables du mois",
+      "Vérifier le solde d'un compte en temps réel",
+      "Exporter les journaux pour l'expert-comptable",
+      "Rapprocher les paiements bancaires"
+    ]
+  },
+  sage: {
+    nom: "Sage 100 / Sage Business Cloud",
+    logo: "🟢",
+    auth: ["client_id","client_secret","company_id"],
+    fonctions: [
+      "Synchroniser les factures et avoirs",
+      "Consulter les soldes et balances",
+      "Saisir des écritures par dictée",
+      "Relances automatiques selon paramétrage Sage",
+      "Export FEC (Fichier des Écritures Comptables)",
+      "Tableau de bord trésorerie en temps réel"
+    ]
+  },
+  cegid: {
+    nom: "Cegid Loop / XRP",
+    logo: "🔵",
+    auth: ["tenant_id","api_key","environment"],
+    fonctions: [
+      "Accès aux dossiers comptables",
+      "Consultation des journaux en vocal",
+      "Création de mandats et titres (secteur public)",
+      "Suivi des déclarations fiscales",
+      "Export vers le cabinet d'expertise"
+    ]
+  },
+  quickbooks: {
+    nom: "QuickBooks",
+    logo: "🟩",
+    auth: ["client_id","client_secret","realm_id"],
+    fonctions: [
+      "Factures, devis et paiements",
+      "Rapport de trésorerie vocal",
+      "Catégorisation des dépenses par Aria",
+      "Export rapports financiers"
+    ]
+  },
+  pennylane: {
+    nom: "Pennylane",
+    logo: "🟡",
+    auth: ["api_key"],
+    fonctions: [
+      "Synchronisation bancaire automatique",
+      "Justificatifs numérisés et classés par Aria",
+      "Tableau de bord financier vocal",
+      "Collaboration avec l'expert-comptable"
+    ]
+  },
+  excel_csv: {
+    nom: "Excel / CSV (universel)",
+    logo: "📊",
+    auth: [],
+    fonctions: [
+      "Import/export de tout logiciel via fichier",
+      "Aria lit et analyse les tableaux Excel",
+      "Génération de rapports en CSV",
+      "Compatible avec n'importe quel ERP"
+    ]
+  }
+};
+
+// Niveau d'accès requis pour les connecteurs comptables
+const ACCES_COMPTA = {
+  consultation: [1, 2, 3, 4],   // Comptable (niv.4) peut consulter
+  ecriture:     [1, 2, 3, 4],   // Comptable peut saisir
+  export_fec:   [1, 2],         // Dirigeant/Directeur uniquement (document fiscal)
+  parametrage:  [1, 2],         // Connexion aux APIs = direction uniquement
+};
+
+function peutAccederCompta(niveauEmetteur, typeAcces){
+  return (ACCES_COMPTA[typeAcces] || [1]).includes(niveauEmetteur);
+}
+
+function afficherConnecteurs(){
+  const monNiveau = getNiveauRole();
+  const modal = document.getElementById('compta-modal');
+  const liste = document.getElementById('compta-liste');
+  liste.innerHTML = Object.entries(CONNECTEURS_COMPTA).map(([key,conn])=>`
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">
+        <span style="font-size:1.2rem">${conn.logo}</span>
+        <span style="font-weight:700;font-size:.88rem">${conn.nom}</span>
+        ${conn.auth.length===0 ? '<span style="font-size:.6rem;background:rgba(74,222,128,.15);color:#4ADE80;padding:2px 8px;border-radius:50px;font-weight:700">Universel</span>' : ''}
+      </div>
+      <div style="font-size:.72rem;color:var(--text2);line-height:1.6">
+        ${conn.fonctions.slice(0,4).map(f=>'✓ '+f).join('<br>')}
+        ${conn.fonctions.length>4 ? '<br><em style="color:var(--text3)">+'+(conn.fonctions.length-4)+' fonctions</em>' : ''}
+      </div>
+      ${monNiveau<=2 ? `<button type="button" onclick="configurerConnecteur('${key}')"
+        style="margin-top:9px;padding:7px 14px;border-radius:9px;border:1px solid var(--border);
+        background:transparent;color:var(--accent);font-family:inherit;font-size:.75rem;
+        font-weight:600;cursor:pointer">Configurer la connexion →</button>` :
+        '<div style="font-size:.68rem;color:var(--text3);margin-top:8px">Configuration par la direction · Vous avez accès aux fonctions</div>'}
+    </div>`).join('');
+  modal.classList.add('show');
+}
+
+function configurerConnecteur(key){
+  const conn = CONNECTEURS_COMPTA[key];
+  const monNiveau = getNiveauRole();
+  if(!peutAccederCompta(monNiveau, 'parametrage')){
+    addAria_ind('⛔ La configuration des connecteurs est réservée à la Direction (niveaux 1-2). Demandez à votre dirigeant de configurer la connexion '+conn.nom+'.');
+    document.getElementById('compta-modal').classList.remove('show');
+    return;
+  }
+  document.getElementById('compta-modal').classList.remove('show');
+  document.getElementById('aria-reply-txt').innerHTML =
+    '🔌 Configuration <b>'+conn.nom+'</b><br><br>' +
+    (conn.auth.length ? 'Identifiants requis : <b>'+conn.auth.join(', ')+'</b><br>Ces informations restent sur votre appareil — jamais transmises à Forgelis.' :
+    'Connexion universelle via fichier — aucun identifiant requis.') +
+    '<br><br>Une fois configuré, le comptable accède aux fonctions depuis son profil Aria.';
+  document.getElementById('aria-confirm').style.display='none';
+  document.getElementById('aria-reply').classList.add('show');
+}
+
+function demoCompta(cas){
+  const monNiveau = getNiveauRole();
+  const demos = [
+    {action:"Consulter les factures impayées dans Odoo",type:"consultation"},
+    {action:"Créer une facture client en dictée vocale",type:"ecriture"},
+    {action:"Exporter le FEC pour le commissaire aux comptes",type:"export_fec"},
+    {action:"Synchroniser les paiements bancaires du mois",type:"consultation"},
+  ];
+  const d = demos[cas];
+  if(peutAccederCompta(monNiveau, d.type)){
+    document.getElementById('aria-reply-txt').innerHTML =
+      '✅ Aria accède à <b>'+CONNECTEURS_COMPTA.odoo.nom+'</b> : '+d.action+'.<br>' +
+      'Données récupérées en temps réel · Aucune copie stockée chez Forgelis.';
+  } else {
+    document.getElementById('aria-reply-txt').innerHTML =
+      '⛔ Action réservée aux niveaux 1-2. <b>'+d.action+'</b> nécessite une habilitation Direction.';
+  }
+  document.getElementById('aria-confirm').style.display='none';
+  document.getElementById('aria-reply').classList.add('show');
+}
+
+
+// ── Visite guidée 2 minutes pour les prospects ──
+const VISITE_ETAPES = [
+  {titre:"☀️ Brief matinal", texte:"Chaque matin, Aria vous donne un résumé vocal complet — devis en attente, absences, échéances. Écoutez le brief de démonstration.", action:()=>playBrief()},
+  {titre:"🎙️ Ordres vocaux", texte:"Donnez un ordre à voix haute ou par écrit. Aria confirme avant d'exécuter. Essayez : pose des congés à Thomas.", action:()=>demoVoice(0)},
+  {titre:"📨 Délégation", texte:"Transmettez une tâche à un collègue. Elle reste en attente jusqu'à ce qu'il la déclenche.", action:()=>demoDeleg(1)},
+  {titre:"🗣️ Réunion → actions", texte:"Dictez votre compte-rendu. Aria extrait les décisions et crée les tâches automatiquement.", action:()=>demoMeeting()},
+  {titre:"👥 141 postes couverts", texte:"De l'artisan seul à la grande entreprise. Ouvrez une catégorie pour voir les fonctions de chaque métier.", action:()=>document.getElementById('cat-0')?.classList.add('open')},
+];
+let visiteIdx = 0;
+let visiteInterval = null;
+
+function lancerVisite(){
+  visiteIdx = 0;
+  afficherEtapeVisite();
+  document.getElementById('visite-btn').style.display='none';
+  document.getElementById('visite-nav').style.display='flex';
+}
+function afficherEtapeVisite(){
+  const e = VISITE_ETAPES[visiteIdx];
+  document.getElementById('visite-titre').textContent = e.titre;
+  document.getElementById('visite-texte').textContent = e.texte;
+  document.getElementById('visite-prog').textContent = (visiteIdx+1)+'/'+VISITE_ETAPES.length;
+  if(e.action) setTimeout(e.action, 400);
+}
+function visiteSuivant(){
+  if(visiteIdx < VISITE_ETAPES.length-1){ visiteIdx++; afficherEtapeVisite(); }
+  else { terminerVisite(); }
+}
+function visitePrecedent(){
+  if(visiteIdx > 0){ visiteIdx--; afficherEtapeVisite(); }
+}
+function terminerVisite(){
+  document.getElementById('visite-btn').style.display='block';
+  document.getElementById('visite-nav').style.display='none';
+  document.getElementById('visite-titre').textContent='';
+  document.getElementById('visite-texte').textContent='';
+  addAria_ind('🎉 Visite terminée ! Vous avez découvert les fonctions clés d\'Aria Industrial. Connectez-vous avec votre code entreprise pour commencer.');
+}
+
+// ── Connexion ──
+function loginEnt(){
+  const code = document.getElementById('lg-code').value.trim() || 'DEMO-2026';
+  const nom = document.getElementById('lg-name').value.trim();
+  if(!nom){ document.getElementById('lg-name').style.borderColor='rgba(248,113,113,.6)'; return; }
+  document.getElementById('ent-name').textContent = code.split('-')[0];
+  document.getElementById('s-login').classList.remove('active');
+  document.getElementById('s-app').classList.add('active');
+}
+
+// ── Démo des rôles ──
+const ROLES = ['👤 Dirigeant','🗂️ Secrétaire','🧑‍💼 RH','📈 Commercial'];
+let roleIdx = 0;
+function cycleRole(){
+  roleIdx = (roleIdx+1) % ROLES.length;
+  document.getElementById('role-btn').textContent = ROLES[roleIdx];
+  // Le brief complet n'est visible que pour le dirigeant
+  document.getElementById('brief-card').style.display = roleIdx===0 ? 'block' : 'none';
+}
+
+// ── Démo ordres vocaux ──
+const ORDRES = [
+  {resume:"Je vais poser <b>2 semaines de congés à Thomas Mercier</b> du 14 au 28 juillet, mettre à jour le planning de l'atelier, et lui envoyer une notification. Je confirme ?",
+   fait:"✓ Congés posés. Planning mis à jour. Thomas a été notifié sur son poste — son PC étant éteint, la notification sera aussi affichée à son prochain allumage.",
+   queue:"Notification congés → Thomas Mercier"},
+  {resume:"J'ai trouvé <b>1 document</b> : « Devis_Plomberie_Martin_032026.pdf » — créé le 14 mars, 2 340 €, statut : envoyé, sans réponse depuis 12 jours. Je vous le transfère et je prépare une relance ?",
+   fait:"✓ Document transféré sur votre mobile. Relance préparée en brouillon — à valider avant envoi.",
+   queue:"Relance devis → Client Martin (brouillon)"},
+  {resume:"Je vais transmettre à <b>Sophie Bernard (Chargée de recrutement)</b> la demande : analyser les 4 candidatures reçues cette semaine, avec synthèse comparative pour vendredi. Je confirme ?",
+   fait:"✓ Demande transmise à Sophie avec les 4 dossiers joints. Elle recevra un rappel jeudi si la synthèse n'est pas commencée.",
+   queue:"Analyse candidatures → Sophie Bernard (RH)"},
+  {resume:"⚠️ <b>Thomas Mercier est en congés</b> jusqu'au lundi 28. Sa suppléante désignée est <b>Léa Martin (Responsable logistique)</b>. Je lui transmets la validation du bon de commande Acier+ et je préviens Thomas à son retour ?",
+   fait:"✓ Transmis à Léa Martin avec le contexte complet. Thomas retrouvera une note à son retour. L'expéditeur est informé de la suppléance.",
+   queue:"Validation BC Acier+ → Léa Martin (suppléance)"},
+  {resume:"Process habituel détecté : <b>relance à J+15</b> (email courtois), <b>J+30</b> (email ferme + appel planifié). 2 factures concernées : #2026-098 (1 200 €) et #2026-101 (860 €). Je lance ?",
+   fait:"✓ Relances J+15 envoyées pour les 2 factures. Suivi automatique activé — vous serez prévenu en cas de paiement ou à J+30.",
+   queue:"Relances factures #098 et #101"},
+  {resume:"🚨 <b>Alerte niveau 2 — fuite hydraulique atelier 3.</b> Je déclenche la cascade d'astreinte : 1️⃣ Karim (technicien de maintenance) — appel + notification. Sans réponse sous 5 min : 2️⃣ Marc (chef d'atelier), puis 3️⃣ vous-même. Je préviens aussi le responsable QHSE. Je lance ?",
+   fait:"✓ Cascade lancée. Karim a confirmé sa prise en charge en 1 min 40. Le QHSE est informé, l'incident est ouvert au journal avec horodatage complet.",
+   queue:"🚨 Alerte niv. 2 atelier 3 → prise en charge Karim"},
+];
+let ordreActif = 0;
+
+function demoVoice(i){
+  ordreActif = i;
+  document.getElementById('aria-reply-txt').innerHTML = ORDRES[i].resume;
+  document.getElementById('aria-confirm').style.display = 'flex';
+  document.getElementById('aria-reply').classList.add('show');
+}
+function confirmOrder(){
+  const o = ORDRES[ordreActif];
+  notifApresOrdre(o.queue);
+  enregistrerOrdre(o.queue);
+  document.getElementById('aria-reply-txt').innerHTML = o.fait;
+  document.getElementById('aria-confirm').style.display = 'none';
+  // Ajout à la file + au journal
+  const q = document.getElementById('queue-list');
+  q.insertAdjacentHTML('afterbegin',
+    `<div class="queue-item"><span class="q-status" style="background:var(--green)"></span>
+     <div class="q-info"><div class="q-action">${o.queue}</div><div class="q-meta">À l'instant · ordre vocal mobile</div></div>
+     <span class="q-badge qb-done">Fait</span></div>`);
+  const l = document.getElementById('log-list');
+  const h = new Date().toTimeString().slice(0,5);
+  l.insertAdjacentHTML('afterbegin',
+    `<div class="log-item"><span class="log-time">${h}</span><span class="log-txt"><b>Dirigeant</b> — ordre vocal exécuté : ${o.queue}</span></div>`);
+}
+function cancelOrder(){
+  document.getElementById('aria-reply').classList.remove('show');
+}
+
+
+// ── Messages & tâches déléguées ──
+const DELEG = [
+  {resume:"Je dépose ce message pour <b>Karim Bensaïd (Conseiller clientèle)</b> : « Le client Morel a rappelé, c'est urgent ». Il sera notifié immédiatement sur son poste — et à l'allumage si son PC est éteint. Je confirme ?",
+   fait:"✓ Message déposé. Karim a été notifié. Vous serez prévenu quand il l'aura lu.",
+   queue:"Message urgent → Karim Bensaïd"},
+  {resume:"Je prépare cette tâche déléguée pour <b>Julie Fontaine (Assistante de direction)</b> : « Envoyer le contrat signé au notaire ». L'ordre est prêt — Julie l'exécutera d'un mot quand elle le décidera. Je confirme ?",
+   fait:"✓ Tâche déléguée créée et transmise à Julie. Elle apparaît dans ses « tâches reçues » — déclenchement à sa demande.",
+   queue:"Tâche déléguée → Julie Fontaine (en attente)"},
+];
+let delegActif = 0;
+function demoDeleg(i){
+  delegActif = i;
+  document.getElementById('deleg-reply-txt').innerHTML = DELEG[i].resume;
+  document.getElementById('deleg-confirm').style.display = 'flex';
+  document.getElementById('deleg-reply').classList.add('show');
+}
+function confirmDeleg(){
+  const d = DELEG[delegActif];
+  notifApresOrdre(d.queue);
+  enregistrerOrdre(d.queue);
+  document.getElementById('deleg-reply-txt').innerHTML = d.fait;
+  document.getElementById('deleg-confirm').style.display = 'none';
+  if(delegActif === 1){
+    document.getElementById('task-julie').style.display = 'flex';
+    // Accusés en temps réel : Reçue → Vue (l'expéditeur suit sans relancer)
+    setTimeout(()=>{
+      const st = document.getElementById('task-julie-status');
+      if(st){ st.textContent = '👁 Vue par Julie'; st.style.color = 'var(--accent)'; }
+    }, 3000);
+  }
+  const l = document.getElementById('log-list');
+  const h = new Date().toTimeString().slice(0,5);
+  l.insertAdjacentHTML('afterbegin',
+    `<div class="log-item"><span class="log-time">${h}</span><span class="log-txt"><b>Collaborateur</b> — ${d.queue}</span></div>`);
+}
+function execTask(){
+  const t = document.getElementById('task-julie');
+  t.innerHTML = `<span class="q-status" style="background:var(--green)"></span>
+    <div class="q-info"><div class="q-action">Envoyer le contrat signé au notaire</div><div class="q-meta">Exécutée à l'instant par Julie · Claire notifiée</div></div>
+    <span class="q-badge qb-done">Fait</span>`;
+  const l = document.getElementById('log-list');
+  const h = new Date().toTimeString().slice(0,5);
+  l.insertAdjacentHTML('afterbegin',
+    `<div class="log-item"><span class="log-time">${h}</span><span class="log-txt"><b>Julie Fontaine</b> a déclenché la tâche déléguée de <b>Claire</b> : contrat envoyé au notaire</span></div>`);
+}
+function execTaskDemo(btn){
+  const item = btn.closest('.queue-item');
+  item.innerHTML = `<span class="q-status" style="background:var(--green)"></span>
+    <div class="q-info"><div class="q-action">Relancer le fournisseur Acier+ sur le délai</div><div class="q-meta">Exécutée à l'instant · Marc notifié</div></div>
+    <span class="q-badge qb-done">Fait</span>`;
+}
+
+
+// ── Parité vocal/écrit : un ordre tapé suit le même circuit ──
+function sendWritten(){
+  const inp = document.getElementById('order-input');
+  const txt = inp.value.trim();
+  if(!txt) return;
+  inp.value = '';
+  ORDRES.push({
+    resume: "Je vais exécuter : <b>" + txt + "</b>. L'action sera tracée au journal et le destinataire notifié si nécessaire. Je confirme ?",
+    fait: "✓ C'est fait. Action exécutée et inscrite au journal.",
+    queue: txt.length > 42 ? txt.slice(0,42) + '…' : txt
+  });
+  demoVoice(ORDRES.length - 1);
+}
+
+
+// ── Réunion → tâches automatiques ──
+function demoMeeting(){
+  document.getElementById('meet-reply-txt').innerHTML =
+    "J'ai identifié <b>3 actions</b> :<br>" +
+    "1️⃣ Tâche pour <b>Marc (Chef d'atelier)</b> : relancer Acier+ — échéance mercredi<br>" +
+    "2️⃣ Tâche pour <b>Julie (Assistante de direction)</b> : préparer le contrat Dupont<br>" +
+    "3️⃣ Rappel collectif : point vendredi 11h00";
+  document.getElementById('meet-confirm').style.display = 'flex';
+  document.getElementById('meet-reply').classList.add('show');
+}
+function confirmMeeting(){
+  document.getElementById('meet-reply-txt').innerHTML =
+    "✓ 2 tâches déléguées créées et transmises (statut 📬 Reçue). Rappel « point vendredi 11h » planifié pour les 3 participants. Chacun sera notifié — vous suivrez l'avancement en temps réel.";
+  document.getElementById('meet-confirm').style.display = 'none';
+  const l = document.getElementById('log-list');
+  const h = new Date().toTimeString().slice(0,5);
+  l.insertAdjacentHTML('afterbegin',
+    `<div class="log-item"><span class="log-time">${h}</span><span class="log-txt"><b>Aria</b> — réunion transformée : 2 tâches déléguées + 1 rappel créés</span></div>`);
+}
+
+
+// ── Notifications hors-ligne depuis l'interface ──
+// Quand le relais est configuré, Aria notifie le salarié même déconnecté.
+async function envoyerNotif(salarieId, salarieNom, email, titre, message, urgent=false){
+  if(!ARIA_RELAY_URL) return; // mode démo
+  try{
+    const r = await fetch(ARIA_RELAY_URL + '/notifier', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        salarie_id: salarieId, salarie_nom: salarieNom,
+        salarie_email: email, forfait: 'tpe',
+        titre, message, canal: 'auto', urgent
+      })
+    });
+    const res = await r.json();
+    return res.ok;
+  }catch(e){ return false; }
+}
+
+// Exemple : notification automatique après confirmation d'un ordre
+async function notifApresOrdre(texte){
+  // En production, récupère le profil du destinataire depuis l'annuaire entreprise
+  // Ici en démo : log uniquement
+  console.log('Notification Aria →', texte);
+}
+
+
+// ── Vue globale des tâches reçues + annulation 5 min ──
+let ordresRecents = []; // historique pour annulation
+
+function enregistrerOrdre(texte){
+  const o = {id: Date.now(), texte, time: Date.now()};
+  ordresRecents.push(o);
+  // Afficher bouton annulation pendant 5 minutes
+  afficherBoutonAnnulation(o);
+  setTimeout(()=>{
+    ordresRecents = ordresRecents.filter(x => x.id !== o.id);
+    const btn = document.getElementById('cancel-btn-'+o.id);
+    if(btn) btn.remove();
+  }, 300000); // 5 minutes
+}
+
+function afficherBoutonAnnulation(ordre){
+  const zone = document.getElementById('cancel-zone');
+  if(!zone) return;
+  zone.style.display = 'block';
+  zone.insertAdjacentHTML('afterbegin',
+    '<div id="cancel-btn-'+ordre.id+'" style="display:flex;align-items:center;gap:9px;'+
+    'background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);'+
+    'border-radius:10px;padding:8px 12px;margin-bottom:6px;font-size:.75rem">'+
+    '<span style="flex:1;color:var(--text2)">⏱ Annulable : '+ordre.texte.substring(0,50)+'…</span>'+
+    '<button type="button" onclick="annulerOrdre('+ordre.id+')" '+
+    'style="padding:4px 11px;border-radius:8px;border:1px solid rgba(248,113,113,.4);'+
+    'background:transparent;color:#F87171;font-family:inherit;font-size:.72rem;'+
+    'font-weight:600;cursor:pointer;white-space:nowrap">Annuler</button></div>');
+}
+
+function annulerOrdre(id){
+  ordresRecents = ordresRecents.filter(x => x.id !== id);
+  const btn = document.getElementById('cancel-btn-'+id);
+  if(btn) btn.remove();
+  const zone = document.getElementById('cancel-zone');
+  if(zone && !zone.children.length) zone.style.display='none';
+  const h = new Date().toTimeString().slice(0,5);
+  document.getElementById('log-list').insertAdjacentHTML('afterbegin',
+    '<div class="log-item"><span class="log-time">'+h+'</span>'+
+    '<span class="log-txt" style="color:var(--amber)">↩️ Ordre annulé dans les 5 minutes</span></div>');
+  addAria_ind('✅ Ordre annulé. Aucune action n\'a été exécutée.');
+}
+
+
+// ── Export journal d'actions (CSV + PDF texte) ──
+function exporterJournal(format='csv'){
+  const lignes = document.querySelectorAll('#log-list .log-item');
+  const date = new Date().toLocaleDateString('fr-FR');
+  const entete = 'Heure,Action,Opérateur\n';
+  let contenu = entete;
+  lignes.forEach(li => {
+    const heure = li.querySelector('.log-time')?.textContent || '';
+    const txt = li.querySelector('.log-txt')?.textContent || '';
+    contenu += `"${heure}","${txt.replace(/"/g,"''")}","Forgelis Aria"\n`;
+  });
+  if(format === 'csv'){
+    const blob = new Blob(['\uFEFF'+contenu], {type:'text/csv;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'aria_journal_'+date.replace(/\//g,'-')+'.csv';
+    a.click();
+    addAria_ind('✅ Journal exporté en CSV — '+lignes.length+' actions. Utilisable comme preuve en cas de litige ou contrôle.');
+  } else {
+    // Export texte simple (compatible impression)
+    let txt = 'JOURNAL D\'ACTIONS ARIA INDUSTRIAL\n';
+    txt += 'Exporté le ' + date + '\n';
+    txt += '══════════════════════════════\n\n';
+    lignes.forEach(li => {
+      const h = li.querySelector('.log-time')?.textContent || '';
+      const t = li.querySelector('.log-txt')?.textContent || '';
+      txt += '['+h+'] '+t+'\n';
+    });
+    const blob = new Blob([txt], {type:'text/plain;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'aria_journal_'+date.replace(/\//g,'-')+'.txt';
+    a.click();
+    addAria_ind('✅ Journal exporté en texte — prêt à imprimer ou envoyer à votre juriste.');
+  }
+}
+
+// ── Brief vocal ──
+function playBrief(){
+  if(!window.speechSynthesis) return;
+  const txt = "Bonjour. Voici votre brief. 3 devis attendent une signature depuis plus de 7 jours, pour un total de 14 200 euros. Thomas Mercier est en congés aujourd'hui, retour lundi. Le contrat Dupont expire dans 5 jours. Et bonne nouvelle : la facture 114 a été payée hier, 3 850 euros.";
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(txt);
+    u.lang='fr-FR'; u.rate=.97;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+// Init
+document.getElementById('brief-date').textContent = new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+renderCats();
+</script>
+</body>
+</html>

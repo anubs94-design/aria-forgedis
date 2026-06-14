@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forgelis — Aria Senior & Aria Kids</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { font-family:'Inter',sans-serif; overflow-x:hidden; }
+
+/* ── NAV ── */
+nav {
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  padding:16px 24px; display:flex; align-items:center; justify-content:space-between;
+  backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(255,255,255,.08);
+  transition:background .3s;
+}
+nav.senior-nav { background:rgba(8,12,24,.85); }
+nav.kids-nav   { background:rgba(255,107,43,.9); }
+
+.nav-brand {
+  display:flex; align-items:center; gap:10px; cursor:pointer;
+}
+.nav-logo {
+  width:32px; height:32px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center; font-size:.9rem;
+}
+.nav-logo.s { background:linear-gradient(135deg,#3B6EE8,#9B6DFF); }
+.nav-logo.k { background:rgba(255,255,255,.25); }
+.nav-name { font-family:'Space Grotesk',sans-serif; font-size:.95rem; font-weight:700; }
+.nav-name.s { color:#fff; }
+.nav-name.k { color:#fff; }
+
+.nav-switch {
+  display:flex; align-items:center; gap:6px; padding:6px 14px;
+  border-radius:50px; border:none; cursor:pointer;
+  font-family:'Inter',sans-serif; font-size:.78rem; font-weight:600;
+  transition:all .2s;
+}
+.nav-switch.to-kids { background:rgba(255,255,255,.12); color:#fff; }
+.nav-switch.to-kids:hover { background:rgba(255,255,255,.2); }
+.nav-switch.to-senior { background:rgba(255,255,255,.2); color:#fff; }
+.nav-switch.to-senior:hover { background:rgba(255,255,255,.3); }
+
+.nav-cta {
+  padding:8px 18px; border-radius:50px; border:none;
+  font-family:'Inter',sans-serif; font-size:.82rem; font-weight:600;
+  cursor:pointer; transition:all .2s;
+}
+.nav-cta.s { background:#fff; color:#1D4ED8; }
+.nav-cta.k { background:#fff; color:#FF6B2B; }
+.nav-cta:hover { transform:scale(1.03); }
+
+/* ── PAGES ── */
+.page { display:none; min-height:100vh; }
+.page.active { display:block; }
+
+/* ════════════════════════════════
+   ARIA SENIOR PAGE
+════════════════════════════════ */
+#p-senior {
+  background:#05070F;
+  color:#F0F4FF;
+}
+
+/* Ambient */
+.senior-ambient {
+  position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden;
+}
+.orb {
+  position:absolute; border-radius:50%; filter:blur(90px); opacity:.3;
+  animation:drift 14s ease-in-out infinite alternate;
+}
+.o1 { width:500px;height:500px;background:radial-gradient(circle,#2563EB,transparent);top:-100px;left:-100px; }
+.o2 { width:400px;height:400px;background:radial-gradient(circle,#7C3AED,transparent);bottom:-80px;right:-80px;animation-delay:-7s; }
+@keyframes drift { from{transform:translate(0,0)} to{transform:translate(30px,40px)} }
+
+/* Hero Senior */
+.s-hero {
+  position:relative; z-index:1; min-height:100vh;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:100px 24px 60px; text-align:center;
+}
+.s-eyebrow {
+  display:inline-flex; align-items:center; gap:8px;
+  background:rgba(59,110,232,.15); border:1px solid rgba(59,110,232,.3);
+  padding:6px 16px; border-radius:50px;
+  font-size:.75rem; font-weight:600; color:#93C5FD; letter-spacing:.5px;
+  margin-bottom:28px;
+}
+.s-hero-title {
+  font-family:'Space Grotesk',sans-serif;
+  font-size:clamp(2.2rem,7vw,3.8rem); font-weight:800;
+  line-height:1.1; letter-spacing:-.03em; margin-bottom:20px;
+  background:linear-gradient(135deg,#F0F4FF 30%,#A5B4FC);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+.s-hero-sub {
+  font-size:clamp(.95rem,2.5vw,1.15rem); font-weight:400;
+  color:rgba(240,244,255,.55); line-height:1.7; max-width:520px; margin-bottom:36px;
+}
+.s-hero-actions { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-bottom:56px; }
+.btn-primary-s {
+  padding:14px 28px; border-radius:50px; border:none;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:#fff; font-family:'Inter',sans-serif; font-size:.92rem; font-weight:600;
+  cursor:pointer; transition:all .2s;
+  box-shadow:0 4px 20px rgba(37,99,235,.35);
+  display:flex; align-items:center; gap:8px;
+}
+.btn-primary-s:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(37,99,235,.4); }
+.btn-secondary-s {
+  padding:14px 28px; border-radius:50px;
+  border:1px solid rgba(255,255,255,.15); background:transparent;
+  color:rgba(255,255,255,.8); font-family:'Inter',sans-serif;
+  font-size:.92rem; font-weight:500; cursor:pointer; transition:all .2s;
+}
+.btn-secondary-s:hover { border-color:rgba(255,255,255,.35); color:#fff; }
+
+/* Phone mockup Senior */
+.s-mockup {
+  width:220px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+  border-radius:28px; overflow:hidden; margin:0 auto;
+  box-shadow:0 24px 80px rgba(0,0,0,.4);
+}
+.s-mock-bar {
+  background:linear-gradient(135deg,#0D1225,#1C2333);
+  padding:14px 16px; display:flex; align-items:center; gap:8px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.s-mock-logo { width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,#2563EB,#7C3AED);display:flex;align-items:center;justify-content:center;font-size:.6rem; }
+.s-mock-name { font-size:.72rem;font-weight:600;color:#fff;flex:1; }
+.s-mock-dot  { width:6px;height:6px;border-radius:50%;background:#4ADE80;animation:p 3s infinite; }
+@keyframes p { 0%,100%{opacity:1}50%{opacity:.3} }
+.s-mock-body { padding:14px; display:flex; flex-direction:column; gap:10px; }
+.s-mock-msg  { background:rgba(255,255,255,.06);border-radius:4px 12px 12px 12px;padding:10px 12px;font-size:.68rem;color:rgba(240,244,255,.7);line-height:1.6;border-left:2px solid #3B6EE8; }
+.s-mock-user { background:linear-gradient(135deg,#2563EB,#7C3AED);border-radius:12px 4px 12px 12px;padding:8px 12px;font-size:.68rem;color:#fff;line-height:1.5;align-self:flex-end;max-width:80%; }
+.s-mock-mic  { display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0; }
+.s-mock-mic-btn { width:40px;height:40px;border-radius:50%;background:linear-gradient(145deg,#2563EB,#1D4ED8);display:flex;align-items:center;justify-content:center;font-size:.9rem;box-shadow:0 4px 12px rgba(37,99,235,.4); }
+.s-mock-mic-lbl { font-size:.58rem;color:rgba(240,244,255,.4); }
+
+/* Features Senior */
+.s-features { position:relative;z-index:1; padding:80px 24px; max-width:900px; margin:0 auto; }
+.s-section-label {
+  font-size:.7rem; font-weight:600; letter-spacing:2px; text-transform:uppercase;
+  color:#3B6EE8; margin-bottom:14px;
+}
+.s-section-title {
+  font-family:'Space Grotesk',sans-serif; font-size:clamp(1.5rem,4vw,2.2rem);
+  font-weight:700; color:#F0F4FF; line-height:1.25; margin-bottom:40px;
+  letter-spacing:-.02em;
+}
+.s-feat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; }
+.s-feat-card {
+  background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07);
+  border-radius:20px; padding:24px; transition:all .2s;
+}
+.s-feat-card:hover { background:rgba(255,255,255,.06); border-color:rgba(59,110,232,.3); transform:translateY(-3px); }
+.s-feat-ico   { font-size:1.8rem; margin-bottom:14px; }
+.s-feat-title { font-family:'Space Grotesk',sans-serif; font-size:.95rem; font-weight:700; color:#F0F4FF; margin-bottom:8px; }
+.s-feat-desc  { font-size:.82rem; color:rgba(240,244,255,.45); line-height:1.65; }
+
+/* Plans Senior */
+.s-plans { position:relative;z-index:1; padding:80px 24px; max-width:700px; margin:0 auto; text-align:center; }
+.s-plans-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-top:36px; }
+.s-plan-card {
+  background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+  border-radius:20px; padding:24px 20px; text-align:left;
+}
+.s-plan-card.featured { border-color:rgba(59,110,232,.5); background:rgba(37,99,235,.1); position:relative; }
+.s-plan-badge { position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#2563EB,#7C3AED);color:#fff;font-size:.62rem;font-weight:700;padding:3px 12px;border-radius:50px;white-space:nowrap; }
+.s-plan-name  { font-size:.75rem;font-weight:600;color:rgba(240,244,255,.5);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px; }
+.s-plan-price { font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:800;color:#F0F4FF; }
+.s-plan-price span { font-size:.85rem;font-weight:500;color:rgba(240,244,255,.4); }
+.s-plan-desc  { font-size:.78rem;color:rgba(240,244,255,.4);margin:8px 0 16px;line-height:1.5; }
+.s-plan-features { display:flex;flex-direction:column;gap:7px; }
+.s-plan-feat  { display:flex;align-items:center;gap:8px;font-size:.78rem;color:rgba(240,244,255,.6); }
+.s-plan-feat::before { content:'✓';font-size:.7rem;color:#4ADE80;font-weight:700;flex-shrink:0; }
+.s-plan-cta   { width:100%;padding:12px;border-radius:12px;border:none;margin-top:18px;font-family:'Inter',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s; }
+.s-plan-cta.main { background:linear-gradient(135deg,#2563EB,#7C3AED);color:#fff; }
+.s-plan-cta.outline { background:transparent;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.6); }
+
+/* Trial Senior */
+.s-trial {
+  position:relative;z-index:1; margin:0 24px 80px; max-width:852px; margin-left:auto; margin-right:auto;
+  background:linear-gradient(135deg,rgba(37,99,235,.15),rgba(124,58,237,.15));
+  border:1px solid rgba(59,110,232,.25); border-radius:24px; padding:36px 32px;
+  display:flex; align-items:center; gap:24px; flex-wrap:wrap;
+}
+.s-trial-text { flex:1; min-width:200px; }
+.s-trial-title{ font-family:'Space Grotesk',sans-serif;font-size:1.3rem;font-weight:700;color:#F0F4FF;margin-bottom:6px; }
+.s-trial-desc { font-size:.85rem;color:rgba(240,244,255,.5);line-height:1.6; }
+.s-trial-cta  { padding:14px 28px;border-radius:50px;border:none;background:linear-gradient(135deg,#2563EB,#7C3AED);color:#fff;font-family:'Inter',sans-serif;font-size:.9rem;font-weight:600;cursor:pointer;white-space:nowrap;box-shadow:0 4px 20px rgba(37,99,235,.3);transition:all .2s; }
+.s-trial-cta:hover { transform:translateY(-2px); }
+
+/* ════════════════════════════════
+   ARIA KIDS PAGE
+════════════════════════════════ */
+#p-kids { background:#FFF8F0; color:#1C1917; }
+
+/* Hero Kids */
+.k-hero {
+  background:linear-gradient(160deg,#FF6B2B 0%,#8B5CF6 60%,#3B82F6 100%);
+  padding:100px 24px 70px; text-align:center; position:relative; overflow:hidden;
+}
+.k-bubbles { position:absolute;inset:0;pointer-events:none;overflow:hidden; }
+.bubble { position:absolute;border-radius:50%;opacity:.15;animation:float 8s ease-in-out infinite; }
+.b1{width:200px;height:200px;background:#fff;top:-60px;right:10%;animation-delay:0s}
+.b2{width:120px;height:120px;background:#FBBF24;top:30%;left:-30px;animation-delay:-3s}
+.b3{width:80px;height:80px;background:#fff;bottom:20%;right:15%;animation-delay:-5s}
+@keyframes float { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-20px) scale(1.05)} }
+
+.k-eyebrow {
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.35);
+  padding:6px 16px;border-radius:50px;font-size:.75rem;font-weight:800;
+  color:#fff;margin-bottom:24px;
+}
+.k-hero-title {
+  font-family:'Space Grotesk',sans-serif;
+  font-size:clamp(2.2rem,7vw,3.8rem); font-weight:800;
+  color:#fff; line-height:1.1; letter-spacing:-.02em; margin-bottom:18px;
+}
+.k-hero-title span { color:#FBBF24; }
+.k-hero-sub {
+  font-size:clamp(.92rem,2.5vw,1.1rem); font-weight:600;
+  color:rgba(255,255,255,.8); line-height:1.7; max-width:500px;
+  margin:0 auto 32px;
+}
+.k-hero-actions { display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:48px; }
+.btn-primary-k {
+  padding:14px 28px; border-radius:50px; border:none;
+  background:#fff; color:#FF6B2B;
+  font-family:'Inter',sans-serif; font-size:.92rem; font-weight:700;
+  cursor:pointer; transition:all .2s;
+  box-shadow:0 4px 20px rgba(0,0,0,.2);
+  display:flex; align-items:center; gap:8px;
+}
+.btn-primary-k:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(0,0,0,.25); }
+.btn-secondary-k {
+  padding:14px 28px; border-radius:50px;
+  border:2px solid rgba(255,255,255,.4); background:transparent;
+  color:#fff; font-family:'Inter',sans-serif;
+  font-size:.92rem; font-weight:600; cursor:pointer; transition:all .2s;
+}
+.btn-secondary-k:hover { background:rgba(255,255,255,.15); }
+
+/* Stats Kids */
+.k-stats {
+  display:flex; gap:16px; flex-wrap:wrap; justify-content:center;
+  position:relative; z-index:1;
+}
+.k-stat {
+  background:rgba(255,255,255,.15); border:1.5px solid rgba(255,255,255,.25);
+  border-radius:16px; padding:14px 20px; text-align:center; min-width:110px;
+}
+.k-stat-num { font-family:'Space Grotesk',sans-serif;font-size:1.6rem;font-weight:800;color:#fff; }
+.k-stat-lbl { font-size:.68rem;font-weight:700;color:rgba(255,255,255,.7);margin-top:2px;text-transform:uppercase;letter-spacing:.5px; }
+
+/* Features Kids */
+.k-features { padding:70px 24px; max-width:900px; margin:0 auto; }
+.k-section-label { font-size:.7rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#FF6B2B;margin-bottom:12px; }
+.k-section-title { font-family:'Space Grotesk',sans-serif;font-size:clamp(1.5rem,4vw,2.2rem);font-weight:800;color:#1C1917;line-height:1.25;margin-bottom:36px;letter-spacing:-.02em; }
+.k-feat-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px; }
+.k-feat-card {
+  background:#fff; border:2px solid #E7E5E4; border-radius:20px; padding:22px;
+  transition:all .2s;
+}
+.k-feat-card:hover { border-color:#FF6B2B; transform:translateY(-3px); box-shadow:0 8px 24px rgba(255,107,43,.12); }
+.k-feat-ico   { font-size:1.8rem; margin-bottom:12px; }
+.k-feat-title { font-family:'Space Grotesk',sans-serif;font-size:.92rem;font-weight:700;color:#1C1917;margin-bottom:7px; }
+.k-feat-desc  { font-size:.8rem;color:#78716C;line-height:1.65; }
+
+/* Collection preview */
+.k-coll { padding:60px 24px; background:linear-gradient(135deg,#FFF0E8,#F3EFFE); }
+.k-coll-inner { max-width:900px;margin:0 auto;text-align:center; }
+.k-coll-grid {
+  display:flex; flex-wrap:wrap; gap:10px; justify-content:center;
+  margin:32px 0;
+}
+.k-coll-item {
+  width:56px; height:56px; border-radius:14px; background:#fff;
+  border:2px solid #E7E5E4; display:flex; align-items:center; justify-content:center;
+  font-size:1.5rem; transition:all .2s;
+}
+.k-coll-item.lit { border-color:#F59E0B; box-shadow:0 2px 10px rgba(245,158,11,.25); }
+.k-coll-item.lit:hover { transform:scale(1.15); }
+.k-coll-item.locked { filter:grayscale(1) opacity(.25); }
+
+/* Plans Kids */
+.k-plans { padding:70px 24px; max-width:700px; margin:0 auto; text-align:center; }
+.k-plans-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:32px; }
+.k-plan-card {
+  background:#fff; border:2px solid #E7E5E4; border-radius:20px; padding:24px 20px; text-align:left;
+  transition:all .2s;
+}
+.k-plan-card.featured { border-color:#FF6B2B; position:relative; box-shadow:0 8px 24px rgba(255,107,43,.12); }
+.k-plan-badge { position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#FF6B2B,#8B5CF6);color:#fff;font-size:.62rem;font-weight:800;padding:3px 12px;border-radius:50px;white-space:nowrap; }
+.k-plan-name  { font-size:.72rem;font-weight:800;color:#A8A29E;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px; }
+.k-plan-price { font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:900;color:#1C1917; }
+.k-plan-price span { font-size:.82rem;font-weight:500;color:#A8A29E; }
+.k-plan-desc  { font-size:.78rem;color:#A8A29E;margin:8px 0 16px;line-height:1.5; }
+.k-plan-features { display:flex;flex-direction:column;gap:7px; }
+.k-plan-feat  { display:flex;align-items:center;gap:8px;font-size:.78rem;color:#57534E; }
+.k-plan-feat::before { content:'✓';font-size:.7rem;color:#10B981;font-weight:800;flex-shrink:0; }
+.k-plan-cta   { width:100%;padding:12px;border-radius:12px;border:none;margin-top:16px;font-family:'Inter',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s; }
+.k-plan-cta.main { background:linear-gradient(135deg,#FF6B2B,#8B5CF6);color:#fff; }
+.k-plan-cta.outline { background:transparent;border:2px solid #E7E5E4;color:#A8A29E; }
+
+/* Trial Kids */
+.k-trial {
+  margin:0 24px 70px; max-width:852px; margin-left:auto; margin-right:auto;
+  background:linear-gradient(135deg,#FFF0E8,#F3EFFE);
+  border:2px solid #FBBF24; border-radius:24px; padding:32px;
+  display:flex; align-items:center; gap:20px; flex-wrap:wrap;
+}
+.k-trial-text { flex:1;min-width:200px; }
+.k-trial-title{ font-family:'Space Grotesk',sans-serif;font-size:1.2rem;font-weight:800;color:#1C1917;margin-bottom:6px; }
+.k-trial-desc { font-size:.82rem;color:#78716C;line-height:1.6; }
+.k-trial-cta  { padding:14px 28px;border-radius:50px;border:none;background:linear-gradient(135deg,#FF6B2B,#8B5CF6);color:#fff;font-family:'Inter',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 4px 16px rgba(255,107,43,.3);transition:all .2s; }
+.k-trial-cta:hover { transform:translateY(-2px); }
+
+/* Footer */
+.footer {
+  padding:24px; text-align:center;
+  font-size:.75rem; font-weight:500;
+  border-top:1px solid rgba(0,0,0,.08);
+}
+#p-senior .footer { background:#05070F;color:rgba(240,244,255,.3);border-color:rgba(255,255,255,.06); }
+#p-kids   .footer { background:#FFF8F0;color:#A8A29E; }
+
+/* Responsive */
+@media(max-width:600px){
+  .s-feat-grid,.k-feat-grid { grid-template-columns:1fr; }
+  .s-plans-grid,.k-plans-grid { grid-template-columns:1fr; }
+  .s-trial,.k-trial { flex-direction:column;text-align:center; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="senior-nav" id="main-nav">
+  <div class="nav-brand" onclick="showPage('senior')">
+    <div class="nav-logo s" id="nav-logo">🎙️</div>
+    <span class="nav-name s" id="nav-name">Aria Senior</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <button type="button" class="nav-switch to-kids" id="nav-switch" onclick="showPage('kids')">
+      Voir Aria Kids →
+    </button>
+    <button type="button" class="nav-cta s" id="nav-cta">Essayer Aria</button>
+  </div>
+</nav>
+
+<!-- ════════════════ ARIA SENIOR ════════════════ -->
+<div class="page active" id="p-senior">
+  <div class="senior-ambient">
+    <div class="orb o1"></div>
+    <div class="orb o2"></div>
+  </div>
+
+  <!-- Hero -->
+  <section class="s-hero">
+    <div class="s-eyebrow">🎙️ Aria Senior · par Forgelis</div>
+    <h1 class="s-hero-title">La technologie<br>enfin simple.</h1>
+    <p class="s-hero-sub">Un assistant vocal intelligent qui aide les seniors à utiliser leur PC sans stress. Emails, internet, rappels — Aria s'en occupe, à la voix.</p>
+    <div class="s-hero-actions">
+      <button type="button" class="btn-primary-s">Essayer gratuitement</button>
+      <button type="button" class="btn-secondary-s">Voir la démo →</button>
+    </div>
+
+    <!-- Phone mockup -->
+    <div class="s-mockup">
+      <div class="s-mock-bar">
+        <div class="s-mock-logo">🎙</div>
+        <span class="s-mock-name">Aria · Marie</span>
+        <div class="s-mock-dot"></div>
+      </div>
+      <div class="s-mock-body">
+        <div class="s-mock-msg">Bonjour Marie. Je suis là pour vous aider. Dites-moi simplement ce que vous souhaitez faire.</div>
+        <div class="s-mock-user">Ouvre mes emails</div>
+        <div class="s-mock-msg">J'ouvre votre messagerie. Vous avez 3 nouveaux messages — le plus récent est de votre fille.</div>
+        <div class="s-mock-mic">
+          <div class="s-mock-mic-btn">🎙</div>
+          <span class="s-mock-mic-lbl">Appuyez pour parler</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="s-features">
+    <div class="s-section-label">Fonctionnalités</div>
+    <h2 class="s-section-title">Tout ce dont vous avez besoin,<br>sans la complexité.</h2>
+    <div class="s-feat-grid">
+      <div class="s-feat-card">
+        <div class="s-feat-ico">🎙️</div>
+        <div class="s-feat-title">Commandes vocales naturelles</div>
+        <div class="s-feat-desc">Parlez à Aria comme à une personne. "Aria, ouvre mes emails" — c'est tout ce qu'il faut dire.</div>
+      </div>
+      <div class="s-feat-card">
+        <div class="s-feat-ico">📧</div>
+        <div class="s-feat-title">Emails lus à voix haute</div>
+        <div class="s-feat-desc">Aria lit vos emails, vous les résume et vous aide à répondre — sans toucher au clavier.</div>
+      </div>
+      <div class="s-feat-card">
+        <div class="s-feat-ico">💊</div>
+        <div class="s-feat-title">Rappels médicaments</div>
+        <div class="s-feat-desc">Ne manquez plus jamais un médicament ou un rendez-vous. Aria vous rappelle au bon moment.</div>
+      </div>
+      <div class="s-feat-card">
+        <div class="s-feat-ico">👨‍👩‍👧</div>
+        <div class="s-feat-title">Profils famille</div>
+        <div class="s-feat-desc">Plusieurs membres de la famille sur un même PC, chacun avec son interface adaptée à son âge.</div>
+      </div>
+      <div class="s-feat-card">
+        <div class="s-feat-ico">🛡️</div>
+        <div class="s-feat-title">Confidentialité par conception</div>
+        <div class="s-feat-desc">Vos données restent sur votre appareil. Forgelis n'héberge aucune donnée personnelle — une architecture conforme au RGPD, par défaut.</div>
+      </div>
+      <div class="s-feat-card">
+        <div class="s-feat-ico">⚡</div>
+        <div class="s-feat-title">3 niveaux d'intelligence</div>
+        <div class="s-feat-desc">Aria Lite, Aria Smart ou Aria Expert — choisissez selon vos besoins et votre budget.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Plans -->
+  <section class="s-plans">
+    <div class="s-section-label">Tarifs</div>
+    <h2 class="s-section-title">Simple et transparent.</h2>
+    <div class="s-plans-grid">
+      <div class="s-plan-card">
+        <div class="s-plan-name">Gratuit</div>
+        <div class="s-plan-price">0€ <span>/mois</span></div>
+        <div class="s-plan-desc">Pour découvrir Aria</div>
+        <div class="s-plan-features">
+          <div class="s-plan-feat">10 crédits par jour</div>
+          <div class="s-plan-feat">Aria Lite uniquement</div>
+          <div class="s-plan-feat">1 profil</div>
+          <div class="s-plan-feat">Clavier uniquement (vocal en Pro)</div>
+        </div>
+        <button type="button" class="s-plan-cta outline">Commencer</button>
+      </div>
+      <div class="s-plan-card featured">
+        <div class="s-plan-badge">⭐ Recommandé</div>
+        <div class="s-plan-name">Pro</div>
+        <div class="s-plan-price">9,99€ <span>/mois</span></div>
+        <div class="s-plan-desc">Pour une utilisation quotidienne</div>
+        <div class="s-plan-features">
+          <div class="s-plan-feat">100 crédits par jour</div>
+          <div class="s-plan-feat">Aria Lite + Smart</div>
+          <div class="s-plan-feat">Profils illimités</div>
+          <div class="s-plan-feat">Rappels médicaments</div>
+          <div class="s-plan-feat">📱 Application mobile — tout à la voix</div>
+          <div class="s-plan-feat">Mises à jour prioritaires</div>
+        </div>
+        <button type="button" class="s-plan-cta main">Commencer l'essai</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trial CTA -->
+  <div class="s-trial">
+    <div class="s-trial-text">
+      <div class="s-trial-title">Essayez Aria Senior pendant 14 jours.</div>
+      <div class="s-trial-desc">Accès complet pendant 14 jours, sans engagement et sans carte bancaire. À l'issue de l'essai, poursuivez avec le plan Pro à 9,99€/mois ou continuez gratuitement.</div>
+    </div>
+    <button type="button" class="s-trial-cta">Démarrer l'essai →</button>
+  </div>
+
+  <div class="footer">Forgelis © 2026 · Aria Senior · <span style="cursor:pointer;text-decoration:underline">Mentions légales</span> · <span style="cursor:pointer;text-decoration:underline">Confidentialité</span></div>
+</div>
+
+<!-- ════════════════ ARIA KIDS ════════════════ -->
+<div class="page" id="p-kids">
+
+  <!-- Hero -->
+  <section class="k-hero">
+    <div class="k-bubbles">
+      <div class="bubble b1"></div>
+      <div class="bubble b2"></div>
+      <div class="bubble b3"></div>
+    </div>
+    <div style="position:relative;z-index:1">
+      <div class="k-eyebrow">🎮 Aria Kids · par Forgelis</div>
+      <h1 class="k-hero-title">Apprends.<br><span>Joue.</span> Grandis.</h1>
+      <p class="k-hero-sub">L'assistant éducatif qui s'adapte à la classe de votre enfant, encourage sa curiosité et récompense ses progrès avec de vraies images à collectionner. Et une confidentialité totale : les données de votre enfant ne quittent jamais votre appareil.</p>
+      <div class="k-hero-actions">
+        <button type="button" class="btn-primary-k">Essayer gratuitement</button>
+        <button type="button" class="btn-secondary-k">Voir la démo →</button>
+      </div>
+      <div class="k-stats">
+        <div class="k-stat"><div class="k-stat-num">100</div><div class="k-stat-lbl">Images S1</div></div>
+        <div class="k-stat"><div class="k-stat-num">13</div><div class="k-stat-lbl">Niveaux scolaires</div></div>
+        <div class="k-stat"><div class="k-stat-num">14</div><div class="k-stat-lbl">Matières</div></div>
+        <div class="k-stat"><div class="k-stat-num">4-17</div><div class="k-stat-lbl">Ans</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="k-features">
+    <div class="k-section-label">Fonctionnalités</div>
+    <h2 class="k-section-title">Conçu pour que<br>chaque enfant progresse.</h2>
+    <div class="k-feat-grid">
+      <div class="k-feat-card">
+        <div class="k-feat-ico">🏫</div>
+        <div class="k-feat-title">Adapté à la vraie classe</div>
+        <div class="k-feat-desc">Aria s'adapte à la classe réelle de l'enfant — même si il a redoublé ou sauté une classe. Du CP à la Terminale.</div>
+      </div>
+      <div class="k-feat-card">
+        <div class="k-feat-ico">🚀</div>
+        <div class="k-feat-title">3 profils scolaires</div>
+        <div class="k-feat-desc">Dans la moyenne, en avance ou besoin d'aide — Aria adapte les exercices et les encouragements en conséquence.</div>
+      </div>
+      <div class="k-feat-card">
+        <div class="k-feat-ico">🖼️</div>
+        <div class="k-feat-title">Collection d'images réelles</div>
+        <div class="k-feat-desc">100 vraies photos éducatives à débloquer — animaux, espace, histoire, art, monuments. Toutes libres de droits.</div>
+      </div>
+      <div class="k-feat-card">
+        <div class="k-feat-ico">⭐</div>
+        <div class="k-feat-title">Système XP & récompenses</div>
+        <div class="k-feat-desc">Chaque bonne réponse, chaque jeu gagné rapporte des XP. Les images se débloquent progressivement.</div>
+      </div>
+      <div class="k-feat-card">
+        <div class="k-feat-ico">🎮</div>
+        <div class="k-feat-title">Jeux éducatifs par matière</div>
+        <div class="k-feat-desc">Maths, Français, Sciences, Histoire, Anglais, EMC, Arts, Musique, EPS — toutes les matières du programme.</div>
+      </div>
+      <div class="k-feat-card">
+        <div class="k-feat-ico">👨‍👩‍👧</div>
+        <div class="k-feat-title">Plusieurs enfants, un PC</div>
+        <div class="k-feat-desc">Chaque enfant a son propre profil, sa propre collection et ses propres progrès — même sur le PC familial.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Collection preview -->
+  <section class="k-coll">
+    <div class="k-coll-inner">
+      <div class="k-section-label">Collection Saison 1</div>
+      <h2 class="k-section-title" style="color:#1C1917">100 images à découvrir et débloquer.</h2>
+      <p style="font-size:.88rem;color:#78716C;max-width:500px;margin:0 auto">Animaux, espace, histoire, art, monuments du monde entier. Chaque image débloquée est une petite victoire.</p>
+      <div class="k-coll-grid">
+        <div class="k-coll-item lit">🦁</div>
+        <div class="k-coll-item lit">🚀</div>
+        <div class="k-coll-item lit">🐬</div>
+        <div class="k-coll-item lit">🌍</div>
+        <div class="k-coll-item lit">🎨</div>
+        <div class="k-coll-item lit">🦋</div>
+        <div class="k-coll-item lit">🏛️</div>
+        <div class="k-coll-item lit">🐼</div>
+        <div class="k-coll-item locked">🔒</div>
+        <div class="k-coll-item locked">🔒</div>
+        <div class="k-coll-item locked">🔒</div>
+        <div class="k-coll-item locked">🔒</div>
+        <div class="k-coll-item locked">🔒</div>
+        <div class="k-coll-item locked">🔒</div>
+        <div class="k-coll-item locked">🔒</div>
+        <div class="k-coll-item locked">🔒</div>
+      </div>
+      <p style="font-size:.8rem;color:#A8A29E;margin-top:8px">8 images débloquées · 92 restantes à découvrir · Saison 2 à venir</p>
+    </div>
+  </section>
+
+  <!-- Plans Kids -->
+  <section class="k-plans">
+    <div class="k-section-label">Tarifs</div>
+    <h2 class="k-section-title" style="color:#1C1917">Pour toute la famille.</h2>
+    <div class="k-plans-grid">
+      <div class="k-plan-card">
+        <div class="k-plan-name">Gratuit</div>
+        <div class="k-plan-price">0€ <span>/mois</span></div>
+        <div class="k-plan-desc">Pour découvrir Aria Kids</div>
+        <div class="k-plan-features">
+          <div class="k-plan-feat">10 crédits par jour</div>
+          <div class="k-plan-feat">Aria Lite uniquement</div>
+          <div class="k-plan-feat">1 profil enfant</div>
+          <div class="k-plan-feat">Accès limité collection</div>
+          <div class="k-plan-feat">Clavier uniquement (micro en Pro)</div>
+        </div>
+        <button type="button" class="k-plan-cta outline">Commencer</button>
+      </div>
+      <div class="k-plan-card featured">
+        <div class="k-plan-badge">🏆 Recommandé</div>
+        <div class="k-plan-name">Pro</div>
+        <div class="k-plan-price">7,99€ <span>/mois</span></div>
+        <div class="k-plan-desc">Pour apprendre tous les jours</div>
+        <div class="k-plan-features">
+          <div class="k-plan-feat">100 crédits par jour</div>
+          <div class="k-plan-feat">Aria Lite + Smart</div>
+          <div class="k-plan-feat">Profils illimités</div>
+          <div class="k-plan-feat">Collection complète</div>
+          <div class="k-plan-feat">Toutes les matières</div>
+          <div class="k-plan-feat">📱 Application mobile avec micro</div>
+          <div class="k-plan-feat">Accès anticipé Saison 2</div>
+        </div>
+        <button type="button" class="k-plan-cta main">Commencer l'essai</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trial Kids CTA -->
+  <div class="k-trial">
+    <div class="k-trial-text">
+      <div class="k-trial-title">Essayez Aria Kids pendant 14 jours.</div>
+      <div class="k-trial-desc">Votre enfant découvre Aria librement pendant 14 jours, sans engagement et sans carte bancaire. Ensuite, poursuivez avec le plan Pro à 7,99€/mois ou continuez gratuitement.</div>
+    </div>
+    <button type="button" class="k-trial-cta">Démarrer l'essai →</button>
+  </div>
+
+  <div class="footer">Forgelis © 2026 · Aria Kids · <span style="cursor:pointer;text-decoration:underline">Mentions légales</span> · <span style="cursor:pointer;text-decoration:underline">Confidentialité</span> · <span style="cursor:pointer;text-decoration:underline">Contrôle parental</span></div>
+</div>
+
+<script>
+function showPage(p){
+  // Pages
+  document.getElementById('p-senior').classList.toggle('active', p==='senior');
+  document.getElementById('p-kids').classList.toggle('active', p==='kids');
+  // Nav
+  const nav    = document.getElementById('main-nav');
+  const logo   = document.getElementById('nav-logo');
+  const name   = document.getElementById('nav-name');
+  const sw     = document.getElementById('nav-switch');
+  const cta    = document.getElementById('nav-cta');
+  if(p==='senior'){
+    nav.className='senior-nav';
+    logo.className='nav-logo s'; logo.textContent='🎙️';
+    name.className='nav-name s'; name.textContent='Aria Senior';
+    sw.className='nav-switch to-kids'; sw.textContent='Voir Aria Kids →';
+    cta.className='nav-cta s'; cta.textContent='Essayer Aria';
+  } else {
+    nav.className='kids-nav';
+    logo.className='nav-logo k'; logo.textContent='🎮';
+    name.className='nav-name k'; name.textContent='Aria Kids';
+    sw.className='nav-switch to-senior'; sw.textContent='Voir Aria Senior →';
+    sw.onclick=()=>showPage('senior');
+    cta.className='nav-cta k'; cta.textContent='Essayer Aria';
+  }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.getElementById('nav-switch').onclick=()=>showPage('kids');
+</script>
+
+<div id="cookie-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:999;
+  background:rgba(15,23,42,.97);border-top:1px solid rgba(255,255,255,.1);
+  padding:14px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+  <div style="flex:1;min-width:200px;font-size:.78rem;color:rgba(255,255,255,.7);line-height:1.5">
+    🍪 Ce site utilise uniquement des cookies techniques nécessaires à son fonctionnement.
+    Aucun cookie publicitaire ni de tracking. <a href="#" style="color:#60A5FA">En savoir plus</a>
+  </div>
+  <button onclick="accepterCookies()" style="padding:9px 20px;border-radius:9px;border:none;
+    background:#2563EB;color:#fff;font-family:inherit;font-size:.8rem;font-weight:600;cursor:pointer;white-space:nowrap">
+    J'accepte
+  </button>
+</div>
+<script>
+function accepterCookies(){
+  localStorage.setItem('cookies_ok','1');
+  document.getElementById('cookie-banner').style.display='none';
+}
+if(!localStorage.getItem('cookies_ok')){
+  document.getElementById('cookie-banner').style.display='flex';
+}
+</script>
+
+</body>
+</html>

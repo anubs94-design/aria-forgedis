@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forgelis — Aria</title>
+<meta name="theme-color" content="#0B0F1E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body {
+  font-family:'Inter',sans-serif; background:#0B0F1E; color:#F0F4FF;
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  padding:24px; overflow-x:hidden;
+}
+.ambient { position:fixed; inset:0; pointer-events:none; overflow:hidden; }
+.orb { position:absolute; border-radius:50%; filter:blur(100px); opacity:.25; animation:drift 16s ease-in-out infinite alternate; }
+.o1 { width:480px;height:480px;background:radial-gradient(circle,#2563EB,transparent);top:-120px;left:-120px; }
+.o2 { width:400px;height:400px;background:radial-gradient(circle,#FF6B2B,transparent);bottom:-100px;right:-100px;animation-delay:-8s; }
+@keyframes drift { from{transform:translate(0,0)} to{transform:translate(40px,30px)} }
+
+.hub { position:relative; z-index:1; width:100%; max-width:420px; }
+
+/* ── Header ── */
+.brand { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+.brand-logo {
+  width:44px; height:44px; border-radius:14px;
+  background:linear-gradient(135deg,#2563EB,#FF6B2B);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Space Grotesk',sans-serif; font-size:1.3rem; font-weight:800; color:#fff;
+}
+.brand-name { font-family:'Space Grotesk',sans-serif; font-size:1.4rem; font-weight:800; letter-spacing:-.5px; }
+.brand-tag { font-size:.78rem; color:rgba(240,244,255,.45); margin-bottom:28px; }
+
+/* ── Étape identification ── */
+.step { display:none; animation:fadeUp .35s ease; }
+.step.active { display:block; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+.id-title { font-family:'Space Grotesk',sans-serif; font-size:1.5rem; font-weight:700; margin-bottom:6px; letter-spacing:-.3px; }
+.id-sub { font-size:.85rem; color:rgba(240,244,255,.5); line-height:1.6; margin-bottom:24px; }
+.id-input {
+  width:100%; background:rgba(255,255,255,.05); border:1.5px solid rgba(255,255,255,.12);
+  border-radius:14px; padding:15px 18px; font-family:'Inter',sans-serif;
+  font-size:1rem; color:#F0F4FF; outline:none; margin-bottom:14px; transition:border .2s;
+}
+.id-input::placeholder { color:rgba(240,244,255,.3); }
+.id-input:focus { border-color:rgba(59,110,232,.6); background:rgba(255,255,255,.07); }
+.id-cta {
+  width:100%; padding:15px; border-radius:14px; border:none;
+  background:linear-gradient(135deg,#2563EB,#7C3AED); color:#fff;
+  font-family:'Inter',sans-serif; font-size:.95rem; font-weight:600; cursor:pointer;
+  transition:all .2s;
+}
+.id-cta:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(37,99,235,.3); }
+.id-privacy { font-size:.68rem; color:rgba(240,244,255,.3); text-align:center; margin-top:14px; line-height:1.5; }
+
+/* ── Étape vitrine ── */
+.welcome { font-family:'Space Grotesk',sans-serif; font-size:1.4rem; font-weight:700; margin-bottom:4px; letter-spacing:-.3px; }
+.welcome-sub { font-size:.82rem; color:rgba(240,244,255,.5); margin-bottom:22px; }
+.products { display:flex; flex-direction:column; gap:12px; margin-bottom:18px; }
+.product {
+  display:flex; align-items:center; gap:14px;
+  background:rgba(255,255,255,.04); border:1.5px solid rgba(255,255,255,.08);
+  border-radius:18px; padding:16px; cursor:pointer; transition:all .2s;
+  text-decoration:none; color:inherit;
+}
+.product:hover { transform:translateY(-2px); background:rgba(255,255,255,.06); }
+.product.senior:hover { border-color:rgba(37,99,235,.5); box-shadow:0 8px 28px rgba(37,99,235,.15); }
+.product.kids:hover { border-color:rgba(255,107,43,.5); box-shadow:0 8px 28px rgba(255,107,43,.15); }
+.product.soon { opacity:.45; cursor:default; }
+.product.soon:hover { transform:none; box-shadow:none; border-color:rgba(255,255,255,.08); }
+.product-ico {
+  width:50px; height:50px; border-radius:15px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:1.4rem;
+}
+.product.senior .product-ico { background:linear-gradient(135deg,#2563EB,#7C3AED); }
+.product.kids .product-ico { background:linear-gradient(135deg,#FF6B2B,#8B5CF6); }
+.product.soon .product-ico { background:rgba(255,255,255,.08); }
+.product-info { flex:1; }
+.product-name { font-family:'Space Grotesk',sans-serif; font-size:.98rem; font-weight:700; }
+.product-desc { font-size:.74rem; color:rgba(240,244,255,.45); margin-top:2px; line-height:1.4; }
+.product-arrow { font-size:1rem; color:rgba(240,244,255,.3); }
+.product-badge { font-size:.6rem; font-weight:700; color:rgba(240,244,255,.4); background:rgba(255,255,255,.08); padding:3px 9px; border-radius:50px; white-space:nowrap; }
+
+/* ── Mode avancé (BYOK) ── */
+.advanced { border:1.5px solid rgba(255,255,255,.08); border-radius:16px; overflow:hidden; margin-bottom:14px; }
+.advanced-head {
+  padding:13px 16px; display:flex; align-items:center; gap:10px; cursor:pointer;
+  font-size:.78rem; font-weight:600; color:rgba(240,244,255,.55);
+}
+.advanced-head:hover { background:rgba(255,255,255,.03); }
+.advanced-arrow { margin-left:auto; transition:transform .25s; font-size:.7rem; }
+.advanced.open .advanced-arrow { transform:rotate(180deg); }
+.advanced-body { display:none; padding:0 16px 16px; }
+.advanced.open .advanced-body { display:block; }
+.advanced-desc { font-size:.72rem; color:rgba(240,244,255,.4); line-height:1.6; margin-bottom:12px; }
+.advanced-input {
+  width:100%; background:rgba(255,255,255,.05); border:1.5px solid rgba(255,255,255,.1);
+  border-radius:11px; padding:11px 14px; font-family:monospace; font-size:.78rem;
+  color:#F0F4FF; outline:none; margin-bottom:10px;
+}
+.advanced-input:focus { border-color:rgba(59,110,232,.5); }
+.advanced-save {
+  padding:9px 16px; border-radius:10px; border:1px solid rgba(255,255,255,.15);
+  background:transparent; color:rgba(240,244,255,.7); font-family:'Inter',sans-serif;
+  font-size:.75rem; font-weight:600; cursor:pointer;
+}
+.advanced-save:hover { border-color:rgba(255,255,255,.3); color:#fff; }
+.advanced-status { font-size:.7rem; margin-left:10px; }
+.byok-on { display:inline-flex; align-items:center; gap:5px; font-size:.62rem; font-weight:700; color:#4ADE80; background:rgba(74,222,128,.1); padding:3px 9px; border-radius:50px; }
+
+.switch-profile { text-align:center; }
+.switch-profile button {
+  background:none; border:none; color:rgba(240,244,255,.35);
+  font-family:'Inter',sans-serif; font-size:.72rem; cursor:pointer; text-decoration:underline;
+}
+.footer { text-align:center; margin-top:22px; font-size:.65rem; color:rgba(240,244,255,.25); }
+</style>
+</head>
+<body>
+<div class="ambient"><div class="orb o1"></div><div class="orb o2"></div></div>
+
+<div class="hub">
+  <div class="brand">
+    <div class="brand-logo">F</div>
+    <span class="brand-name">Forgelis</span>
+  </div>
+  <div class="brand-tag">La technologie, enfin pour tous.</div>
+
+  <!-- ── ÉTAPE 1 : IDENTIFICATION ── -->
+  <div class="step active" id="step-id">
+    <div class="id-title">Bienvenue 👋</div>
+    <div class="id-sub">Identifiez-vous pour accéder à vos assistants Aria. Votre profil reste sur cet appareil — Forgelis ne stocke rien.</div>
+    <input type="text" class="id-input" id="id-name" placeholder="Votre prénom" autocomplete="off" onkeydown="if(event.key==='Enter')identify()">
+    <button type="button" class="id-cta" onclick="identify()">Accéder à mes assistants →</button>
+    <div class="id-privacy">🔒 Identification 100% locale · Zéro donnée sur nos serveurs · Conforme RGPD</div>
+  </div>
+
+  <!-- ── ÉTAPE 2 : VITRINE ── -->
+  <div class="step" id="step-hub">
+    <div class="welcome">Bonjour <span id="hub-name">—</span> <span id="byok-badge" class="byok-on" style="display:none">🔑 Clé personnelle active</span></div>
+    <div class="welcome-sub">Choisissez votre assistant</div>
+
+    <div class="products">
+      <a class="product senior" href="aria_senior_v2.html">
+        <div class="product-ico">🎙️</div>
+        <div class="product-info">
+          <div class="product-name">Aria Senior</div>
+          <div class="product-desc">L'assistant vocal qui simplifie le PC — 60 ans et + · 📱 mobile vocal avec Pro</div>
+        </div>
+        <span class="product-arrow">→</span>
+      </a>
+      <a class="product kids" href="aria_kids_v2.html">
+        <div class="product-ico">🎮</div>
+        <div class="product-info">
+          <div class="product-name">Aria Kids</div>
+          <div class="product-desc">Apprendre en jouant, du CP à la Terminale — 4 à 17 ans · 📱 micro avec Pro</div>
+        </div>
+        <span class="product-arrow">→</span>
+      </a>
+      <a class="product" href="aria_industrial_v1.html" style="border-color:rgba(56,189,248,.2)">
+        <div class="product-ico" style="background:linear-gradient(135deg,#38BDF8,#6366F1)">🏭</div>
+        <div class="product-info">
+          <div class="product-name">Aria Industrial</div>
+          <div class="product-desc">Le système nerveux de votre entreprise — ordres vocaux, brief matinal, postes & rôles</div>
+        </div>
+        <span class="product-badge" style="color:#38BDF8;background:rgba(56,189,248,.1)">Aperçu</span>
+      </a>
+    </div>
+
+    <!-- Activation licence Pro -->
+    <div class="advanced" id="lic-box">
+      <div class="advanced-head" onclick="document.getElementById('lic-box').classList.toggle('open')">
+        🔑 Activer ma licence Pro
+        <span class="advanced-arrow">▼</span>
+      </div>
+      <div class="advanced-body">
+        <div class="advanced-desc">Vous avez reçu une clé de licence après votre achat ? Collez-la ici — activation instantanée, 100% locale.</div>
+        <input type="text" class="advanced-input" id="lic-key" placeholder="ARIA-XXXXX-XXXXX-..." autocomplete="off">
+        <button type="button" class="advanced-save" onclick="activerLicence()">Activer</button>
+        <span class="advanced-status" id="lic-status"></span>
+      </div>
+    </div>
+
+    <!-- Mode avancé : clé personnelle (BYOK) -->
+    <div class="advanced" id="advanced">
+      <div class="advanced-head" onclick="document.getElementById('advanced').classList.toggle('open')">
+        ⚙️ Mode avancé — Utiliser ma propre clé IA
+        <span class="advanced-arrow">▼</span>
+      </div>
+      <div class="advanced-body">
+        <div class="advanced-desc">
+          Pour les utilisateurs expérimentés et les entreprises : connectez votre propre clé API Anthropic.
+          La consommation est alors <b>facturée directement sur votre compte</b>, sans intermédiaire.
+          La clé est stockée uniquement sur cet appareil et n'est jamais transmise à Forgelis.
+        </div>
+        <input type="password" class="advanced-input" id="byok-key" placeholder="sk-ant-..." autocomplete="off">
+        <button type="button" class="advanced-save" onclick="saveByok()">Enregistrer</button>
+        <button type="button" class="advanced-save" onclick="clearByok()" style="margin-left:6px">Retirer</button>
+        <span class="advanced-status" id="byok-status"></span>
+      </div>
+    </div>
+
+    <div class="switch-profile">
+      <button type="button" onclick="switchProfile()">Changer d'utilisateur</button>
+    </div>
+  </div>
+
+  <div class="footer">Forgelis © 2026 · forgelis.fr · Vos données restent chez vous</div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+// FORGELIS HUB — identification locale + vitrine
+// Architecture zéro-données : tout vit dans cet appareil.
+// ════════════════════════════════════════════
+
+function identify(){
+  const nom = document.getElementById('id-name').value.trim();
+  if(!nom){
+    document.getElementById('id-name').style.borderColor = 'rgba(239,68,68,.6)';
+    return;
+  }
+  try{ localStorage.setItem('forgelis_user', JSON.stringify({name: nom, since: new Date().toISOString()})); }catch(e){}
+  showHub(nom);
+}
+
+function showHub(nom){
+  document.getElementById('hub-name').textContent = nom;
+  document.getElementById('step-id').classList.remove('active');
+  document.getElementById('step-hub').classList.add('active');
+  refreshByokBadge();
+}
+
+function switchProfile(){
+  try{ localStorage.removeItem('forgelis_user'); }catch(e){}
+  document.getElementById('id-name').value = '';
+  document.getElementById('step-hub').classList.remove('active');
+  document.getElementById('step-id').classList.add('active');
+}
+
+
+// ── Activation de licence Pro (vérifiée localement par l'app) ──
+function activerLicence(){
+  const k = document.getElementById('lic-key').value.trim();
+  const st = document.getElementById('lic-status');
+  if(!k){ st.textContent = 'Entrez votre clé'; st.style.color = '#F87171'; return; }
+  try{ localStorage.setItem('aria_licence', k); }catch(e){}
+  if(window.pywebview && window.pywebview.api && window.pywebview.api.save_licence){
+    window.pywebview.api.save_licence(k).then(res=>{
+      if(res && res.ok){
+        st.textContent = '✅ Licence Pro activée jusqu\'au ' + res.expire; st.style.color = '#4ADE80';
+        document.getElementById('lic-key').value = '';
+      } else if(res && res.error === 'expiree'){
+        st.textContent = '❌ Licence expirée le ' + res.expire; st.style.color = '#F87171';
+      } else {
+        st.textContent = '❌ Clé invalide'; st.style.color = '#F87171';
+      }
+    });
+  } else {
+    st.textContent = '✓ Clé enregistrée — activation au prochain lancement de l\'application'; st.style.color = '#4ADE80';
+  }
+}
+
+// ── Clé personnelle (BYOK) — stockée localement, jamais envoyée à Forgelis ──
+function saveByok(){
+  const k = document.getElementById('byok-key').value.trim();
+  const st = document.getElementById('byok-status');
+  if(!k || !k.startsWith('sk-')){
+    st.textContent = '❌ Format invalide'; st.style.color = '#F87171';
+    return;
+  }
+  // Stockage local. Si l'app tourne en mode bureau, on la transmet aussi à Python.
+  try{ localStorage.setItem('aria_byok', k); }catch(e){}
+  if(window.pywebview && window.pywebview.api && window.pywebview.api.save_api_key){
+    window.pywebview.api.save_api_key(k);
+  }
+  document.getElementById('byok-key').value = '';
+  st.textContent = '✅ Clé enregistrée sur cet appareil'; st.style.color = '#4ADE80';
+  refreshByokBadge();
+}
+
+function clearByok(){
+  try{ localStorage.removeItem('aria_byok'); }catch(e){}
+  if(window.pywebview && window.pywebview.api && window.pywebview.api.save_api_key){
+    window.pywebview.api.save_api_key('');
+  }
+  const st = document.getElementById('byok-status');
+  st.textContent = 'Clé retirée'; st.style.color = 'rgba(240,244,255,.5)';
+  refreshByokBadge();
+}
+
+function refreshByokBadge(){
+  let on = false;
+  try{ on = !!localStorage.getItem('aria_byok'); }catch(e){}
+  document.getElementById('byok-badge').style.display = on ? 'inline-flex' : 'none';
+}
+
+// ── Au chargement : profil déjà identifié ? ──
+(function(){
+  try{
+    const u = JSON.parse(localStorage.getItem('forgelis_user') || 'null');
+    if(u && u.name) showHub(u.name);
+  }catch(e){}
+})();
+</script>
+</body>
+</html>

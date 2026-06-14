@@ -1,0 +1,1957 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="description" content="Aria Kids — Apprendre en jouant, du CP à la Terminale. Par Forgelis.">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Aria Kids</title>
+<link rel="manifest" href="manifest_kids.json">
+<meta name="theme-color" content="#FF6B2B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --orange:#FF6B2B; --orange2:#FF8C52; --orange-pale:#FFF0E8;
+  --violet:#8B5CF6; --violet2:#A78BFA; --violet-pale:#F3EFFE;
+  --green:#10B981; --green-pale:#ECFDF5;
+  --amber:#F59E0B; --amber-pale:#FFFBEB;
+  --blue:#3B82F6; --blue-pale:#EFF6FF;
+  --red:#EF4444; --bg:#FFF8F0;
+  --card:#FFFFFF; --border:#E7E5E4;
+  --text:#1C1917; --text2:#57534E; --text3:#A8A29E;
+  --shadow:0 2px 12px rgba(0,0,0,0.07);
+  --shadow-lg:0 8px 32px rgba(0,0,0,0.10);
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body { height:100%; overflow:hidden; }
+body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text); height:100vh; overflow:hidden; }
+
+.screen { display:none; height:100vh; flex-direction:column; overflow:hidden; }
+.screen.active { display:flex; }
+
+
+
+
+/* ── PARENT GATE & DASHBOARD ── */
+#s-parent { background:linear-gradient(160deg,#1E293B 0%,#334155 100%); align-items:center; justify-content:center; padding:24px; }
+.pg-wrap { width:100%; max-width:380px; }
+.pg-badge { display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,.1); border:1.5px solid rgba(255,255,255,.2); padding:6px 14px; border-radius:50px; font-size:.72rem; font-weight:800; color:#93C5FD; margin-bottom:20px; }
+.pg-title { font-size:1.5rem; font-weight:900; color:#fff; line-height:1.25; margin-bottom:10px; }
+.pg-desc { font-size:.85rem; font-weight:600; color:rgba(255,255,255,.6); line-height:1.65; margin-bottom:22px; }
+.pg-checks { display:flex; flex-direction:column; gap:10px; margin-bottom:18px; }
+.pg-check { display:flex; align-items:flex-start; gap:11px; background:rgba(255,255,255,.06); border:1.5px solid rgba(255,255,255,.12); border-radius:14px; padding:13px 15px; cursor:pointer; transition:all .2s; }
+.pg-check.on { background:rgba(59,130,246,.15); border-color:rgba(59,130,246,.5); }
+.pg-box { width:20px; height:20px; border-radius:6px; border:2px solid rgba(255,255,255,.3); flex-shrink:0; display:flex; align-items:center; justify-content:center; margin-top:1px; transition:all .2s; }
+.pg-check.on .pg-box { background:#3B82F6; border-color:#3B82F6; }
+.pg-check.on .pg-box::after { content:'✓'; color:#fff; font-size:.7rem; font-weight:900; }
+.pg-check-txt { font-size:.78rem; font-weight:600; color:rgba(255,255,255,.75); line-height:1.5; }
+.pg-input { width:100%; background:rgba(255,255,255,.08); border:2px solid rgba(255,255,255,.15); border-radius:14px; padding:13px 16px; font-family:'Nunito',sans-serif; font-size:.9rem; font-weight:700; color:#fff; outline:none; margin-bottom:16px; }
+.pg-input::placeholder { color:rgba(255,255,255,.35); }
+.pg-input:focus { border-color:rgba(59,130,246,.6); }
+.pg-cta { width:100%; padding:15px; border-radius:14px; border:none; background:linear-gradient(135deg,#3B82F6,#8B5CF6); color:#fff; font-family:'Nunito',sans-serif; font-size:.95rem; font-weight:900; cursor:pointer; transition:all .2s; }
+.pg-cta:disabled { opacity:.35; cursor:not-allowed; }
+.pg-cta:not(:disabled):hover { transform:translateY(-1px); }
+.pg-legal { font-size:.68rem; color:rgba(255,255,255,.35); text-align:center; margin-top:12px; line-height:1.5; }
+
+/* Parental dashboard */
+#s-parental { background:#F1F5F9; }
+.pd-header { background:linear-gradient(135deg,#1E293B,#334155); padding:20px 18px; }
+.pd-title { font-size:1.2rem; font-weight:900; color:#fff; }
+.pd-sub { font-size:.75rem; font-weight:600; color:rgba(255,255,255,.55); margin-top:3px; }
+.pd-body { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; }
+.pd-card { background:#fff; border:1.5px solid #E2E8F0; border-radius:16px; padding:16px; }
+.pd-card-title { font-size:.72rem; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:.8px; margin-bottom:12px; }
+.pd-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.pd-stat { text-align:center; }
+.pd-stat-num { font-size:1.4rem; font-weight:900; color:#1E293B; }
+.pd-stat-lbl { font-size:.62rem; font-weight:700; color:#94A3B8; margin-top:2px; }
+.pd-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid #F1F5F9; }
+.pd-row:last-child { border-bottom:none; }
+.pd-row-label { font-size:.82rem; font-weight:700; color:#334155; }
+.pd-row-value { font-size:.82rem; font-weight:800; color:#1E293B; }
+.pd-toggle { width:44px; height:24px; border-radius:50px; background:#CBD5E1; position:relative; cursor:pointer; transition:background .2s; border:none; flex-shrink:0; }
+.pd-toggle.on { background:#3B82F6; }
+.pd-toggle::after { content:''; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff; transition:left .2s; }
+.pd-toggle.on::after { left:23px; }
+.pd-btn-danger { width:100%; padding:12px; border-radius:12px; border:1.5px solid #FECACA; background:#FEF2F2; color:#DC2626; font-family:'Nunito',sans-serif; font-size:.82rem; font-weight:800; cursor:pointer; margin-top:8px; }
+.pd-btn-normal { width:100%; padding:12px; border-radius:12px; border:1.5px solid #E2E8F0; background:#fff; color:#475569; font-family:'Nunito',sans-serif; font-size:.82rem; font-weight:800; cursor:pointer; margin-top:8px; }
+.pd-back { width:100%; padding:14px; border-radius:14px; border:none; background:linear-gradient(135deg,#FF6B2B,#8B5CF6); color:#fff; font-family:'Nunito',sans-serif; font-size:.9rem; font-weight:900; cursor:pointer; }
+.pd-plan-badge { display:inline-block; background:#EFF6FF; color:#2563EB; font-size:.68rem; font-weight:800; padding:3px 10px; border-radius:50px; }
+
+/* Math gate modal */
+.gate-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:500; align-items:center; justify-content:center; padding:24px; }
+.gate-modal.show { display:flex; }
+.gate-card { background:#fff; border-radius:20px; padding:24px; max-width:280px; width:100%; text-align:center; }
+.gate-title { font-size:1rem; font-weight:900; color:#1E293B; margin-bottom:6px; }
+.gate-desc { font-size:.78rem; color:#64748B; margin-bottom:16px; }
+.gate-q { font-size:1.6rem; font-weight:900; color:#3B82F6; margin-bottom:14px; }
+.gate-input { width:100%; border:2px solid #E2E8F0; border-radius:12px; padding:12px; text-align:center; font-size:1.2rem; font-weight:900; font-family:'Nunito',sans-serif; outline:none; margin-bottom:12px; }
+.gate-input:focus { border-color:#3B82F6; }
+.gate-btn { width:100%; padding:12px; border-radius:12px; border:none; background:#3B82F6; color:#fff; font-family:'Nunito',sans-serif; font-size:.88rem; font-weight:900; cursor:pointer; }
+.gate-cancel { width:100%; padding:10px; border:none; background:transparent; color:#94A3B8; font-family:'Nunito',sans-serif; font-size:.78rem; font-weight:700; cursor:pointer; margin-top:6px; }
+
+/* Cancel sub modal */
+.cancel-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:500; align-items:center; justify-content:center; padding:24px; }
+.cancel-modal.show { display:flex; }
+.cancel-card { background:#fff; border-radius:20px; padding:24px; max-width:300px; width:100%; text-align:center; }
+
+/* ── TRIAL BANNER ── */
+.trial-banner { background:linear-gradient(135deg,#8B5CF6,#FF6B2B); padding:8px 14px; display:flex; align-items:center; gap:10px; }
+.trial-left   { flex:1; display:flex; flex-direction:column; gap:3px; }
+.trial-top    { display:flex; align-items:center; justify-content:space-between; }
+.trial-label  { font-size:.62rem; font-weight:800; color:rgba(255,255,255,.85); text-transform:uppercase; letter-spacing:.5px; }
+.trial-days   { font-size:.7rem; font-weight:900; color:#fff; }
+.trial-track  { height:4px; background:rgba(255,255,255,.2); border-radius:2px; overflow:hidden; }
+.trial-fill   { height:100%; border-radius:2px; background:#fff; transition:width .5s; }
+.trial-fill.urgent { background:#FCD34D; }
+.trial-cta { background:#fff; color:var(--violet); border:none; border-radius:50px; padding:6px 12px; font-family:inherit; font-size:.72rem; font-weight:900; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+
+.trial-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:400; align-items:center; justify-content:center; padding:24px; }
+.trial-modal.show { display:flex; }
+.trial-card { background:var(--card); border-radius:22px; padding:24px; max-width:300px; width:100%; text-align:center; }
+.trial-card-ico   { font-size:2.8rem; margin-bottom:10px; }
+.trial-card-title { font-size:1.1rem; font-weight:900; color:var(--text); margin-bottom:6px; }
+.trial-card-desc  { font-size:.82rem; color:var(--text3); line-height:1.6; margin-bottom:16px; }
+.trial-card-price { background:linear-gradient(135deg,var(--orange),var(--violet)); color:#fff; border:none; border-radius:14px; padding:13px; width:100%; font-family:inherit; font-size:.92rem; font-weight:900; cursor:pointer; margin-bottom:7px; }
+.trial-card-free  { background:transparent; border:1.5px solid var(--border); border-radius:14px; padding:11px; width:100%; font-family:inherit; font-size:.82rem; font-weight:700; color:var(--text3); cursor:pointer; }
+
+/* ── CREDIT SYSTEM ── */
+.credit-bar { padding:8px 14px; background:var(--card); border-bottom:1.5px solid var(--border); display:flex; align-items:center; gap:8px; }
+.credit-left { flex:1; display:flex; flex-direction:column; gap:3px; }
+.credit-top  { display:flex; align-items:center; justify-content:space-between; }
+.credit-label{ font-size:.62rem; font-weight:800; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; }
+.credit-nums { font-size:.7rem; font-weight:800; color:var(--text2); }
+.credit-track{ height:6px; background:var(--border); border-radius:4px; overflow:hidden; }
+.credit-fill { height:100%; border-radius:4px; background:linear-gradient(90deg,var(--orange),var(--amber)); transition:width .5s; }
+.credit-fill.low { background:linear-gradient(90deg,#F59E0B,#EF4444); }
+.credit-bonus { font-size:.68rem; font-weight:800; color:var(--violet); background:var(--violet-pale); padding:3px 8px; border-radius:50px; white-space:nowrap; }
+.credit-buy { font-size:.65rem; font-weight:800; color:var(--orange); background:var(--orange-pale); border:none; padding:4px 9px; border-radius:50px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+
+.model-selector { display:flex; gap:5px; padding:0 12px 8px; }
+.model-btn { flex:1; padding:7px 4px; border-radius:10px; border:2px solid var(--border); background:var(--card); cursor:pointer; font-family:inherit; display:flex; flex-direction:column; align-items:center; gap:2px; transition:all .18s; }
+.model-btn.active { border-color:var(--orange); background:var(--orange-pale); }
+.model-ico  { font-size:.9rem; }
+.model-name { font-size:.58rem; font-weight:900; color:var(--text3); }
+.model-cost { font-size:.55rem; font-weight:700; color:var(--text3); }
+.model-btn.active .model-name,
+.model-btn.active .model-cost { color:var(--orange); }
+
+.credit-warning { margin:0 12px 8px; background:#FEF3C7; border:1.5px solid #F59E0B; border-radius:12px; padding:8px 12px; font-size:.75rem; font-weight:700; color:#92400E; display:none; align-items:center; gap:7px; }
+.credit-warning.show { display:flex; }
+
+.recharge-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:300; align-items:center; justify-content:center; padding:20px; }
+.recharge-modal.show { display:flex; }
+.recharge-card { background:var(--card); border-radius:20px; padding:22px; max-width:300px; width:100%; }
+.recharge-title { font-size:.95rem; font-weight:900; color:var(--text); margin-bottom:4px; }
+.recharge-sub   { font-size:.75rem; color:var(--text3); margin-bottom:16px; }
+.pack-list { display:flex; flex-direction:column; gap:7px; margin-bottom:14px; }
+.pack-item { background:var(--bg); border:1.5px solid var(--border); border-radius:13px; padding:12px 14px; display:flex; align-items:center; gap:10px; cursor:pointer; transition:all .18s; }
+.pack-item:hover { border-color:var(--orange); background:var(--orange-pale); }
+.pack-ico  { font-size:1.3rem; }
+.pack-info { flex:1; }
+.pack-name { font-size:.82rem; font-weight:800; color:var(--text); }
+.pack-desc { font-size:.68rem; color:var(--text3); }
+.pack-price{ font-size:.88rem; font-weight:900; color:var(--orange); }
+.recharge-close { width:100%; padding:11px; border-radius:12px; border:1.5px solid var(--border); background:transparent; color:var(--text3); font-family:inherit; font-size:.82rem; font-weight:700; cursor:pointer; }
+
+/* ══ ONBOARDING ══ */
+#s-onboard {
+  background:linear-gradient(160deg,#FF6B2B 0%,#8B5CF6 100%);
+  align-items:center; justify-content:center; padding:24px;
+}
+.ob-wrap { width:100%; max-width:380px; height:100%; max-height:700px; display:flex; flex-direction:column; }
+.ob-brand { display:flex; align-items:center; gap:10px; margin-bottom:28px; }
+.ob-logo { width:42px;height:42px;background:rgba(255,255,255,.25);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.4rem; }
+.ob-brand-name { font-size:1.2rem;font-weight:900;color:#fff; }
+.ob-brand-sub { font-size:.72rem;font-weight:700;color:rgba(255,255,255,.6);margin-left:auto;background:rgba(255,255,255,.15);padding:3px 10px;border-radius:50px; }
+.ob-progress { display:flex;gap:5px;margin-bottom:24px; }
+.ob-seg { flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.25);transition:background .4s; }
+.ob-seg.on { background:#fff; }
+.ob-step { display:none;flex:1;flex-direction:column;animation:popIn .3s ease; }
+.ob-step.active { display:flex; }
+@keyframes popIn { from{opacity:0;transform:scale(.97)} to{opacity:1;transform:scale(1)} }
+.ob-emoji { font-size:3rem;margin-bottom:14px; }
+.ob-title { font-size:1.7rem;font-weight:900;color:#fff;line-height:1.2;margin-bottom:8px;letter-spacing:-.4px; }
+.ob-desc  { font-size:.9rem;font-weight:600;color:rgba(255,255,255,.72);line-height:1.6;margin-bottom:24px; }
+.ob-input { width:100%;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.25);border-radius:16px;padding:15px 18px;font-family:'Nunito',sans-serif;font-size:1rem;font-weight:700;color:#fff;outline:none;margin-bottom:14px; }
+.ob-input::placeholder { color:rgba(255,255,255,.4); }
+.ob-input:focus { background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.5); }
+.age-block { margin-bottom:16px; }
+.age-ctrl { display:flex;align-items:center;gap:10px;margin-bottom:12px; }
+.age-btn { width:50px;height:50px;border-radius:14px;border:none;cursor:pointer;background:rgba(255,255,255,.2);color:#fff;font-size:1.4rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+.age-btn:active { transform:scale(.9); }
+.age-num { flex:1;background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.3);border-radius:14px;padding:12px;text-align:center;font-size:2rem;font-weight:900;color:#fff;outline:none;font-family:'Nunito',sans-serif; }
+.age-num::-webkit-inner-spin-button { -webkit-appearance:none; }
+.age-chip { display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.25);padding:7px 14px;border-radius:50px;font-size:.82rem;font-weight:700;color:#fff; }
+
+/* Classe selector */
+.class-select { width:100%;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.25);border-radius:16px;padding:14px 16px;font-family:'Nunito',sans-serif;font-size:.95rem;font-weight:700;color:#fff;outline:none;margin-bottom:14px;-webkit-appearance:none;cursor:pointer; }
+.class-select option { color:var(--text);background:#fff; }
+
+/* Profile type */
+.profile-types { display:flex;flex-direction:column;gap:8px;margin-bottom:16px; }
+.ptype { background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.15);border-radius:14px;padding:13px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .2s; }
+.ptype:active { transform:scale(.97); }
+.ptype.sel { background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.5); }
+.ptype-ico  { font-size:1.5rem;flex-shrink:0; }
+.ptype-info { flex:1; }
+.ptype-title{ font-size:.9rem;font-weight:800;color:#fff; }
+.ptype-desc { font-size:.72rem;font-weight:600;color:rgba(255,255,255,.6);margin-top:2px; }
+.ptype-radio{ width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.3);flex-shrink:0;display:flex;align-items:center;justify-content:center; }
+.ptype.sel .ptype-radio { background:#fff; }
+.ptype.sel .ptype-radio::after { content:'';width:6px;height:6px;border-radius:50%;background:var(--orange); }
+
+.ob-choices { display:flex;gap:10px;margin-bottom:16px; }
+.ob-choice { flex:1;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.2);border-radius:16px;padding:16px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:all .2s; }
+.ob-choice.sel { background:rgba(255,255,255,.28);border-color:rgba(255,255,255,.6); }
+.ob-choice:active { transform:scale(.96); }
+.ob-choice-ico   { font-size:1.8rem; }
+.ob-choice-title { font-size:.85rem;font-weight:800;color:#fff;text-align:center; }
+.ob-choice-sub   { font-size:.68rem;font-weight:600;color:rgba(255,255,255,.6);text-align:center; }
+
+.ob-summary { background:rgba(255,255,255,.15);border-radius:16px;overflow:hidden;margin-bottom:16px;border:1.5px solid rgba(255,255,255,.2); }
+.ob-sum-row { display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid rgba(255,255,255,.1); }
+.ob-sum-row:last-child { border-bottom:none; }
+.ob-sum-ico { font-size:.9rem;flex-shrink:0; }
+.ob-sum-key { font-size:.78rem;font-weight:600;color:rgba(255,255,255,.6);flex:1; }
+.ob-sum-val { font-size:.82rem;font-weight:800;color:#fff; }
+
+.ob-cta { width:100%;padding:16px;border-radius:16px;border:none;background:#fff;color:var(--orange);font-family:'Nunito',sans-serif;font-size:1rem;font-weight:900;cursor:pointer;transition:all .2s;margin-top:auto;display:flex;align-items:center;justify-content:center;gap:8px; }
+.ob-cta:hover { transform:translateY(-2px); }
+.ob-cta:active { transform:scale(.97); }
+
+/* ══ SWITCHER ══ */
+#s-switcher { background:var(--bg); }
+.sw-header { background:linear-gradient(135deg,var(--orange),var(--violet));padding:28px 22px 22px; }
+.sw-logo-row { display:flex;align-items:center;gap:9px;margin-bottom:16px; }
+.sw-logo-ico { width:30px;height:30px;background:rgba(255,255,255,.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem; }
+.sw-logo-name { font-size:.9rem;font-weight:900;color:#fff; }
+.sw-title { font-size:1.4rem;font-weight:900;color:#fff;letter-spacing:-.3px; }
+.sw-sub   { font-size:.82rem;font-weight:600;color:rgba(255,255,255,.7);margin-top:3px; }
+.sw-body  { flex:1;padding:18px;overflow-y:auto;display:flex;flex-direction:column;gap:8px; }
+.sw-card { background:var(--card);border:2px solid var(--border);border-radius:18px;padding:14px 16px;display:flex;align-items:center;gap:13px;cursor:pointer;transition:all .2s;box-shadow:var(--shadow); }
+.sw-card:hover { border-color:var(--orange); }
+.sw-card.sel { border-color:var(--orange);background:var(--orange-pale); }
+.sw-card:active { transform:scale(.98); }
+.sw-ava { width:46px;height:46px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Nunito',sans-serif;font-size:1.2rem;font-weight:900;color:#fff; }
+.sw-info { flex:1; }
+.sw-name { font-size:.95rem;font-weight:800;color:var(--text); }
+.sw-meta { font-size:.72rem;font-weight:600;color:var(--text3);margin-top:2px; }
+.sw-xp   { font-size:.72rem;font-weight:800;color:var(--amber); }
+.sw-badge { padding:3px 9px;border-radius:50px;font-size:.65rem;font-weight:800; }
+.b-je { background:var(--orange-pale);color:var(--orange); }
+.b-ja { background:var(--violet-pale);color:var(--violet); }
+.sw-check { width:22px;height:22px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;transition:all .2s;display:flex;align-items:center;justify-content:center; }
+.sw-card.sel .sw-check { background:var(--orange);border-color:var(--orange); }
+.sw-card.sel .sw-check::after { content:'✓';font-size:.65rem;color:#fff;font-weight:900; }
+.sw-footer { padding:0 18px 24px;display:flex;flex-direction:column;gap:8px; }
+.sw-confirm { width:100%;padding:15px;border-radius:16px;border:none;background:linear-gradient(135deg,var(--orange),var(--violet));color:#fff;font-family:'Nunito',sans-serif;font-size:.95rem;font-weight:900;cursor:pointer;transition:all .2s; }
+.sw-confirm:hover { transform:translateY(-1px); }
+.sw-add { width:100%;padding:12px;border-radius:16px;border:2px dashed var(--border);background:transparent;color:var(--text3);font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer; }
+.sw-add:hover { border-color:var(--orange);color:var(--orange); }
+
+/* ══ MAIN ══ */
+#s-main { background:var(--bg); }
+.topbar { background:linear-gradient(135deg,var(--orange),var(--violet));padding:12px 16px;display:flex;align-items:center;gap:10px; }
+.tb-logo { width:28px;height:28px;background:rgba(255,255,255,.25);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:.85rem; }
+.tb-name { font-size:.9rem;font-weight:900;color:#fff;flex:1;letter-spacing:-.2px; }
+.tb-chg  { background:rgba(255,255,255,.2);border:none;border-radius:8px;padding:5px 10px;color:#fff;font-family:'Nunito',sans-serif;font-size:.72rem;font-weight:800;cursor:pointer; }
+
+/* XP bar */
+.xp-bar-wrap { padding:10px 16px;background:var(--card);border-bottom:1.5px solid var(--border);display:flex;align-items:center;gap:10px; }
+.xp-left { display:flex;flex-direction:column;flex:1;gap:4px; }
+.xp-top  { display:flex;align-items:center;justify-content:space-between; }
+.xp-label{ font-size:.68rem;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.8px; }
+.xp-count{ font-size:.72rem;font-weight:900;color:var(--amber); }
+.xp-track{ height:8px;background:var(--border);border-radius:6px;overflow:hidden; }
+.xp-fill { height:100%;border-radius:6px;background:linear-gradient(90deg,var(--amber),var(--orange));transition:width .8s cubic-bezier(.4,0,.2,1); }
+.xp-stats{ display:flex;gap:8px; }
+.xp-stat { display:flex;align-items:center;gap:4px;font-size:.72rem;font-weight:800;padding:4px 8px;border-radius:50px;border:1.5px solid var(--border); }
+
+/* Content */
+.main-content { flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px; }
+.main-content::-webkit-scrollbar { width:0; }
+
+/* Chat */
+.chat-panel { background:var(--card);border-radius:20px;border:1.5px solid var(--border);box-shadow:var(--shadow);overflow:hidden; }
+.chat-msgs  { padding:14px;display:flex;flex-direction:column;gap:10px;min-height:80px;max-height:160px;overflow-y:auto; }
+.chat-msgs::-webkit-scrollbar { width:0; }
+.ma { display:flex;gap:8px;align-items:flex-start;animation:mIn .25s ease; }
+.ma-ava { width:28px;height:28px;border-radius:9px;flex-shrink:0;background:linear-gradient(135deg,var(--orange),var(--violet));display:flex;align-items:center;justify-content:center;font-size:.8rem; }
+.ma-bbl { background:var(--orange-pale);border-radius:4px 14px 14px 14px;padding:10px 13px;font-size:.88rem;font-weight:700;line-height:1.6;color:var(--text);max-width:86%;border:1.5px solid rgba(255,107,43,.15); }
+.ma-bbl.typing { display:flex;gap:5px;align-items:center;padding:13px; }
+.td { width:6px;height:6px;border-radius:50%;background:var(--orange);animation:tda 1.2s infinite; }
+.td:nth-child(2){animation-delay:.2s}.td:nth-child(3){animation-delay:.4s}
+@keyframes tda { 0%,80%,100%{transform:scale(.5);opacity:.3} 40%{transform:scale(1);opacity:1} }
+.mu { display:flex;justify-content:flex-end;animation:mIn .25s ease; }
+.mu-bbl { background:linear-gradient(135deg,var(--violet),var(--violet2));color:#fff;border-radius:14px 4px 14px 14px;padding:10px 13px;font-size:.88rem;font-weight:700;max-width:80%;line-height:1.55; }
+@keyframes mIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+/* Mic */
+.mic-section { border-top:1.5px solid var(--border);padding:14px;display:flex;flex-direction:column;align-items:center;gap:8px; }
+.mic-wrap { position:relative;display:flex;align-items:center;justify-content:center; }
+.mic-ring1,.mic-ring2 { position:absolute;border-radius:50%;opacity:0;transition:opacity .3s; }
+.mic-ring1 { width:64px;height:64px;border:2px solid rgba(255,107,43,.3); }
+.mic-ring2 { width:80px;height:80px;border:2px solid rgba(255,107,43,.15); }
+.mic-wrap.on .mic-ring1 { opacity:1;animation:rng 1.5s ease-in-out infinite; }
+.mic-wrap.on .mic-ring2 { opacity:1;animation:rng 1.5s ease-in-out infinite .4s; }
+@keyframes rng { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
+.mic-btn { width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(145deg,var(--orange),var(--orange2));font-size:1.5rem;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(255,107,43,.4);transition:all .2s;position:relative;z-index:1; }
+.mic-btn:active { transform:scale(.94); }
+.mic-btn.on { background:linear-gradient(145deg,var(--violet),var(--violet2));box-shadow:0 4px 16px rgba(139,92,246,.4); }
+.mic-hint { font-size:.72rem;font-weight:700;color:var(--text3); }
+
+/* Games */
+.acts-label { font-size:.65rem;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px; }
+.game-grid { display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:8px; }
+.game-card { background:var(--card);border:2px solid var(--border);border-radius:16px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;transition:all .2s;box-shadow:var(--shadow); }
+.game-card:hover { border-color:var(--orange);transform:translateY(-3px);box-shadow:0 8px 24px rgba(255,107,43,.15); }
+.game-card:active { transform:scale(.96); }
+.game-ico  { font-size:2rem; }
+.game-name { font-size:.78rem;font-weight:900;color:var(--text);text-align:center; }
+.game-xp   { font-size:.65rem;font-weight:800;color:var(--amber);background:var(--amber-pale);padding:2px 7px;border-radius:50px; }
+.quick-row { display:flex;gap:7px; }
+.qa { flex:1;background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:11px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:all .18s;box-shadow:var(--shadow); }
+.qa:hover { border-color:var(--violet);background:var(--violet-pale);transform:translateY(-2px); }
+.qa:active { transform:scale(.96); }
+.qa-ico { font-size:1.25rem; }
+.qa-lbl { font-size:.65rem;font-weight:800;color:var(--text3); }
+
+/* Collection */
+.coll-wrap { background:var(--card);border-radius:20px;border:1.5px solid var(--border);box-shadow:var(--shadow);overflow:hidden; }
+.coll-header { padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1.5px solid var(--border); }
+.coll-title { font-size:.88rem;font-weight:900;color:var(--text); }
+.coll-count { font-size:.7rem;font-weight:800;color:var(--violet);background:var(--violet-pale);padding:3px 9px;border-radius:50px; }
+.coll-grid  { display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px; }
+
+/* Image card dans la collection */
+.img-item {
+  aspect-ratio:1; border-radius:12px; overflow:hidden;
+  border:2px solid var(--border); cursor:pointer;
+  transition:all .2s; position:relative;
+  background:var(--bg);
+  display:flex; align-items:center; justify-content:center;
+}
+.img-item img { width:100%;height:100%;object-fit:cover;display:block; }
+.img-item.locked { filter:grayscale(1) opacity(.25);cursor:default; }
+.img-item.unlocked { border-color:var(--amber);box-shadow:0 2px 8px rgba(245,158,11,.2); }
+.img-item.unlocked:hover { transform:scale(1.08); }
+.img-item.loading { background:var(--border); }
+.img-lock { font-size:1.2rem; }
+.img-new-badge { position:absolute;top:3px;right:3px;background:var(--orange);color:#fff;font-size:.52rem;font-weight:900;padding:1px 5px;border-radius:50px; }
+
+/* Image modal */
+.img-modal { display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center;padding:20px; }
+.img-modal.show { display:flex;animation:fadeIn .2s ease; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+.img-modal-card { background:var(--card);border-radius:20px;overflow:hidden;max-width:320px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3); }
+.img-modal-img  { width:100%;height:220px;object-fit:cover;display:block; }
+.img-modal-body { padding:16px; }
+.img-modal-name { font-size:1rem;font-weight:900;color:var(--text);margin-bottom:4px; }
+.img-modal-src  { font-size:.72rem;font-weight:600;color:var(--text3);margin-bottom:12px; }
+.img-modal-close { width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--orange),var(--violet));color:#fff;font-family:'Nunito',sans-serif;font-size:.9rem;font-weight:900;cursor:pointer; }
+
+/* Reward popup */
+.reward-popup { display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;padding:24px; }
+.reward-popup.show { display:flex;animation:popIn .3s ease; }
+.reward-card { background:var(--card);border-radius:24px;overflow:hidden;max-width:300px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2);border:2px solid var(--amber); }
+.reward-img-wrap { height:180px;overflow:hidden;position:relative; }
+.reward-img-wrap img { width:100%;height:100%;object-fit:cover;display:block; }
+.reward-img-placeholder { width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:4rem;background:var(--orange-pale); }
+.reward-body { padding:20px;text-align:center; }
+.reward-badge { display:inline-flex;align-items:center;gap:6px;background:var(--amber-pale);border:1.5px solid var(--amber);padding:5px 14px;border-radius:50px;font-size:.75rem;font-weight:900;color:var(--amber);margin-bottom:10px; }
+.reward-title { font-size:1.2rem;font-weight:900;color:var(--text);margin-bottom:6px; }
+.reward-desc  { font-size:.82rem;font-weight:600;color:var(--text2);line-height:1.5;margin-bottom:14px; }
+.reward-xp    { display:inline-flex;align-items:center;gap:6px;background:var(--amber-pale);border:2px solid var(--amber);padding:7px 16px;border-radius:50px;font-size:.88rem;font-weight:900;color:var(--amber);margin-bottom:14px; }
+.reward-close { width:100%;padding:12px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--orange),var(--violet));color:#fff;font-family:'Nunito',sans-serif;font-size:.92rem;font-weight:900;cursor:pointer; }
+
+/* Bottom */
+.bottom-row { display:flex;gap:8px;align-items:center; }
+.cancel-btn  { height:44px;padding:0 12px;border-radius:13px;border:1.5px solid var(--border);background:var(--card);color:var(--text3);font-family:'Nunito',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer;white-space:nowrap; }
+.input-row   { flex:1;display:flex;align-items:center;background:var(--card);border:1.5px solid var(--border);border-radius:13px;overflow:hidden;transition:border-color .2s; }
+.input-row:focus-within { border-color:var(--orange); }
+.txt-in { flex:1;border:none;background:transparent;outline:none;padding:0 13px;height:44px;font-family:'Nunito',sans-serif;font-size:.88rem;font-weight:700;color:var(--text); }
+.txt-in::placeholder { color:var(--text3); }
+.send-btn { width:36px;height:36px;margin:4px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--orange),var(--violet));color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.82rem;flex-shrink:0; }
+.send-btn:active { transform:scale(.9); }
+
+/* Profile footer */
+.pf-footer { background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px; }
+.pf-ava  { width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Nunito',sans-serif;font-size:.9rem;font-weight:900;color:#fff; }
+.pf-info { flex:1; }
+.pf-name { font-size:.8rem;font-weight:800;color:var(--text); }
+.pf-xp   { font-size:.68rem;font-weight:700;color:var(--amber);margin-top:1px; }
+.pf-btn  { font-size:.68rem;font-weight:800;color:var(--orange);background:var(--orange-pale);border:none;padding:5px 11px;border-radius:50px;cursor:pointer;font-family:'Nunito',sans-serif; }
+
+/* Confetti */
+.confetti-wrap { position:fixed;inset:0;pointer-events:none;z-index:200;overflow:hidden; }
+.conf { position:absolute;width:10px;height:10px;border-radius:2px;opacity:0;animation:fall 1.5s ease-in forwards; }
+@keyframes fall { 0%{opacity:1;transform:translateY(-20px) rotate(0deg)} 100%{opacity:0;transform:translateY(100vh) rotate(720deg)} }
+
+/* ── iPhone safe area ── */
+body { padding-bottom: env(safe-area-inset-bottom); }
+</style>
+</head>
+<body>
+
+<!-- ══ PARENT GATE (RGPD) ══ -->
+<div class="screen active" id="s-parent">
+<div class="pg-wrap">
+  <div class="pg-badge">🛡️ Espace Parents — Conformité RGPD</div>
+  <div class="pg-title">Avant de commencer, nous avons besoin de votre accord.</div>
+  <div class="pg-desc">Aria Kids est conçu pour les enfants de 4 à 17 ans. La loi française exige le consentement d'un parent ou tuteur légal pour traiter les données d'un mineur de moins de 15 ans.</div>
+  <div class="pg-checks">
+    <div class="pg-check" onclick="togglePgCheck(this,0)">
+      <div class="pg-box"></div>
+      <div class="pg-check-txt">Je certifie être le parent ou tuteur légal de l'enfant qui utilisera Aria Kids.</div>
+    </div>
+    <div class="pg-check" onclick="togglePgCheck(this,1)">
+      <div class="pg-box"></div>
+      <div class="pg-check-txt">J'autorise l'utilisation locale des informations de mon enfant (prénom, âge, classe, progression). Ces données restent sur cet appareil — jamais sur les serveurs Forgelis.</div>
+    </div>
+    <div class="pg-check" onclick="togglePgCheck(this,2)">
+      <div class="pg-box"></div>
+      <div class="pg-check-txt">J'ai lu et j'accepte la politique de confidentialité et les conditions d'utilisation.</div>
+    </div>
+  </div>
+  <input type="email" class="pg-input" id="pg-email" placeholder="Votre email (parent) — pour le contrôle parental" autocomplete="off">
+  <button type="button" class="pg-cta" id="pg-cta" disabled onclick="validateParentGate()">Continuer vers le profil enfant →</button>
+  <div class="pg-legal">🔒 Zéro donnée sur nos serveurs : tout reste sur VOTRE appareil. Forgelis ne stocke, ne vend et ne transmet aucune donnée de votre enfant. Supprimables à tout moment depuis l'Espace Parents.</div>
+</div>
+</div>
+
+<!-- ══ ONBOARDING ══ -->
+<div class="screen" id="s-onboard">
+<div class="ob-wrap">
+  <div class="ob-brand">
+    <div class="ob-logo">🎮</div>
+    <span class="ob-brand-name">Aria Kids</span>
+    <span class="ob-brand-sub">par Forgelis</span>
+  </div>
+  <div class="ob-progress">
+    <div class="ob-seg on" id="ps0"></div>
+    <div class="ob-seg" id="ps1"></div>
+    <div class="ob-seg" id="ps2"></div>
+    <div class="ob-seg" id="ps3"></div>
+    <div class="ob-seg" id="ps4"></div>
+  </div>
+
+  <!-- 1 — Prénom -->
+  <div class="ob-step active" id="ob-s1">
+    <div class="ob-emoji">👋</div>
+    <div class="ob-title">Comment tu t'appelles ?</div>
+    <div class="ob-desc">Aria va créer ton profil de super héros et tu vas gagner des vraies images !</div>
+    <input type="text" class="ob-input" id="ob-name" placeholder="Ton prénom..." autocomplete="off" onkeydown="if(event.key==='Enter')obGo(2)">
+    <div style="flex:1"></div>
+    <button type="button" class="ob-cta" onclick="obGo(2)">C'est parti ! 🚀</button>
+  </div>
+
+  <!-- 2 — Âge -->
+  <div class="ob-step" id="ob-s2">
+    <div class="ob-emoji">🎂</div>
+    <div class="ob-title" id="ob-q2">Tu as quel âge ?</div>
+    <div class="ob-desc">Aria adapte les jeux et les images à ton âge.</div>
+    <div class="age-block">
+      <div class="age-ctrl">
+        <button type="button" class="age-btn" onclick="chAge(-1)">−</button>
+        <input type="number" class="age-num" id="age-val" value="9" min="4" max="17" oninput="syncAge()">
+        <button type="button" class="age-btn" onclick="chAge(1)">+</button>
+      </div>
+      <div class="age-chip">🎯 <span id="age-chip-txt">CE2 · 9 ans</span></div>
+    </div>
+    <div style="flex:1"></div>
+    <button type="button" class="ob-cta" onclick="obGo(3)">Super ! →</button>
+  </div>
+
+  <!-- 3 — Classe réelle -->
+  <div class="ob-step" id="ob-s3">
+    <div class="ob-emoji">🏫</div>
+    <div class="ob-title" id="ob-q3">Tu es dans quelle classe ?</div>
+    <div class="ob-desc">Aria adapte les exercices à ta vraie classe — même si tu es en avance ou si tu as redoublé.</div>
+    <select class="class-select" id="ob-class">
+      <option value="maternelle">🌱 Maternelle (TPS/PS/MS/GS)</option>
+      <option value="cp">📗 CP</option>
+      <option value="ce1">📘 CE1</option>
+      <option value="ce2" selected>📙 CE2</option>
+      <option value="cm1">📕 CM1</option>
+      <option value="cm2">📒 CM2</option>
+      <option value="6eme">🟣 6ème</option>
+      <option value="5eme">🔵 5ème</option>
+      <option value="4eme">🟢 4ème</option>
+      <option value="3eme">🟡 3ème</option>
+      <option value="seconde">⚪ Seconde</option>
+      <option value="premiere">🟠 Première</option>
+      <option value="terminale">🔴 Terminale</option>
+    </select>
+    <div style="flex:1"></div>
+    <button type="button" class="ob-cta" onclick="obGo(4)">Continuer →</button>
+  </div>
+
+  <!-- 4 — Profil scolaire -->
+  <div class="ob-step" id="ob-s4">
+    <div class="ob-emoji">🎯</div>
+    <div class="ob-title" id="ob-q4">Comment tu te sens à l'école ?</div>
+    <div class="ob-desc">Aria s'adapte exactement à ton niveau pour t'aider au mieux.</div>
+    <div class="profile-types">
+      <div class="ptype sel" id="pt-normal" onclick="pickPT('normal',this)">
+        <span class="ptype-ico">📚</span>
+        <div class="ptype-info">
+          <div class="ptype-title">Dans la moyenne</div>
+          <div class="ptype-desc">Je suis mon programme normalement</div>
+        </div>
+        <div class="ptype-radio"></div>
+      </div>
+      <div class="ptype" id="pt-avance" onclick="pickPT('avance',this)">
+        <span class="ptype-ico">🚀</span>
+        <div class="ptype-info">
+          <div class="ptype-title">En avance — je veux apprendre plus</div>
+          <div class="ptype-desc">Je veux des exercices du niveau supérieur</div>
+        </div>
+        <div class="ptype-radio"></div>
+      </div>
+      <div class="ptype" id="pt-aide" onclick="pickPT('aide',this)">
+        <span class="ptype-ico">🤝</span>
+        <div class="ptype-info">
+          <div class="ptype-title">J'ai besoin d'aide</div>
+          <div class="ptype-desc">Certaines matières sont difficiles pour moi</div>
+        </div>
+        <div class="ptype-radio"></div>
+      </div>
+    </div>
+    <div style="flex:1"></div>
+    <button type="button" class="ob-cta" onclick="obGo(5)">Continuer →</button>
+  </div>
+
+  <!-- 5 — Récap -->
+  <div class="ob-step" id="ob-s5">
+    <div class="ob-emoji">✅</div>
+    <div class="ob-title">Ton profil héros !</div>
+    <div class="ob-desc">Tout est prêt. Débloque des vraies images en jouant !</div>
+    <div class="ob-summary">
+      <div class="ob-sum-row"><span class="ob-sum-ico">👤</span><span class="ob-sum-key">Prénom</span><span class="ob-sum-val" id="s-name">—</span></div>
+      <div class="ob-sum-row"><span class="ob-sum-ico">🎂</span><span class="ob-sum-key">Âge</span><span class="ob-sum-val" id="s-age">—</span></div>
+      <div class="ob-sum-row"><span class="ob-sum-ico">🏫</span><span class="ob-sum-key">Classe</span><span class="ob-sum-val" id="s-class">—</span></div>
+      <div class="ob-sum-row"><span class="ob-sum-ico">🎯</span><span class="ob-sum-key">Profil</span><span class="ob-sum-val" id="s-profile">—</span></div>
+      <div class="ob-sum-row"><span class="ob-sum-ico">🖼️</span><span class="ob-sum-key">Images à débloquer</span><span class="ob-sum-val">100 images</span></div>
+    </div>
+    <div style="flex:1"></div>
+    <button type="button" class="ob-cta" onclick="finishOb()">Jouer ! 🎮</button>
+  </div>
+
+</div>
+</div>
+
+<!-- ══ SWITCHER ══ -->
+<div class="screen" id="s-switcher">
+  <div class="sw-header">
+    <div class="sw-logo-row"><div class="sw-logo-ico">🎮</div><span class="sw-logo-name">Aria Kids</span></div>
+    <div class="sw-title">C'est qui ? 👀</div>
+    <div class="sw-sub">Choisis ton profil pour jouer</div>
+  </div>
+  <div class="sw-body">
+    <div class="sw-card sel" onclick="selP(this,'Lucas',9,'ce2','normal','je')">
+      <div class="sw-ava" style="background:linear-gradient(135deg,#FF6B2B,#FF8C52)">L</div>
+      <div class="sw-info"><div class="sw-name">Lucas</div><div class="sw-meta">9 ans · CE2 · Dans la moyenne</div></div>
+      <div class="sw-xp">⭐ 240 XP</div>
+      <span class="sw-badge b-je">Junior</span>
+      <div class="sw-check"></div>
+    </div>
+    <div class="sw-card" onclick="selP(this,'Emma',14,'3eme','avance','ja')">
+      <div class="sw-ava" style="background:linear-gradient(135deg,#8B5CF6,#A78BFA)">E</div>
+      <div class="sw-info"><div class="sw-name">Emma</div><div class="sw-meta">14 ans · 3ème · En avance 🚀</div></div>
+      <div class="sw-xp">⭐ 580 XP</div>
+      <span class="sw-badge b-ja">Ado</span>
+      <div class="sw-check"></div>
+    </div>
+    <div class="sw-card" onclick="selP(this,'Tom',7,'cp','aide','je')">
+      <div class="sw-ava" style="background:linear-gradient(135deg,#10B981,#34D399)">T</div>
+      <div class="sw-info"><div class="sw-name">Tom</div><div class="sw-meta">7 ans · CP · A besoin d'aide 🤝</div></div>
+      <div class="sw-xp">⭐ 90 XP</div>
+      <span class="sw-badge b-je">Junior</span>
+      <div class="sw-check"></div>
+    </div>
+  </div>
+  <div class="sw-footer">
+    <button type="button" class="sw-confirm" onclick="confirmP()">C'est moi ! Jouer 🎮</button>
+    <button type="button" class="sw-add">+ Ajouter un profil</button>
+  </div>
+</div>
+
+<!-- ══ MAIN ══ -->
+<div class="screen" id="s-main">
+  <div class="topbar">
+    <div class="tb-logo">🎮</div>
+    <span class="tb-name" id="tb-name">Aria Kids · Lucas</span>
+    <button type="button" class="tb-chg" onclick="openParentGate()">🛡️ Parents</button>
+    <button type="button" class="tb-chg" onclick="goTo('s-switcher')">👤 Changer</button>
+  </div>
+
+
+  <!-- Trial banner -->
+  <div class="trial-banner" id="trial-banner">
+    <div class="trial-left">
+      <div class="trial-top">
+        <span class="trial-label">🎁 Essai Pro gratuit</span>
+        <span class="trial-days"><span id="trial-days">11</span> jours restants</span>
+      </div>
+      <div class="trial-track"><div class="trial-fill" id="trial-fill" style="width:78%"></div></div>
+    </div>
+    <button type="button" class="trial-cta" onclick="showTrialModal()">Passer Pro →</button>
+  </div>
+
+  <div class="xp-bar-wrap">
+    <div class="xp-left">
+      <div class="xp-top">
+        <span class="xp-label">Niveau <span id="xp-level">3</span></span>
+        <span class="xp-count"><span id="xp-current">240</span> / <span id="xp-next">300</span> XP</span>
+      </div>
+      <div class="xp-track"><div class="xp-fill" id="xp-fill" style="width:80%"></div></div>
+    </div>
+    <div class="xp-stats">
+      <div class="xp-stat" style="color:var(--amber)">🔥 <span id="streak">5</span></div>
+      <div class="xp-stat" style="color:var(--violet)">🖼️ <span id="imgs-count">3</span>/100</div>
+    </div>
+  </div>
+
+  <!-- Credit bar -->
+  <div class="credit-bar">
+    <div class="credit-left">
+      <div class="credit-top">
+        <span class="credit-label">Crédits aujourd'hui</span>
+        <span class="credit-nums"><span id="cr-left">87</span>/<span id="cr-total">100</span> · 🔄 minuit</span>
+      </div>
+      <div class="credit-track"><div class="credit-fill" id="cr-fill" style="width:87%"></div></div>
+    </div>
+    <span class="credit-bonus" id="cr-bonus">🎁 320</span>
+    <button type="button" class="credit-buy" onclick="showRecharge()">+ Crédits</button>
+  </div>
+
+  <div class="main-content">
+
+    <div class="chat-panel">
+      <div class="chat-msgs" id="chat"></div>
+      <div class="mic-section">
+        <div class="mic-wrap" id="mic-wrap">
+          <div class="mic-ring1"></div><div class="mic-ring2"></div>
+          <button type="button" class="mic-btn" id="mic-btn" onclick="toggleMic()">🎙️</button>
+        </div>
+        <span class="mic-hint" id="mic-hint">Appuie pour parler à Aria</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="acts-label" id="acts-label">🎮 Matières</div>
+      <div class="game-grid" id="game-grid"></div>
+      <div class="quick-row">
+        <button type="button" class="qa" onclick="ask('Aide-moi avec mes devoirs.')"><span class="qa-ico">📚</span><span class="qa-lbl">Devoirs</span></button>
+        <button type="button" class="qa" onclick="ask('Raconte-moi une histoire.')"><span class="qa-ico">📖</span><span class="qa-lbl">Histoire</span></button>
+        <button type="button" class="qa" onclick="ask('Donne-moi un défi bonus.')"><span class="qa-ico">⚡</span><span class="qa-lbl">Défi +XP</span></button>
+        <button type="button" class="qa" onclick="showColl()"><span class="qa-ico">🖼️</span><span class="qa-lbl">Collection</span></button>
+      </div>
+    </div>
+
+    <!-- Collection -->
+    <div class="coll-wrap" id="coll-wrap">
+      <div class="coll-header">
+        <span class="coll-title">🖼️ Ma collection d'images</span>
+        <span class="coll-count" id="coll-count">3 / 100</span>
+      </div>
+      <div class="coll-grid" id="coll-grid"></div>
+    </div>
+
+    <!-- Warning -->
+    <div class="credit-warning" id="cr-warning">⚠️ Plus que <span id="cr-warn-n">10</span> crédits ! Recharge pour continuer.</div>
+
+    <!-- Model selector -->
+    <div class="model-selector">
+      <button type="button" class="model-btn active" onclick="selectModel('lite',this)">
+        <span class="model-ico">⚡</span><span class="model-name">Aria Lite</span><span class="model-cost">1 crédit</span>
+      </button>
+      <button type="button" class="model-btn" onclick="selectModel('smart',this)">
+        <span class="model-ico">🧠</span><span class="model-name">Aria Smart</span><span class="model-cost">3 crédits</span>
+      </button>
+      <button type="button" class="model-btn" onclick="selectModel('expert',this)">
+        <span class="model-ico">🚀</span><span class="model-name">Aria Expert</span><span class="model-cost">10 crédits</span>
+      </button>
+    </div>
+
+    <div class="bottom-row">
+      <button type="button" class="cancel-btn" onclick="cancelAct()">✕</button>
+      <div class="input-row">
+        <input type="text" class="txt-in" id="txt-in" placeholder="Écris à Aria..." onkeydown="if(event.key==='Enter')sendMsg()">
+        <button type="button" class="send-btn" onclick="sendMsg()">➤</button>
+      </div>
+    </div>
+
+    <div class="pf-footer">
+      <div class="pf-ava" id="pf-ava" style="background:linear-gradient(135deg,#FF6B2B,#8B5CF6)">L</div>
+      <div class="pf-info">
+        <div class="pf-name" id="pf-name">Lucas · 9 ans · CE2</div>
+        <div class="pf-xp">⭐ <span id="pf-xp">240</span> XP · Niveau <span id="pf-lvl">3</span></div>
+      </div>
+      <button type="button" class="pf-btn" onclick="goTo('s-switcher')">Changer</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ PARENTAL DASHBOARD ══ -->
+<div class="screen" id="s-parental">
+  <div class="pd-header">
+    <div class="pd-title">🛡️ Espace Parents</div>
+    <div class="pd-sub">Suivi et contrôle — réservé aux adultes</div>
+  </div>
+  <div class="pd-body">
+
+    <div class="pd-card">
+      <div class="pd-card-title">📊 Activité aujourd'hui</div>
+      <div class="pd-stats">
+        <div class="pd-stat"><div class="pd-stat-num" id="pd-time">12 min</div><div class="pd-stat-lbl">Temps passé</div></div>
+        <div class="pd-stat"><div class="pd-stat-num" id="pd-credits">13</div><div class="pd-stat-lbl">Crédits utilisés</div></div>
+        <div class="pd-stat"><div class="pd-stat-num" id="pd-xp">45</div><div class="pd-stat-lbl">XP gagnés</div></div>
+      </div>
+    </div>
+
+    <div class="pd-card">
+      <div class="pd-card-title">⚙️ Limites & contrôles</div>
+      <div class="pd-row">
+        <span class="pd-row-label">Limite de temps quotidienne</span>
+        <span class="pd-row-value" id="pd-limit-val">1h / jour</span>
+      </div>
+      <div class="pd-row">
+        <span class="pd-row-label">Accès Aria Expert (10 crédits)</span>
+        <button type="button" class="pd-toggle" id="pd-tg-expert" onclick="this.classList.toggle('on')"></button>
+      </div>
+      <div class="pd-row">
+        <span class="pd-row-label">Pause après 30 min en continu</span>
+        <button type="button" class="pd-toggle on" id="pd-tg-pause" onclick="this.classList.toggle('on')"></button>
+      </div>
+      <div class="pd-row">
+        <span class="pd-row-label">Notifications par email (parent)</span>
+        <button type="button" class="pd-toggle on" id="pd-tg-mail" onclick="this.classList.toggle('on')"></button>
+      </div>
+    </div>
+
+    <div class="pd-card">
+      <div class="pd-card-title">💳 Abonnement</div>
+      <div class="pd-row">
+        <span class="pd-row-label">Plan actuel</span>
+        <span class="pd-plan-badge" id="pd-plan">Essai Pro — 11 jours restants</span>
+      </div>
+      <div class="pd-row">
+        <span class="pd-row-label">Prochain prélèvement</span>
+        <span class="pd-row-value" id="pd-billing">Aucun (essai)</span>
+      </div>
+      <button type="button" class="pd-btn-normal" onclick="showTrialModal()">Gérer mon abonnement</button>
+      <button type="button" class="pd-btn-danger" onclick="startCancelFlow()">Résilier l'abonnement</button>
+    </div>
+
+    <div class="pd-card">
+      <div class="pd-card-title">🗑️ Données personnelles (RGPD)</div>
+      <button type="button" class="pd-btn-normal" onclick="exportData()">Exporter les données de mon enfant</button>
+      <button type="button" class="pd-btn-danger" onclick="deleteDataFlow()">Supprimer toutes les données</button>
+    </div>
+
+    <button type="button" class="pd-back" onclick="goTo('s-main')">← Retour à Aria Kids</button>
+  </div>
+</div>
+
+<!-- Math gate -->
+<div class="gate-modal" id="gate-modal">
+  <div class="gate-card">
+    <div class="gate-title">🛡️ Espace réservé aux parents</div>
+    <div class="gate-desc">Réponds à cette question pour continuer :</div>
+    <div class="gate-q" id="gate-q">7 × 4 = ?</div>
+    <input type="number" class="gate-input" id="gate-input" placeholder="?" onkeydown="if(event.key==='Enter')checkGate()">
+    <button type="button" class="gate-btn" onclick="checkGate()">Valider</button>
+    <button type="button" class="gate-cancel" onclick="closeGate()">Annuler</button>
+  </div>
+</div>
+
+<!-- Cancel modal -->
+<div class="cancel-modal" id="cancel-modal">
+  <div class="cancel-card">
+    <div style="font-size:2.5rem;margin-bottom:10px">😢</div>
+    <div style="font-size:1rem;font-weight:900;color:#1E293B;margin-bottom:6px">Résilier l'abonnement ?</div>
+    <div style="font-size:.8rem;color:#64748B;line-height:1.6;margin-bottom:16px">Votre enfant repassera au plan Gratuit (10 crédits/jour). Sa collection et ses XP sont conservés.</div>
+    <button type="button" class="pd-btn-danger" onclick="confirmCancel()">Oui, résilier maintenant</button>
+    <button type="button" class="pd-btn-normal" onclick="document.getElementById('cancel-modal').classList.remove('show')">Non, garder mon abonnement</button>
+  </div>
+</div>
+
+<!-- Reward popup -->
+<div class="reward-popup" id="reward-popup">
+  <div class="reward-card">
+    <div class="reward-img-wrap">
+      <img id="reward-img" src="" alt="" style="display:none">
+      <div class="reward-img-placeholder" id="reward-placeholder">🎉</div>
+    </div>
+    <div class="reward-body">
+      <div class="reward-badge">🎉 Nouvelle image débloquée !</div>
+      <div class="reward-title" id="reward-title">Félicitations !</div>
+      <div class="reward-desc"  id="reward-desc">Tu as gagné une image pour ta collection !</div>
+      <div class="reward-xp"   id="reward-xp">+20 XP ⭐</div>
+      <button type="button" class="reward-close" onclick="closeReward()">Super ! Continuer 🚀</button>
+    </div>
+  </div>
+</div>
+
+<!-- Image modal -->
+<div class="img-modal" id="img-modal" onclick="closeImgModal()">
+  <div class="img-modal-card" onclick="event.stopPropagation()">
+    <img id="modal-img" src="" alt="" class="img-modal-img">
+    <div class="img-modal-body">
+      <div class="img-modal-name" id="modal-name">Image</div>
+      <div class="img-modal-src"  id="modal-src">Source</div>
+      <button type="button" class="img-modal-close" onclick="closeImgModal()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confetti -->
+<div class="confetti-wrap" id="confetti"></div>
+
+<script>
+// ── Unsplash API ──
+const UNSPLASH_KEY = 'KgBVUmPskUuGluE00vnq8UFfOuCVzZ91hdR9x8bap-0'; // Remplace par ta clé Access Key Unsplash
+
+// ── Catalogue 100 images ──
+const CATALOGUE = [
+  // ANIMAUX (25)
+  {id:0,  name:'Lion d\'Afrique',      query:'lion africa wildlife',     cat:'animals',  rarity:'c', xp:10, age:4},
+  {id:1,  name:'Dauphin',             query:'dolphin ocean jumping',    cat:'animals',  rarity:'c', xp:10, age:4},
+  {id:2,  name:'Éléphant d\'Afrique', query:'elephant africa savanna',  cat:'animals',  rarity:'c', xp:10, age:4},
+  {id:3,  name:'Papillon monarque',   query:'monarch butterfly flower', cat:'animals',  rarity:'c', xp:10, age:4},
+  {id:4,  name:'Panda géant',         query:'giant panda bamboo',       cat:'animals',  rarity:'c', xp:10, age:4},
+  {id:5,  name:'Girafe',              query:'giraffe africa sunset',    cat:'animals',  rarity:'c', xp:10, age:4},
+  {id:6,  name:'Renard roux',         query:'red fox snow forest',      cat:'animals',  rarity:'c', xp:10, age:5},
+  {id:7,  name:'Tortue marine',       query:'sea turtle ocean coral',   cat:'animals',  rarity:'c', xp:10, age:5},
+  {id:8,  name:'Manchot',             query:'penguin antarctica ice',   cat:'animals',  rarity:'r', xp:20, age:6},
+  {id:9,  name:'Aigle royal',         query:'eagle flying mountains',   cat:'animals',  rarity:'r', xp:20, age:6},
+  {id:10, name:'Baleine bleue',       query:'blue whale ocean deep',    cat:'animals',  rarity:'r', xp:20, age:7},
+  {id:11, name:'Flamant rose',        query:'flamingo pink lake',       cat:'animals',  rarity:'r', xp:20, age:6},
+  {id:12, name:'Guépard',             query:'cheetah running savanna',  cat:'animals',  rarity:'r', xp:20, age:7},
+  {id:13, name:'Grand requin blanc',  query:'great white shark ocean',  cat:'animals',  rarity:'r', xp:20, age:8},
+  {id:14, name:'Pieuvre',             query:'octopus underwater ocean', cat:'animals',  rarity:'e', xp:35, age:9},
+  {id:15, name:'Orque',               query:'orca killer whale ocean',  cat:'animals',  rarity:'e', xp:35, age:9},
+  {id:16, name:'Dragon de Komodo',    query:'komodo dragon indonesia',  cat:'animals',  rarity:'l', xp:50, age:10},
+  {id:17, name:'Narval',              query:'narwhal arctic ocean',     cat:'animals',  rarity:'l', xp:50, age:10},
+  {id:18, name:'Loup arctique',       query:'arctic wolf snow white',   cat:'animals',  rarity:'r', xp:20, age:7},
+  {id:19, name:'Lynx des neiges',     query:'snow leopard mountains',   cat:'animals',  rarity:'e', xp:35, age:8},
+  {id:20, name:'Gorille des montagnes',query:'mountain gorilla forest', cat:'animals',  rarity:'e', xp:35, age:9},
+  {id:21, name:'Méduse luminescente', query:'jellyfish underwater glow',cat:'animals',  rarity:'l', xp:50, age:10},
+  {id:22, name:'Colibri',             query:'hummingbird flower nectar',cat:'animals',  rarity:'r', xp:20, age:6},
+  {id:23, name:'Bison d\'Amérique',   query:'american bison plains',    cat:'animals',  rarity:'c', xp:10, age:7},
+  {id:24, name:'Tigre du Bengale',    query:'bengal tiger jungle',      cat:'animals',  rarity:'e', xp:35, age:8},
+  // ESPACE (25)
+  {id:25, name:'La Terre vue de l\'espace', query:'earth from space nasa blue',    cat:'space', rarity:'c', xp:10, age:5},
+  {id:26, name:'Surface de la Lune',        query:'moon surface crater nasa',      cat:'space', rarity:'c', xp:10, age:6},
+  {id:27, name:'Saturne et ses anneaux',    query:'saturn planet rings space',     cat:'space', rarity:'c', xp:10, age:7},
+  {id:28, name:'Jupiter',                   query:'jupiter planet storm space',    cat:'space', rarity:'c', xp:10, age:7},
+  {id:29, name:'Éruption volcanique',       query:'volcano eruption lava fire',    cat:'space', rarity:'c', xp:10, age:8},
+  {id:30, name:'Foudre et éclair',          query:'lightning storm thunderbolt',   cat:'space', rarity:'c', xp:10, age:8},
+  {id:31, name:'Nébuleuse colorée',         query:'nebula colorful space stars',   cat:'space', rarity:'r', xp:20, age:9},
+  {id:32, name:'Galaxie spirale',           query:'spiral galaxy milky way',       cat:'space', rarity:'r', xp:20, age:9},
+  {id:33, name:'Lever de Terre',            query:'earth rise moon apollo',        cat:'space', rarity:'l', xp:50, age:10},
+  {id:34, name:'Décollage fusée',           query:'rocket launch space shuttle',   cat:'space', rarity:'e', xp:35, age:8},
+  {id:35, name:'Cristaux de neige',         query:'snowflake crystal macro',       cat:'space', rarity:'e', xp:35, age:9},
+  {id:36, name:'Aurora Borealis',           query:'northern lights aurora iceland',cat:'space', rarity:'e', xp:35, age:8},
+  {id:37, name:'Forêt amazonienne',         query:'amazon rainforest aerial',      cat:'space', rarity:'r', xp:20, age:9},
+  {id:38, name:'Désert du Sahara',          query:'sahara desert dunes aerial',    cat:'space', rarity:'r', xp:20, age:9},
+  {id:39, name:'Vague de l\'océan',         query:'ocean wave surfer power',       cat:'space', rarity:'c', xp:10, age:6},
+  {id:40, name:'Chutes du Niagara',         query:'niagara falls waterfall',       cat:'space', rarity:'e', xp:35, age:8},
+  {id:41, name:'Cellule au microscope',     query:'cell microscope biology',       cat:'space', rarity:'r', xp:20, age:10},
+  {id:42, name:'ADN double hélice',         query:'DNA double helix science',      cat:'space', rarity:'r', xp:20, age:12},
+  {id:43, name:'Arc-en-ciel',               query:'rainbow sky colorful',          cat:'space', rarity:'c', xp:10, age:4},
+  {id:44, name:'Everest',                   query:'mount everest summit snow',     cat:'space', rarity:'e', xp:35, age:10},
+  {id:45, name:'Coraux tropicaux',          query:'coral reef tropical fish',      cat:'space', rarity:'r', xp:20, age:7},
+  {id:46, name:'Aurore australe',           query:'southern lights aurora',        cat:'space', rarity:'l', xp:50, age:10},
+  {id:47, name:'Séquoias géants',           query:'giant sequoia redwood forest',  cat:'space', rarity:'r', xp:20, age:8},
+  {id:48, name:'Lave volcanique',           query:'lava flow volcano night',       cat:'space', rarity:'e', xp:35, age:9},
+  {id:49, name:'Tempête de sable',          query:'sandstorm desert dramatic',     cat:'space', rarity:'l', xp:50, age:10},
+  // MONDE (25)
+  {id:50, name:'Tour Eiffel',               query:'eiffel tower paris sunset',     cat:'world', rarity:'c', xp:10, age:5},
+  {id:51, name:'Colisée de Rome',           query:'colosseum rome italy',          cat:'world', rarity:'c', xp:10, age:8},
+  {id:52, name:'Statue de la Liberté',      query:'statue liberty new york',       cat:'world', rarity:'c', xp:10, age:7},
+  {id:53, name:'Mont Fuji',                 query:'mount fuji japan cherry',       cat:'world', rarity:'c', xp:10, age:7},
+  {id:54, name:'Pyramides de Gizeh',        query:'pyramids giza egypt desert',    cat:'world', rarity:'r', xp:20, age:8},
+  {id:55, name:'Grande Muraille de Chine',  query:'great wall china mountains',    cat:'world', rarity:'r', xp:20, age:9},
+  {id:56, name:'Taj Mahal',                 query:'taj mahal india sunrise',       cat:'world', rarity:'r', xp:20, age:9},
+  {id:57, name:'Golden Gate Bridge',        query:'golden gate bridge san francisco fog', cat:'world', rarity:'c', xp:10, age:7},
+  {id:58, name:'Machu Picchu',              query:'machu picchu peru mountains',   cat:'world', rarity:'l', xp:50, age:9},
+  {id:59, name:'Île de Pâques — Moai',      query:'easter island moai statues',    cat:'world', rarity:'e', xp:35, age:9},
+  {id:60, name:'Sagrada Família',           query:'sagrada familia barcelona architecture', cat:'world', rarity:'r', xp:20, age:8},
+  {id:61, name:'Forêt de bambous Japon',    query:'bamboo forest japan green',     cat:'world', rarity:'c', xp:10, age:6},
+  {id:62, name:'Lavande Provence',          query:'lavender field provence france',cat:'world', rarity:'c', xp:10, age:5},
+  {id:63, name:'Venise sur l\'eau',         query:'venice canal gondola italy',    cat:'world', rarity:'r', xp:20, age:8},
+  {id:64, name:'Santorini Grèce',           query:'santorini greece white blue',   cat:'world', rarity:'e', xp:35, age:9},
+  {id:65, name:'Parc Yellowstone',          query:'yellowstone geyser national park', cat:'world', rarity:'e', xp:35, age:10},
+  {id:66, name:'Angkor Vat Cambodge',       query:'angkor wat cambodia temple',    cat:'world', rarity:'e', xp:35, age:11},
+  {id:67, name:'Kyoto en automne',          query:'kyoto japan autumn leaves',     cat:'world', rarity:'r', xp:20, age:8},
+  {id:68, name:'Îles Maldives',             query:'maldives ocean island tropical',cat:'world', rarity:'e', xp:35, age:8},
+  {id:69, name:'Mont Saint-Michel',         query:'mont saint michel france tide', cat:'world', rarity:'r', xp:20, age:7},
+  {id:70, name:'Grand Canyon',              query:'grand canyon arizona sunset',   cat:'world', rarity:'r', xp:20, age:8},
+  {id:71, name:'Patagonie Chili',           query:'patagonia chile mountains glacier', cat:'world', rarity:'l', xp:50, age:11},
+  {id:72, name:'Tokyo nuit',                query:'tokyo night skyline japan',     cat:'world', rarity:'e', xp:35, age:9},
+  {id:73, name:'Fiords Norvège',            query:'norway fjord mountains water',  cat:'world', rarity:'l', xp:50, age:10},
+  {id:74, name:'Champs tulipes Hollande',   query:'tulip field netherlands colorful', cat:'world', rarity:'c', xp:10, age:5},
+  // ART (25 — œuvres domaine public via Wikimedia)
+  {id:75, name:'La Joconde — Da Vinci',     query:'mona lisa painting classic art',     cat:'art', rarity:'c', xp:10, age:10},
+  {id:76, name:'La Nuit étoilée — Van Gogh',query:'starry night van gogh painting',     cat:'art', rarity:'c', xp:10, age:10},
+  {id:77, name:'Les Tournesols — Van Gogh', query:'sunflowers van gogh yellow painting',cat:'art', rarity:'c', xp:10, age:10},
+  {id:78, name:'Le Cri — Munch',            query:'the scream munch expressionism',     cat:'art', rarity:'c', xp:10, age:11},
+  {id:79, name:'Les Nymphéas — Monet',      query:'water lilies monet impressionism',   cat:'art', rarity:'c', xp:10, age:10},
+  {id:80, name:'La Grande Vague — Hokusai', query:'great wave kanagawa hokusai japan',  cat:'art', rarity:'r', xp:20, age:11},
+  {id:81, name:'La Danseuse — Degas',       query:'ballet dancer degas painting',       cat:'art', rarity:'r', xp:20, age:11},
+  {id:82, name:'La Création d\'Adam',       query:'creation adam michelangelo ceiling', cat:'art', rarity:'r', xp:20, age:12},
+  {id:83, name:'Le Penseur — Rodin',        query:'the thinker rodin sculpture bronze', cat:'art', rarity:'r', xp:20, age:12},
+  {id:84, name:'Vénus de Milo',             query:'venus de milo sculpture marble',     cat:'art', rarity:'r', xp:20, age:12},
+  {id:85, name:'La Persistance — Dalí',     query:'persistence memory dali surrealism', cat:'art', rarity:'e', xp:35, age:13},
+  {id:86, name:'Impression soleil levant',  query:'impression sunrise monet harbor',    cat:'art', rarity:'e', xp:35, age:12},
+  {id:87, name:'L\'Homme de Vitruve',       query:'vitruvian man da vinci drawing',     cat:'art', rarity:'l', xp:50, age:12},
+  {id:88, name:'La Naissance de Vénus',     query:'birth of venus botticelli painting', cat:'art', rarity:'l', xp:50, age:13},
+  {id:89, name:'La Liberté guidant le peuple', query:'liberty leading people delacroix', cat:'art', rarity:'e', xp:35, age:12},
+  {id:90, name:'Composition — Kandinsky',   query:'kandinsky abstract art composition', cat:'art', rarity:'e', xp:35, age:13},
+  {id:91, name:'Autoportrait — Rembrandt',  query:'rembrandt self portrait painting',   cat:'art', rarity:'r', xp:20, age:12},
+  {id:92, name:'La Joconde nuit',           query:'louvre museum night art palace',     cat:'art', rarity:'r', xp:20, age:10},
+  {id:93, name:'Couleurs d\'une palette',   query:'artist paint palette colorful',      cat:'art', rarity:'c', xp:10, age:5},
+  {id:94, name:'Aquarelle de nature',       query:'watercolor painting nature flowers', cat:'art', rarity:'c', xp:10, age:6},
+  {id:95, name:'Sculpture en marbre',       query:'marble sculpture museum classic',    cat:'art', rarity:'r', xp:20, age:11},
+  {id:96, name:'Mosaïque romaine',          query:'roman mosaic ancient tiles',         cat:'art', rarity:'r', xp:20, age:11},
+  {id:97, name:'Vitrail cathédrale',        query:'stained glass cathedral light',      cat:'art', rarity:'e', xp:35, age:10},
+  {id:98, name:'Grotte de Lascaux',         query:'cave painting prehistoric art',      cat:'art', rarity:'l', xp:50, age:12},
+  {id:99, name:'✦ Image Secrète Finale',    query:'golden treasure chest reward',       cat:'secret', rarity:'s', xp:100, age:4},
+];
+
+// ── State ──
+let age=9, obName='', obClass='ce2', obPType='normal', obCur=1;
+let curP={name:'Lucas', age:9, classe:'ce2', ptype:'normal', type:'je'};
+let micOn=false, isThinking=false, recognition=null;
+let xp=240, streak=5, level=3, imgsUnlocked=3;
+let unlocked = new Set([0,1,2]);
+let imageCache = {}; // Cache des URLs d'images récupérées
+
+// ── Nav ──
+function goTo(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── Unsplash API ──
+async function fetchImage(query, id){
+  if(imageCache[id]) return imageCache[id];
+  if(!UNSPLASH_KEY){
+    return null;
+  }
+  try {
+    const res = await fetch(`https://api.unsplash.com/photos/random?query=${encodeURIComponent(query)}&orientation=squarish&client_id=${UNSPLASH_KEY}`);
+    if(!res.ok) return null;
+    const data = await res.json();
+    const url = data.urls?.small || data.urls?.regular;
+    if(url) imageCache[id] = { url, credit: data.user?.name||'Unsplash', link: data.links?.html||'' };
+    return imageCache[id] || null;
+  } catch(e) { return null; }
+}
+
+// ── Onboarding ──
+function obGo(n){
+  if(n===2){
+    const v=document.getElementById('ob-name').value.trim();
+    if(!v){document.getElementById('ob-name').style.borderColor='rgba(255,255,255,.7)';return;}
+    obName=v;
+    document.getElementById('ob-q2').textContent=`${obName}, tu as quel âge ?`;
+    document.getElementById('ob-q3').textContent=`${obName}, tu es dans quelle classe ?`;
+    document.getElementById('ob-q4').textContent=`${obName}, comment tu te sens à l'école ?`;
+  }
+  if(n===5){
+    obClass=document.getElementById('ob-class').value;
+    const classLabel=document.getElementById('ob-class').options[document.getElementById('ob-class').selectedIndex].text;
+    document.getElementById('s-name').textContent=obName;
+    document.getElementById('s-age').textContent=age+' ans';
+    document.getElementById('s-class').textContent=classLabel;
+    document.getElementById('s-profile').textContent=ptypeLabel(obPType);
+  }
+  document.getElementById('ob-s'+obCur).classList.remove('active');
+  document.getElementById('ps'+(obCur-1)).classList.add('on');
+  obCur=n;
+  document.getElementById('ob-s'+obCur).classList.add('active');
+  if(n<=5) document.getElementById('ps'+(n-1)).classList.add('on');
+}
+function chAge(d){ const i=document.getElementById('age-val'); age=Math.max(4,Math.min(17,age+d)); i.value=age; updateAgeChip(); }
+function syncAge(){ age=Math.max(4,Math.min(17,parseInt(document.getElementById('age-val').value)||9)); updateAgeChip(); }
+function updateAgeChip(){ document.getElementById('age-chip-txt').textContent=schoolLevel(age)+' · '+age+' ans'; }
+function pickPT(v,el){
+  obPType=v;
+  document.querySelectorAll('.ptype').forEach(p=>p.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function ptypeLabel(v){ return v==='avance'?'En avance 🚀':v==='aide'?'A besoin d\'aide 🤝':'Dans la moyenne 📚'; }
+function schoolLevel(a){
+  if(a<=5)return'Maternelle'; if(a===6)return'CP'; if(a===7)return'CE1';
+  if(a===8)return'CE2'; if(a===9)return'CM1'; if(a===10)return'CM2';
+  if(a===11)return'6ème'; if(a===12)return'5ème'; if(a===13)return'4ème';
+  if(a<=14)return'3ème'; return'Lycée';
+}
+function profType(a){ return a<=12?'je':'ja'; }
+function finishOb(){
+  obClass=document.getElementById('ob-class').value;
+  curP={name:obName,age,classe:obClass,ptype:obPType,type:profType(age)};
+  xp=0; streak=0; level=1; unlocked=new Set(); imgsUnlocked=0; imageCache={};
+  resetChat(); apply(); buildColl(); updateXPBar(); updateCreditBar(); updateTrialBanner(); goTo('s-main');
+}
+
+// ── Switcher ──
+function selP(el,name,ag,cl,pt,t){
+  document.querySelectorAll('.sw-card').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel'); curP={name,age:ag,classe:cl,ptype:pt,type:t};
+}
+function confirmP(){
+  if(curP.name==='Lucas'){xp=240;streak=5;level=3;unlocked=new Set([0,1,2]);imgsUnlocked=3;}
+  else if(curP.name==='Emma'){xp=580;streak=12;level=6;unlocked=new Set([0,1,2,3,4,5,6,7,8,9,10,11]);imgsUnlocked=12;}
+  else{xp=90;streak=2;level=1;unlocked=new Set([0]);imgsUnlocked=1;}
+  imageCache={};
+  resetChat(); apply(); buildColl(); updateXPBar(); updateCreditBar(); updateTrialBanner(); goTo('s-main');
+}
+
+// ── Apply ──
+function avaGrad(n){ const g=['linear-gradient(135deg,#FF6B2B,#8B5CF6)','linear-gradient(135deg,#8B5CF6,#EC4899)','linear-gradient(135deg,#10B981,#3B82F6)','linear-gradient(135deg,#F59E0B,#EF4444)']; return g[n.charCodeAt(0)%g.length]; }
+function apply(){
+  const p=curP,n=p.name;
+  document.getElementById('tb-name').textContent=`Aria Kids · ${n}`;
+  const a=document.getElementById('pf-ava'); a.textContent=n.charAt(0).toUpperCase(); a.style.background=avaGrad(n);
+  document.getElementById('pf-name').textContent=`${n} · ${p.age} ans · ${p.classe.toUpperCase()}`;
+  document.getElementById('pf-xp').textContent=xp;
+  document.getElementById('pf-lvl').textContent=level;
+  renderGameGrid(p.classe || 'ce2');
+  const msgs={
+    je:`Coucou ${n} ! 🎉 Je suis Aria. Joue et débloque des vraies photos dans ta collection !`,
+    ja:`Salut ${n} ! Je suis Aria. Joue pour débloquer des images et gagner des XP !`,
+  };
+  addAria(msgs[p.type]||msgs.je);
+}
+
+// ── XP System ──
+function addXP(amount){ setTimeout(saveState, 80);
+  xp+=amount; streak++;
+  const newLevel=Math.floor(xp/100)+1;
+  const levelUp=newLevel>level;
+  level=newLevel; updateXPBar();
+  document.getElementById('pf-xp').textContent=xp;
+  document.getElementById('pf-lvl').textContent=level;
+  document.getElementById('streak').textContent=streak;
+  // Débloquer une image ?
+  const nextIdx=unlocked.size;
+  if(nextIdx<CATALOGUE.length && !unlocked.has(nextIdx)){
+    // Vérifier si l'enfant a l'âge requis
+    const img=CATALOGUE[nextIdx];
+    if(curP.age>=img.age){
+      unlocked.add(nextIdx); imgsUnlocked=unlocked.size;
+      document.getElementById('imgs-count').textContent=imgsUnlocked;
+      document.getElementById('coll-count').textContent=imgsUnlocked+' / 100';
+      showReward(img, amount);
+    }
+  } else if(levelUp){ launchConfetti(); }
+}
+
+function updateXPBar(){
+  const pct=(xp%100)+'%';
+  document.getElementById('xp-fill').style.width=pct;
+  document.getElementById('xp-current').textContent=xp;
+  document.getElementById('xp-next').textContent=(Math.floor(xp/100)+1)*100;
+  document.getElementById('xp-level').textContent=level;
+}
+
+// ── Collection ──
+function buildColl(){
+  const g=document.getElementById('coll-grid');
+  // Afficher les 20 premiers slots
+  const slots=CATALOGUE.slice(0,20);
+  g.innerHTML=slots.map(item=>{
+    const isUnlocked=unlocked.has(item.id);
+    const cached=imageCache[item.id];
+    if(isUnlocked && cached){
+      return `<div class="img-item unlocked" onclick="showImgModal(${item.id})" title="${item.name}">
+        <img src="${cached.url}" alt="${item.name}" loading="lazy">
+        </div>`;
+    } else if(isUnlocked){
+      return `<div class="img-item unlocked loading" id="coll-${item.id}" onclick="loadAndShowImg(${item.id})" title="${item.name}">
+        <div style="font-size:.6rem;font-weight:800;color:var(--amber);text-align:center;padding:4px">🔄 Charger</div>
+        </div>`;
+    } else {
+      return `<div class="img-item locked" title="???"><span class="img-lock">🔒</span></div>`;
+    }
+  }).join('');
+  document.getElementById('coll-count').textContent=imgsUnlocked+' / 100';
+}
+
+async function loadAndShowImg(id){
+  const item=CATALOGUE[id];
+  if(!item) return;
+  addAria(`⏳ Je cherche la photo de "${item.name}"...`);
+  const img=await fetchImage(item.query, id);
+  if(img){
+    buildColl();
+    showImgModal(id);
+    addAria(`🖼️ Voilà la photo de "${item.name}" ! Photo par ${img.credit} sur Unsplash.`);
+  } else {
+    addAria(`⚠️ Impossible de charger la photo. Vérifie ta connexion internet ou configure la clé Unsplash.`);
+  }
+}
+
+function showImgModal(id){
+  const item=CATALOGUE[id];
+  const cached=imageCache[id];
+  if(!item) return;
+  const modal=document.getElementById('img-modal');
+  const img=document.getElementById('modal-img');
+  if(cached){ img.src=cached.url; img.style.display='block'; }
+  else { img.style.display='none'; }
+  document.getElementById('modal-name').textContent=item.name;
+  document.getElementById('modal-src').textContent=cached?`📸 Photo par ${cached.credit} · Unsplash`:'';
+  modal.classList.add('show');
+}
+function closeImgModal(){ document.getElementById('img-modal').classList.remove('show'); }
+
+async function showReward(item, xpGained){
+  const popup=document.getElementById('reward-popup');
+  document.getElementById('reward-title').textContent=item.name;
+  document.getElementById('reward-desc').textContent=`Tu as débloqué cette image pour ta collection ! Clique dessus pour la voir en grand.`;
+  document.getElementById('reward-xp').textContent=`+${xpGained} XP ⭐`;
+  // Charger la vraie photo
+  const img=await fetchImage(item.query, item.id);
+  const rImg=document.getElementById('reward-img');
+  const rPlaceholder=document.getElementById('reward-placeholder');
+  if(img){
+    rImg.src=img.url; rImg.style.display='block'; rPlaceholder.style.display='none';
+    buildColl();
+  } else {
+    rImg.style.display='none'; rPlaceholder.style.display='flex';
+    rPlaceholder.textContent='🎉';
+  }
+  popup.classList.add('show');
+  launchConfetti();
+}
+function closeReward(){ document.getElementById('reward-popup').classList.remove('show'); }
+function showColl(){ document.getElementById('coll-wrap').scrollIntoView({behavior:'smooth'}); }
+
+// ── Confetti ──
+function launchConfetti(){
+  const w=document.getElementById('confetti'); w.innerHTML='';
+  const colors=['#FF6B2B','#8B5CF6','#10B981','#F59E0B','#EC4899','#3B82F6'];
+  for(let i=0;i<30;i++){
+    const c=document.createElement('div'); c.className='conf';
+    c.style.left=Math.random()*100+'vw'; c.style.top='-20px';
+    c.style.background=colors[Math.floor(Math.random()*colors.length)];
+    c.style.width=(6+Math.random()*8)+'px'; c.style.height=(6+Math.random()*8)+'px';
+    c.style.borderRadius=Math.random()>.5?'50%':'2px';
+    c.style.animationDelay=Math.random()*1+'s';
+    c.style.animationDuration=(1+Math.random()*.8)+'s';
+    w.appendChild(c);
+  }
+  setTimeout(()=>w.innerHTML='',2500);
+}
+
+// ── Matières par niveau scolaire ──
+const MATIERES = {
+  maternelle: [
+    {id:'decouverte', ico:'🌍', name:'Découverte du monde', xp:10, msgs:[n=>`🌍 Connais-tu cet animal ${n} ? C'est un éléphant ! Il vit en Afrique.`, n=>`🌍 Quelle couleur est le ciel ${n} ?`]},
+    {id:'lettres',    ico:'📖', name:'Lettres & sons',      xp:10, msgs:[n=>`📖 Quelle lettre commence le mot "chat" ${n} ?`, n=>`📖 Dis-moi une lettre de l'alphabet ${n} !`]},
+    {id:'chiffres',   ico:'🔢', name:'Chiffres & formes',   xp:10, msgs:[n=>`🔢 Combien de doigts as-tu sur une main ${n} ?`, n=>`🔢 Quelle forme a une balle ${n} ?`]},
+    {id:'arts',       ico:'🎨', name:'Arts plastiques',     xp:10, msgs:[n=>`🎨 Quelle est ta couleur préférée ${n} ?`, n=>`🎨 Combien de couleurs y a-t-il dans un arc-en-ciel ${n} ?`]},
+    {id:'musique',    ico:'🎵', name:'Musique & chants',    xp:10, msgs:[n=>`🎵 Connais-tu une chanson ${n} ? Fredonne-la !`, n=>`🎵 Quel instrument fait "boum boum" ${n} ?`]},
+    {id:'motricite',  ico:'🤸', name:'Motricité',           xp:10, msgs:[n=>`🤸 Combien de sauts peux-tu faire sur un pied ${n} ?`, n=>`🤸 Peux-tu toucher tes pieds sans plier les genoux ${n} ?`]},
+    {id:'vie',        ico:'🌱', name:'Vivre ensemble',      xp:10, msgs:[n=>`🌱 Comment dit-on merci en anglais ${n} ?`, n=>`🌱 Qu'est-ce qu'un ami ${n} ?`]},
+  ],
+  cp: [
+    {id:'lecture',    ico:'📖', name:'Lecture',              xp:15, msgs:[n=>`📖 Lis ce mot ${n} : C-H-A-T. Qu'est-ce que ça fait ?`, n=>`📖 Quelle lettre fait le son "ou" ${n} ?`]},
+    {id:'ecriture',   ico:'✏️', name:'Écriture',             xp:10, msgs:[n=>`✏️ Épelle le mot "MAISON" ${n} !`, n=>`✏️ Comment écrit-on le son "an" ${n} ?`]},
+    {id:'maths',      ico:'🔢', name:'Maths',                xp:15, msgs:[n=>`🔢 Combien font 3 + 4 ${n} ?`, n=>`🔢 Il y a 8 bonbons, tu en manges 3. Combien en reste-t-il ${n} ?`]},
+    {id:'decouv',     ico:'🌍', name:'Découverte du monde',  xp:10, msgs:[n=>`🌍 Dans quelle saison est-on quand il neige ${n} ?`, n=>`🌍 Comment s'appelle le bébé de la vache ${n} ?`]},
+    {id:'arts',       ico:'🎨', name:'Arts plastiques',      xp:10, msgs:[n=>`🎨 Cite 3 couleurs primaires ${n} !`, n=>`🎨 Qu'obtient-on en mélangeant bleu et jaune ${n} ?`]},
+    {id:'musique',    ico:'🎵', name:'Musique',              xp:10, msgs:[n=>`🎵 Combien y a-t-il de notes dans la gamme ${n} ?`, n=>`🎵 Quel instrument a des touches noires et blanches ${n} ?`]},
+    {id:'anglais',    ico:'🇬🇧', name:'Anglais',             xp:10, msgs:[n=>`🇬🇧 How do you say "bonjour" in English ${n}?`, n=>`🇬🇧 What color is the sun ${n}?`]},
+    {id:'eps',        ico:'⚽', name:'EPS',                  xp:10, msgs:[n=>`⚽ Combien de joueurs dans une équipe de foot ${n} ?`, n=>`⚽ Quel sport se joue avec une raquette ${n} ?`]},
+  ],
+  ce1: [
+    {id:'francais',   ico:'📝', name:'Français',             xp:15, msgs:[n=>`📝 Conjugue "être" au présent pour "je" ${n} !`, n=>`📝 Quel est le féminin de "boulanger" ${n} ?`]},
+    {id:'maths',      ico:'🔢', name:'Maths',                xp:20, msgs:[n=>`🔢 Combien font 7 × 3 ${n} ?`, n=>`🔢 Quel nombre vient après 39 ${n} ?`]},
+    {id:'sciences',   ico:'🔬', name:'Sciences',             xp:15, msgs:[n=>`🔬 Comment s'appelle la transformation de la chenille en papillon ${n} ?`, n=>`🔬 Que produisent les plantes grâce au soleil ${n} ?`]},
+    {id:'histoire',   ico:'🏛️', name:'Histoire',             xp:15, msgs:[n=>`🏛️ Quel monument célèbre se trouve à Paris ${n} ?`, n=>`🏛️ Comment appelle-t-on les hommes qui vivaient dans des cavernes ${n} ?`]},
+    {id:'geo',        ico:'🌍', name:'Géographie',           xp:15, msgs:[n=>`🌍 Comment appelle-t-on la mer qui borde le sud de la France ${n} ?`, n=>`🌍 Quelle est la capitale de la France ${n} ?`]},
+    {id:'anglais',    ico:'🇬🇧', name:'Anglais',             xp:15, msgs:[n=>`🇬🇧 How do you say "chien" in English ${n}?`, n=>`🇬🇧 Count from 1 to 10 in English ${n}!`]},
+    {id:'arts',       ico:'🎨', name:'Arts plastiques',      xp:10, msgs:[n=>`🎨 Qu'est-ce qu'une nature morte en peinture ${n} ?`, n=>`🎨 Cite un peintre célèbre ${n} !`]},
+    {id:'musique',    ico:'🎵', name:'Musique',              xp:10, msgs:[n=>`🎵 Qu'est-ce qu'un rythme ${n} ?`, n=>`🎵 Cite un instrument à cordes ${n} !`]},
+    {id:'eps',        ico:'⚽', name:'EPS',                  xp:10, msgs:[n=>`⚽ Qu'est-ce que l'endurance ${n} ?`, n=>`⚽ Cite 3 sports d'équipe ${n} !`]},
+  ],
+  ce2: [
+    {id:'francais',   ico:'📝', name:'Français',             xp:20, msgs:[n=>`📝 Conjugue "aller" au futur pour "nous" ${n} !`, n=>`📝 Donne le pluriel de "bal" ${n} !`]},
+    {id:'maths',      ico:'🔢', name:'Maths',                xp:20, msgs:[n=>`🔢 Combien font 8 × 7 ${n} ?`, n=>`🔢 ${Math.floor(Math.random()*50+20)} × 3 = ? ${n}`]},
+    {id:'sciences',   ico:'🔬', name:'Sciences',             xp:20, msgs:[n=>`🔬 Combien de planètes dans le système solaire ${n} ?`, n=>`🔬 Qu'est-ce que la photosynthèse ${n} ?`]},
+    {id:'histoire',   ico:'🏛️', name:'Histoire',             xp:20, msgs:[n=>`🏛️ En quelle année a eu lieu la Révolution française ${n} ?`, n=>`🏛️ Qui était Vercingétorix ${n} ?`]},
+    {id:'geo',        ico:'🌍', name:'Géographie',           xp:15, msgs:[n=>`🌍 Quelle est la capitale de l'Espagne ${n} ?`, n=>`🌍 Sur quel continent se trouve l'Égypte ${n} ?`]},
+    {id:'anglais',    ico:'🇬🇧', name:'Anglais',             xp:15, msgs:[n=>`🇬🇧 How do you say "chat" in English ${n}?`, n=>`🇬🇧 What color is the sky ${n}?`]},
+    {id:'arts',       ico:'🎨', name:'Arts plastiques',      xp:10, msgs:[n=>`🎨 Cite une œuvre de Van Gogh ${n} !`, n=>`🎨 Qu'est-ce que le portrait en peinture ${n} ?`]},
+    {id:'musique',    ico:'🎵', name:'Musique',              xp:10, msgs:[n=>`🎵 Cite un instrument à vent ${n} !`, n=>`🎵 Qu'est-ce qu'une gamme musicale ${n} ?`]},
+    {id:'eps',        ico:'⚽', name:'EPS',                  xp:10, msgs:[n=>`⚽ Quelle est la différence entre sprint et jogging ${n} ?`, n=>`⚽ Cite 3 sports olympiques ${n} !`]},
+    {id:'emc',        ico:'🤝', name:'EMC',                  xp:10, msgs:[n=>`🤝 Qu'est-ce que la citoyenneté ${n} ?`, n=>`🤝 Cite un droit fondamental de l'enfant ${n} !`]},
+  ],
+  cm1: [
+    {id:'francais',   ico:'📝', name:'Français',             xp:20, msgs:[n=>`📝 Analyse grammaticale : "Le chat mange la souris" — quel est le sujet ${n} ?`, n=>`📝 Conjugue "savoir" au conditionnel présent pour "il" ${n} !`]},
+    {id:'maths',      ico:'🔢', name:'Maths',                xp:25, msgs:[n=>`🔢 Calcule : 456 × 12 = ? ${n}`, n=>`🔢 Quelle est la fraction équivalente à 1/2 avec le dénominateur 8 ${n} ?`]},
+    {id:'sciences',   ico:'🔬', name:'Sciences',             xp:20, msgs:[n=>`🔬 Qu'est-ce qu'un être vivant ${n} ?`, n=>`🔬 Comment fonctionne la digestion ${n} ?`]},
+    {id:'histoire',   ico:'🏛️', name:'Histoire',             xp:20, msgs:[n=>`🏛️ Qui était Napoléon Bonaparte ${n} ?`, n=>`🏛️ Qu'est-ce que la Première Guerre Mondiale ${n} ?`]},
+    {id:'geo',        ico:'🌍', name:'Géographie',           xp:20, msgs:[n=>`🌍 Quels sont les 5 océans du monde ${n} ?`, n=>`🌍 Quelle est la plus grande ville de France ${n} ?`]},
+    {id:'anglais',    ico:'🇬🇧', name:'Anglais',             xp:20, msgs:[n=>`🇬🇧 Conjugue "to be" au présent pour "they" ${n}!`, n=>`🇬🇧 How do you say "demain" in English ${n}?`]},
+    {id:'arts',       ico:'🎨', name:'Arts plastiques',      xp:15, msgs:[n=>`🎨 Qu'est-ce que la perspective en dessin ${n} ?`, n=>`🎨 Cite un sculpteur célèbre ${n} !`]},
+    {id:'musique',    ico:'🎵', name:'Musique',              xp:15, msgs:[n=>`🎵 Qu'est-ce qu'une clé de sol ${n} ?`, n=>`🎵 Cite un compositeur classique ${n} !`]},
+    {id:'eps',        ico:'⚽', name:'EPS',                  xp:10, msgs:[n=>`⚽ Qu'est-ce que le fair-play ${n} ?`, n=>`⚽ Cite 2 sports individuels et 2 sports collectifs ${n} !`]},
+    {id:'emc',        ico:'🤝', name:'EMC',                  xp:10, msgs:[n=>`🤝 Qu'est-ce que la laïcité ${n} ?`, n=>`🤝 Quels sont les 3 piliers de la République française ${n} ?`]},
+    {id:'info',       ico:'💻', name:'Informatique',         xp:15, msgs:[n=>`💻 Qu'est-ce qu'un logiciel ${n} ?`, n=>`💻 Quelle est la différence entre copier et coller ${n} ?`]},
+  ],
+  cm2: [
+    {id:'francais',   ico:'📝', name:'Français',             xp:20, msgs:[n=>`📝 Rédige une phrase avec un complément circonstanciel de temps ${n} !`, n=>`📝 Conjugue "résoudre" au passé simple pour "ils" ${n} !`]},
+    {id:'maths',      ico:'🔢', name:'Maths',                xp:25, msgs:[n=>`🔢 Calcule l'aire d'un rectangle de 8cm × 5cm ${n} !`, n=>`🔢 Convertis 3,5 km en mètres ${n} !`]},
+    {id:'sciences',   ico:'🔬', name:'Sciences',             xp:20, msgs:[n=>`🔬 Explique le cycle de l'eau ${n} !`, n=>`🔬 Qu'est-ce que l'électricité statique ${n} ?`]},
+    {id:'histoire',   ico:'🏛️', name:'Histoire',             xp:20, msgs:[n=>`🏛️ Qu'est-ce que la Résistance durant la Seconde Guerre Mondiale ${n} ?`, n=>`🏛️ Qui était Charles de Gaulle ${n} ?`]},
+    {id:'geo',        ico:'🌍', name:'Géographie',           xp:20, msgs:[n=>`🌍 Cite 3 pays d'Amérique du Sud ${n} !`, n=>`🌍 Quels sont les départements d'outre-mer français ${n} ?`]},
+    {id:'anglais',    ico:'🇬🇧', name:'Anglais',             xp:20, msgs:[n=>`🇬🇧 What's the difference between "make" and "do" ${n}?`, n=>`🇬🇧 Conjugue "to go" au prétérit ${n}!`]},
+    {id:'arts',       ico:'🎨', name:'Arts plastiques',      xp:15, msgs:[n=>`🎨 Cite un mouvement artistique du 20ème siècle ${n} !`, n=>`🎨 Qu'est-ce que l'impressionnisme ${n} ?`]},
+    {id:'musique',    ico:'🎵', name:'Musique',              xp:15, msgs:[n=>`🎵 Qu'est-ce qu'un accord musical ${n} ?`, n=>`🎵 Cite 3 familles d'instruments ${n} !`]},
+    {id:'eps',        ico:'⚽', name:'EPS',                  xp:10, msgs:[n=>`⚽ Explique la règle du hors-jeu au football ${n} !`, n=>`⚽ Cite 3 sports aux Jeux Olympiques ${n} !`]},
+    {id:'emc',        ico:'🤝', name:'EMC',                  xp:15, msgs:[n=>`🤝 Qu'est-ce que la Déclaration des droits de l'Homme ${n} ?`, n=>`🤝 Qu'est-ce que la démocratie ${n} ?`]},
+    {id:'info',       ico:'💻', name:'Informatique',         xp:15, msgs:[n=>`💻 Qu'est-ce qu'un algorithme ${n} ?`, n=>`💻 Quelle est la différence entre RAM et stockage ${n} ?`]},
+  ],
+  '6eme': [
+    {id:'francais',   ico:'📝', name:'Français',             xp:25, msgs:[n=>`📝 Quelle est la différence entre un récit et une description ${n} ?`, n=>`📝 Analyse la figure de style dans "ses yeux sont des étoiles" ${n} !`]},
+    {id:'maths',      ico:'🔢', name:'Maths',                xp:25, msgs:[n=>`🔢 Calcule le PGCD de 24 et 36 ${n} !`, n=>`🔢 Simplifie la fraction 24/36 ${n} !`]},
+    {id:'histoire',   ico:'🏛️', name:'Histoire',             xp:25, msgs:[n=>`🏛️ Qu'est-ce que la Mésopotamie ${n} ?`, n=>`🏛️ Quels sont les grands empires de l'Antiquité ${n} ?`]},
+    {id:'geo',        ico:'🌍', name:'Géographie',           xp:25, msgs:[n=>`🌍 Qu'est-ce qu'un méridien ${n} ?`, n=>`🌍 Quelle est la différence entre un continent et un océan ${n} ?`]},
+    {id:'svt',        ico:'🔬', name:'SVT',                  xp:25, msgs:[n=>`🔬 Qu'est-ce qu'une cellule ${n} ?`, n=>`🔬 Quelle est la différence entre un être vivant et un minéral ${n} ?`]},
+    {id:'anglais',    ico:'🇬🇧', name:'Anglais LV1',         xp:20, msgs:[n=>`🇬🇧 What's the present perfect of "to go" ${n}?`, n=>`🇬🇧 Translate: "I have never been to Paris" ${n}!`]},
+    {id:'lv2',        ico:'🌐', name:'LV2 (Esp/All)',        xp:20, msgs:[n=>`🌐 Comment dit-on "bonjour" en espagnol ${n} ?`, n=>`🌐 Comment dit-on "merci" en allemand ${n} ?`]},
+    {id:'techno',     ico:'⚙️', name:'Technologie',          xp:20, msgs:[n=>`⚙️ Qu'est-ce qu'un algorithme ${n} ?`, n=>`⚙️ Quelle est la différence entre hardware et software ${n} ?`]},
+    {id:'arts',       ico:'🎨', name:'Arts plastiques',      xp:15, msgs:[n=>`🎨 Qu'est-ce que la composition dans une œuvre d'art ${n} ?`, n=>`🎨 Cite un mouvement artistique ${n} !`]},
+    {id:'musique',    ico:'🎵', name:'Éducation musicale',   xp:15, msgs:[n=>`🎵 Qu'est-ce qu'un tempo ${n} ?`, n=>`🎵 Quelle est la différence entre mélodie et harmonie ${n} ?`]},
+    {id:'eps',        ico:'⚽', name:'EPS',                  xp:10, msgs:[n=>`⚽ Cite 3 sports de raquette ${n} !`, n=>`⚽ Qu'est-ce que l'échauffement et pourquoi est-il important ${n} ?`]},
+    {id:'emc',        ico:'🤝', name:'EMC',                  xp:15, msgs:[n=>`🤝 Qu'est-ce que la laïcité en France ${n} ?`, n=>`🤝 Quels sont les droits et devoirs d'un citoyen ${n} ?`]},
+  ],
+  '5eme': [
+    {id:'francais',   ico:'📝', name:'Français',             xp:25, msgs:[n=>`📝 Qu'est-ce qu'une métaphore ${n} ? Donne un exemple !`, n=>`📝 Quelle est la structure d'un sonnet ${n} ?`]},
+    {id:'maths',      ico:'🔢', name:'Maths',                xp:30, msgs:[n=>`🔢 Calcule : 3x + 5 = 14, x = ? ${n}`, n=>`🔢 Quel est le théorème de Pythagore ${n} ?`]},
+    {id:'histoire',   ico:'🏛️', name:'Histoire',             xp:25, msgs:[n=>`🏛️ Qu'est-ce que la Renaissance ${n} ?`, n=>`🏛️ Qui était Louis XIV ${n} ?`]},
+    {id:'geo',        ico:'🌍', name:'Géographie',           xp:25, msgs:[n=>`🌍 Cite 3 pays membres de l'Union Européenne ${n} !`, n=>`🌍 Qu'est-ce qu'un pays développé ${n} ?`]},
+    {id:'svt',        ico:'🔬', name:'SVT',                  xp:25, msgs:[n=>`🔬 Quelle est la différence entre une veine et une artère ${n} ?`, n=>`🔬 Qu'est-ce que la photosynthèse ${n} ?`]},
+    {id:'physique',   ico:'⚡', name:'Physique-Chimie',       xp:25, msgs:[n=>`⚡ Quelle est la formule de la vitesse ${n} ?`, n=>`⚡ Quelle est la différence entre masse et poids ${n} ?`]},
+    {id:'anglais',    ico:'🇬🇧', name:'Anglais LV1',         xp:20, msgs:[n=>`🇬🇧 What's the difference between "will" and "going to" ${n}?`, n=>`🇬🇧 Conjugue "to write" au past continuous ${n}!`]},
+    {id:'lv2',        ico:'🌐', name:'LV2 (Esp/All)',        xp:20, msgs:[n=>`🌐 Conjugue "ser" au présent pour "yo" en espagnol ${n} !`, n=>`🌐 Comment dit-on "je m'appelle" en allemand ${n} ?`]},
+    {id:'techno',     ico:'⚙️', name:'Technologie',          xp:20, msgs:[n=>`⚙️ Qu'est-ce qu'un programme informatique ${n} ?`, n=>`⚙️ Cite 3 langages de programmation ${n} !`]},
+    {id:'arts',       ico:'🎨', name:'Arts plastiques',      xp:15, msgs:[n=>`🎨 Qu'est-ce que l'art abstrait ${n} ?`, n=>`🎨 Cite une œuvre de Picasso ${n} !`]},
+    {id:'musique',    ico:'🎵', name:'Éducation musicale',   xp:15, msgs:[n=>`🎵 Qu'est-ce qu'une fugue en musique ${n} ?`, n=>`🎵 Quelle est la différence entre baroque et classique ${n} ?`]},
+    {id:'eps',        ico:'⚽', name:'EPS',                  xp:10, msgs:[n=>`⚽ Qu'est-ce que la natation synchronisée ${n} ?`, n=>`⚽ Cite 3 disciplines de l'athlétisme ${n} !`]},
+    {id:'emc',        ico:'🤝', name:'EMC',                  xp:15, msgs:[n=>`🤝 Qu'est-ce que la liberté d'expression ${n} ?`, n=>`🤝 Qu'est-ce qu'une loi dans une démocratie ${n} ?`]},
+  ],
+  '4eme': [
+    {id:'francais',   ico:'📝', name:'Français',             xp:25, msgs:[n=>`📝 Qu'est-ce que le romantisme en littérature ${n} ?`, n=>`📝 Qu'est-ce qu'un oxymore ${n} ? Donne un exemple !`]},
+    {id:'maths',      ico:'🔢', name:'Maths',                xp:30, msgs:[n=>`🔢 Développe : (x+3)(x-2) ${n} !`, n=>`🔢 Calcule la probabilité d'obtenir un 6 avec un dé ${n} !`]},
+    {id:'histoire',   ico:'🏛️', name:'Histoire',             xp:25, msgs:[n=>`🏛️ Quelles sont les causes de la Révolution française ${n} ?`, n=>`🏛️ Qu'est-ce que les Lumières ${n} ?`]},
+    {id:'geo',        ico:'🌍', name:'Géographie',           xp:25, msgs:[n=>`🌍 Qu'est-ce que la mondialisation ${n} ?`, n=>`🌍 Qu'est-ce qu'une mégapole ${n} ?`]},
+    {id:'svt',        ico:'🔬', name:'SVT',                  xp:25, msgs:[n=>`🔬 Qu'est-ce que l'ADN ${n} ?`, n=>`🔬 Comment fonctionne la reproduction sexuée ${n} ?`]},
+    {id:'physique',   ico:'⚡', name:'Physique-Chimie',       xp:25, msgs:[n=>`⚡ Quelle est la formule de l'énergie cinétique ${n} ?`, n=>`⚡ Qu'est-ce qu'un atome ${n} ?`]},
+    {id:'anglais',    ico:'🇬🇧', name:'Anglais LV1',         xp:20, msgs:[n=>`🇬🇧 What's the difference between "since" and "for" ${n}?`, n=>`🇬🇧 Translate: "If I were you, I would study" ${n}!`]},
+    {id:'lv2',        ico:'🌐', name:'LV2 (Esp/All)',        xp:20, msgs:[n=>`🌐 Conjugue "hablar" au présent en espagnol ${n} !`, n=>`🌐 Comment forme-t-on le parfait en allemand ${n} ?`]},
+    {id:'latin',      ico:'🏺', name:'Latin (option)',       xp:25, msgs:[n=>`🏺 Que signifie "veni, vidi, vici" ${n} ?`, n=>`🏺 Décline le mot "rosa" au nominatif singulier ${n} !`]},
+    {id:'arts',       ico:'🎨', name:'Arts plastiques',      xp:15, msgs:[n=>`🎨 Qu'est-ce que le cubisme ${n} ?`, n=>`🎨 Cite une œuvre de Monet ${n} !`]},
+    {id:'musique',    ico:'🎵', name:'Éducation musicale',   xp:15, msgs:[n=>`🎵 Qu'est-ce que le jazz ${n} ?`, n=>`🎵 Cite un compositeur romantique ${n} !`]},
+    {id:'eps',        ico:'⚽', name:'EPS',                  xp:10, msgs:[n=>`⚽ Cite 3 arts martiaux ${n} !`, n=>`⚽ Qu'est-ce que le cardio-training ${n} ?`]},
+    {id:'emc',        ico:'🤝', name:'EMC',                  xp:15, msgs:[n=>`🤝 Qu'est-ce que la discrimination ${n} ?`, n=>`🤝 Qu'est-ce que la séparation des pouvoirs ${n} ?`]},
+    {id:'techno',     ico:'⚙️', name:'Technologie',          xp:20, msgs:[n=>`⚙️ Qu'est-ce qu'une variable en programmation ${n} ?`, n=>`⚙️ Qu'est-ce qu'une boucle en code ${n} ?`]},
+  ],
+  '3eme': [
+    {id:'francais',   ico:'📝', name:'Français',             xp:30, msgs:[n=>`📝 Qu'est-ce qu'un texte argumentatif ${n} ?`, n=>`📝 Définis l'ironie en littérature ${n} !`]},
+    {id:'maths',      ico:'🔢', name:'Maths',                xp:30, msgs:[n=>`🔢 Résous : x² - 5x + 6 = 0 ${n} !`, n=>`🔢 Qu'est-ce que le théorème de Thalès ${n} ?`]},
+    {id:'histoire',   ico:'🏛️', name:'Histoire',             xp:30, msgs:[n=>`🏛️ Quelles sont les causes de la Seconde Guerre Mondiale ${n} ?`, n=>`🏛️ Qu'est-ce que la Shoah ${n} ?`]},
+    {id:'geo',        ico:'🌍', name:'Géographie',           xp:30, msgs:[n=>`🌍 Qu'est-ce que le développement durable ${n} ?`, n=>`🌍 Qu'est-ce qu'un pays émergent ${n} ?`]},
+    {id:'svt',        ico:'🔬', name:'SVT',                  xp:25, msgs:[n=>`🔬 Qu'est-ce que la mitose ${n} ?`, n=>`🔬 Comment fonctionne le système immunitaire ${n} ?`]},
+    {id:'physique',   ico:'⚡', name:'Physique-Chimie',       xp:25, msgs:[n=>`⚡ Quelle est la loi d'Ohm ${n} ?`, n=>`⚡ Qu'est-ce que la radioactivité ${n} ?`]},
+    {id:'anglais',    ico:'🇬🇧', name:'Anglais LV1',         xp:25, msgs:[n=>`🇬🇧 What's the passive form of "They built this house in 1900" ${n}?`, n=>`🇬🇧 Explain the difference between "despite" and "although" ${n}!`]},
+    {id:'lv2',        ico:'🌐', name:'LV2 (Esp/All)',        xp:20, msgs:[n=>`🌐 Utilise le subjonctif présent en espagnol ${n} !`, n=>`🌐 Forme une phrase au Konjunktiv II en allemand ${n} !`]},
+    {id:'latin',      ico:'🏺', name:'Latin (option)',       xp:25, msgs:[n=>`🏺 Traduis "Gallia est omnis divisa in partes tres" ${n} !`, n=>`🏺 Qu'est-ce que le supin en latin ${n} ?`]},
+    {id:'arts',       ico:'🎨', name:'Arts plastiques',      xp:15, msgs:[n=>`🎨 Qu'est-ce que le pop art ${n} ?`, n=>`🎨 Qui était Andy Warhol ${n} ?`]},
+    {id:'musique',    ico:'🎵', name:'Éducation musicale',   xp:15, msgs:[n=>`🎵 Qu'est-ce que le rock progressif ${n} ?`, n=>`🎵 Cite un compositeur contemporain ${n} !`]},
+    {id:'eps',        ico:'⚽', name:'EPS',                  xp:10, msgs:[n=>`⚽ Qu'est-ce qu'un brevet de natation ${n} ?`, n=>`⚽ Cite 3 sports aux Jeux Paralympiques ${n} !`]},
+    {id:'emc',        ico:'🤝', name:'EMC',                  xp:20, msgs:[n=>`🤝 Qu'est-ce que le droit de vote ${n} ?`, n=>`🤝 Qu'est-ce que la Constitution française ${n} ?`]},
+    {id:'techno',     ico:'⚙️', name:'Technologie',          xp:20, msgs:[n=>`⚙️ Qu'est-ce que la robotique ${n} ?`, n=>`⚙️ Qu'est-ce qu'une intelligence artificielle ${n} ?`]},
+  ],
+  seconde: [
+    {id:'francais',   ico:'📝', name:'Français',             xp:30, msgs:[n=>`📝 Quelles sont les caractéristiques du roman réaliste ${n} ?`, n=>`📝 Analyse ce vers de Baudelaire ${n} !`]},
+    {id:'maths',      ico:'🔢', name:'Maths',                xp:35, msgs:[n=>`🔢 Calcule la dérivée de f(x) = x³ - 2x² + x ${n} !`, n=>`🔢 Résous dans ℝ : 2x² - 3x - 2 = 0 ${n} !`]},
+    {id:'histoire',   ico:'🏛️', name:'Histoire',             xp:30, msgs:[n=>`🏛️ Qu'est-ce que la décolonisation ${n} ?`, n=>`🏛️ Qu'est-ce que la guerre froide ${n} ?`]},
+    {id:'geo',        ico:'🌍', name:'Géographie',           xp:30, msgs:[n=>`🌍 Qu'est-ce qu'une métropole mondiale ${n} ?`, n=>`🌍 Quels sont les défis environnementaux du 21ème siècle ${n} ?`]},
+    {id:'svt',        ico:'🔬', name:'SVT',                  xp:30, msgs:[n=>`🔬 Qu'est-ce que la méiose ${n} ?`, n=>`🔬 Comment fonctionne la sélection naturelle ${n} ?`]},
+    {id:'physique',   ico:'⚡', name:'Physique-Chimie',       xp:30, msgs:[n=>`⚡ Quelle est la formule de l'énergie potentielle ${n} ?`, n=>`⚡ Qu'est-ce qu'une liaison covalente ${n} ?`]},
+    {id:'anglais',    ico:'🇬🇧', name:'Anglais LV1',         xp:25, msgs:[n=>`🇬🇧 What's the difference between the present perfect simple and continuous ${n}?`, n=>`🇬🇧 Discuss: "Social media does more harm than good" ${n}!`]},
+    {id:'lv2',        ico:'🌐', name:'LV2 (Esp/All)',        xp:25, msgs:[n=>`🌐 Explique le subjonctif imparfait en espagnol ${n} !`, n=>`🌐 Qu'est-ce que le Passiv en allemand ${n} ?`]},
+    {id:'ses',        ico:'📊', name:'SES',                  xp:30, msgs:[n=>`📊 Qu'est-ce que le PIB ${n} ?`, n=>`📊 Quelle est la différence entre microéconomie et macroéconomie ${n} ?`]},
+    {id:'nsi',        ico:'💻', name:'NSI',                  xp:30, msgs:[n=>`💻 Qu'est-ce que la récursivité ${n} ?`, n=>`💻 Quelle est la différence entre HTML et CSS ${n} ?`]},
+    {id:'arts',       ico:'🎨', name:'Arts',                 xp:15, msgs:[n=>`🎨 Qu'est-ce que le surréalisme ${n} ?`, n=>`🎨 Cite une œuvre de Dalí ${n} !`]},
+    {id:'eps',        ico:'⚽', name:'EPS',                  xp:10, msgs:[n=>`⚽ Qu'est-ce que le VO2max ${n} ?`, n=>`⚽ Cite 3 sports de combat olympiques ${n} !`]},
+    {id:'emc',        ico:'🤝', name:'EMC',                  xp:20, msgs:[n=>`🤝 Qu'est-ce que la démocratie représentative ${n} ?`, n=>`🤝 Qu'est-ce que l'état de droit ${n} ?`]},
+  ],
+  premiere: [
+    {id:'francais',   ico:'📝', name:'Français',             xp:35, msgs:[n=>`📝 Quelle est la thèse de Montaigne dans les Essais ${n} ?`, n=>`📝 Analyse la structure d'un discours argumentatif ${n} !`]},
+    {id:'maths',      ico:'🔢', name:'Maths',                xp:40, msgs:[n=>`🔢 Calcule l'intégrale de f(x) = 2x + 3 entre 0 et 2 ${n} !`, n=>`🔢 Qu'est-ce qu'une suite arithmétique ${n} ?`]},
+    {id:'histoire',   ico:'🏛️', name:'Histoire',             xp:35, msgs:[n=>`🏛️ Quels sont les enjeux de la mondialisation économique ${n} ?`, n=>`🏛️ Qu'est-ce que la décolonisation ${n} ?`]},
+    {id:'geo',        ico:'🌍', name:'Géographie',           xp:35, msgs:[n=>`🌍 Quels sont les grands défis géopolitiques contemporains ${n} ?`, n=>`🌍 Qu'est-ce que la transition énergétique ${n} ?`]},
+    {id:'svt',        ico:'🔬', name:'SVT',                  xp:30, msgs:[n=>`🔬 Qu'est-ce que l'évolution des espèces selon Darwin ${n} ?`, n=>`🔬 Comment fonctionne un vaccin ${n} ?`]},
+    {id:'physique',   ico:'⚡', name:'Physique-Chimie',       xp:30, msgs:[n=>`⚡ Qu'est-ce que la mécanique newtonienne ${n} ?`, n=>`⚡ Explique la réaction nucléaire de fission ${n} !`]},
+    {id:'philo',      ico:'🧠', name:'Philosophie',          xp:35, msgs:[n=>`🧠 Qu'est-ce que la liberté selon Sartre ${n} ?`, n=>`🧠 Quelle est la différence entre morale et éthique ${n} ?`]},
+    {id:'anglais',    ico:'🇬🇧', name:'Anglais LV1',         xp:30, msgs:[n=>`🇬🇧 Analyse the use of irony in "Animal Farm" by Orwell ${n}!`, n=>`🇬🇧 What's the subjunctive mood in English ${n}?`]},
+    {id:'lv2',        ico:'🌐', name:'LV2 (Esp/All)',        xp:25, msgs:[n=>`🌐 Analyse un texte de García Márquez en espagnol ${n} !`, n=>`🌐 Qu'est-ce que le Konjunktiv I en allemand ${n} ?`]},
+    {id:'ses',        ico:'📊', name:'SES',                  xp:35, msgs:[n=>`📊 Qu'est-ce que la croissance économique ${n} ?`, n=>`📊 Quelle est la différence entre chômage frictionnel et structurel ${n} ?`]},
+    {id:'nsi',        ico:'💻', name:'NSI',                  xp:35, msgs:[n=>`💻 Qu'est-ce qu'un arbre binaire ${n} ?`, n=>`💻 Explique le protocole TCP/IP ${n} !`]},
+    {id:'eps',        ico:'⚽', name:'EPS',                  xp:10, msgs:[n=>`⚽ Qu'est-ce que la proprioception ${n} ?`, n=>`⚽ Cite 3 disciplines aux Jeux Olympiques d'hiver ${n} !`]},
+    {id:'emc',        ico:'🤝', name:'EMC',                  xp:20, msgs:[n=>`🤝 Qu'est-ce que la liberté de la presse ${n} ?`, n=>`🤝 Qu'est-ce que l'ONU ${n} ?`]},
+  ],
+  terminale: [
+    {id:'philo',      ico:'🧠', name:'Philosophie',          xp:40, msgs:[n=>`🧠 Qu'est-ce que la conscience selon Descartes ${n} ?`, n=>`🧠 Analyse la notion de justice chez Rawls ${n} !`]},
+    {id:'maths',      ico:'🔢', name:'Maths',                xp:45, msgs:[n=>`🔢 Démontre par récurrence que la somme des n premiers entiers vaut n(n+1)/2 ${n} !`, n=>`🔢 Qu'est-ce qu'une limite infinie ${n} ?`]},
+    {id:'histoire',   ico:'🏛️', name:'Histoire',             xp:40, msgs:[n=>`🏛️ Quels sont les fondements de la démocratie libérale ${n} ?`, n=>`🏛️ Analyse les enjeux géopolitiques du Moyen-Orient ${n} !`]},
+    {id:'geo',        ico:'🌍', name:'Géographie',           xp:40, msgs:[n=>`🌍 Quels sont les grands défis environnementaux du 21ème siècle ${n} ?`, n=>`🌍 Qu'est-ce que la géopolitique de l'énergie ${n} ?`]},
+    {id:'svt',        ico:'🔬', name:'SVT',                  xp:35, msgs:[n=>`🔬 Explique le mécanisme de la réplication de l'ADN ${n} !`, n=>`🔬 Qu'est-ce que la plasticité cérébrale ${n} ?`]},
+    {id:'physique',   ico:'⚡', name:'Physique-Chimie',       xp:35, msgs:[n=>`⚡ Explique le principe de la relativité restreinte ${n} !`, n=>`⚡ Qu'est-ce que la thermodynamique ${n} ?`]},
+    {id:'anglais',    ico:'🇬🇧', name:'Anglais LV1',         xp:35, msgs:[n=>`🇬🇧 Analyse the concept of the "American Dream" ${n}!`, n=>`🇬🇧 What are the key features of dystopian literature ${n}?`]},
+    {id:'lv2',        ico:'🌐', name:'LV2 (Esp/All)',        xp:30, msgs:[n=>`🌐 Analyse un texte de Borges en espagnol ${n} !`, n=>`🌐 Explique la déclinaison allemande ${n} !`]},
+    {id:'ses',        ico:'📊', name:'SES',                  xp:40, msgs:[n=>`📊 Qu'est-ce que la théorie keynésienne ${n} ?`, n=>`📊 Analysez les inégalités sociales en France ${n} !`]},
+    {id:'nsi',        ico:'💻', name:'NSI',                  xp:40, msgs:[n=>`💻 Qu'est-ce que la complexité algorithmique ${n} ?`, n=>`💻 Explique le protocole HTTPS ${n} !`]},
+    {id:'eps',        ico:'⚽', name:'EPS',                  xp:10, msgs:[n=>`⚽ Qu'est-ce que la biomécanique sportive ${n} ?`, n=>`⚽ Cite 3 champions olympiques français ${n} !`]},
+    {id:'emc',        ico:'🤝', name:'EMC',                  xp:20, msgs:[n=>`🤝 Qu'est-ce que la citoyenneté européenne ${n} ?`, n=>`🤝 Qu'est-ce que le droit international humanitaire ${n} ?`]},
+  ],
+};
+
+function renderGameGrid(classe){
+  const mats = MATIERES[classe] || MATIERES['ce2'];
+  const grid = document.getElementById('game-grid');
+  const label = document.getElementById('acts-label');
+  const classNames = {
+    maternelle:'Maternelle',cp:'CP',ce1:'CE1',ce2:'CE2',cm1:'CM1',cm2:'CM2',
+    '6eme':'6ème','5eme':'5ème','4eme':'4ème','3eme':'3ème',
+    seconde:'Seconde',premiere:'Première',terminale:'Terminale'
+  };
+  label.textContent = `🎮 Matières — ${classNames[classe]||classe}`;
+  grid.innerHTML = mats.map(m=>
+    `<button type="button" class="game-card" onclick="startGame('${m.id}')">
+      <span class="game-ico">${m.ico}</span>
+      <span class="game-name">${m.name}</span>
+      <span class="game-xp">+${m.xp} XP</span>
+    </button>`
+  ).join('');
+}
+
+function startGame(id){
+  const classe = curP.classe || 'ce2';
+  const mats = MATIERES[classe] || MATIERES['ce2'];
+  const mat = mats.find(m=>m.id===id);
+  if(!mat) return;
+  const msg = mat.msgs[Math.floor(Math.random()*mat.msgs.length)](curP.name);
+  showTyping();
+  setTimeout(()=>{
+    removeTyping(); addAria(msg);
+    // Ajustement XP selon profil scolaire
+    let xpGain = mat.xp;
+    if(curP.ptype==='avance') xpGain = Math.round(xpGain * 1.5);
+    setTimeout(()=>{
+      addAria(`Bravo ${curP.name} ! 🎉 Tu gagnes +${xpGain} XP !`);
+      addXP(xpGain);
+    },4000);
+  },700);
+}
+
+// ── Smart replies ──
+function smartReply(msg,p){
+  const m=msg.toLowerCase(),n=p.name;
+  if(/^(bonjour|salut|coucou|hey|hello)/.test(m)) return `Coucou ${n} ! 😄 Prêt(e) à jouer ?`;
+  if(/merci|super|cool|bravo|génial/.test(m)){const r=`De rien ${n} ! Tu gagnes +5 XP pour ta gentillesse ! 😊`;addXP(5);return r;}
+  if(/devoir|révision|leçon/.test(m)) return `📚 Sur quelle matière tu veux de l'aide ${n} ? Maths, français, histoire ?`;
+  if(/histoire|conte|raconte/.test(m)) return `📖 Il était une fois un héros nommé ${n} qui possédait un assistant magique... Je continue ?`;
+  if(/anglais|english/.test(m)) return `🇬🇧 Let's go ${n}! Vocabulaire, conjugaison ou compréhension ?`;
+  if(/collection|image|photo/.test(m)) return `🖼️ Tu as ${imgsUnlocked}/100 images débloquées ! Continue à jouer pour en gagner plus !`;
+  if(/xp|point|niveau/.test(m)) return `⭐ Tu as ${xp} XP — niveau ${level} ! Il te faut encore ${(Math.floor(xp/100)+1)*100-xp} XP pour le prochain niveau.`;
+  if(/aide|help|que.*fai/.test(m)) return `Je peux :\n🔢 Jeux de maths\n📚 Aider pour les devoirs\n🇬🇧 Anglais\n📖 Raconter des histoires\n🖼️ Déverrouiller des vraies photos !\n\nQu'est-ce que tu veux ${n} ?`;
+  const calc=m.match(/(\d+)\s*([\+\-\*x×÷\/])\s*(\d+)/);
+  if(calc){const a=+calc[1],o=calc[2],b=+calc[3];const r=o==='+'?a+b:o==='-'?a-b:(o==='/'||o==='÷')?Math.round(a/b*100)/100:a*b;addXP(10);return`🔢 ${a} ${o} ${b} = ${r} ! Bien calculé ! +10 XP 🎉`;}
+  return `Bonne question ${n} ! Dans Aria complet, je peux tout faire. Continue à jouer pour débloquer des vraies photos ! 🚀`;
+}
+
+// ── Chat ──
+function resetChat(){ document.getElementById('chat').innerHTML=''; }
+function addAria(txt){
+  const c=document.getElementById('chat');
+  const d=document.createElement('div'); d.className='ma';
+  d.innerHTML=`<div class="ma-ava">✦</div><div class="ma-bbl">${txt.replace(/\n/g,'<br>')}</div>`;
+  c.appendChild(d); c.scrollTop=c.scrollHeight;
+}
+function addUser(txt){
+  const c=document.getElementById('chat');
+  const d=document.createElement('div'); d.className='mu';
+  d.innerHTML=`<div class="mu-bbl">${txt}</div>`;
+  c.appendChild(d); c.scrollTop=c.scrollHeight;
+}
+function showTyping(){
+  const c=document.getElementById('chat');
+  const d=document.createElement('div'); d.className='ma'; d.id='typing';
+  d.innerHTML=`<div class="ma-ava">✦</div><div class="ma-bbl typing"><div class="td"></div><div class="td"></div><div class="td"></div></div>`;
+  c.appendChild(d); c.scrollTop=c.scrollHeight;
+}
+function removeTyping(){ const t=document.getElementById('typing'); if(t) t.remove(); }
+
+// ── Mic ──
+function setMic(on){
+  const m=document.getElementById('mic-btn'),w=document.getElementById('mic-wrap'),h=document.getElementById('mic-hint');
+  if(on){m.classList.add('on');m.textContent='⏹️';w.classList.add('on');h.textContent="J'écoute...";}
+  else{m.classList.remove('on');m.textContent='🎙️';w.classList.remove('on');h.textContent='Appuie pour parler à Aria';}
+}
+function toggleMic(){
+  if(!speechSupported){
+    addAria('Le micro n\'est pas disponible sur ce navigateur. Sur iPhone, utilise Safari. Sur Mac ou PC, utilise Chrome.');
+    return;
+  }
+  if(!isPro){
+    addAria('🎙️ Parler à Aria avec le micro, c\'est réservé au plan Pro ! Demande à tes parents — il y a 14 jours d\'essai gratuit. 🚀');
+    showTrialModal();
+    return;
+  }
+
+  if(micOn){if(recognition)try{recognition.stop();}catch(e){}micOn=false;setMic(false);return;}
+  if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){addAria("Micro non disponible ! Écris ta question.");return;}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  recognition=new SR();recognition.lang='fr-FR';recognition.continuous=false;recognition.interimResults=false;
+  recognition.onresult=e=>{const t=e.results[0][0].transcript;addUser(t);reply(t);};
+  recognition.onerror=()=>{micOn=false;setMic(false);};
+  recognition.onend=()=>{micOn=false;setMic(false);};
+  try{recognition.start();micOn=true;setMic(true);}catch(e){addAria("Problème micro ! Écris ta question.");}
+}
+
+// ── Actions ──
+function ask(msg){ if(isThinking)return; addUser(msg); reply(msg); }
+function reply(msg){
+  if(intercepterNote(msg)) return;
+  // ── Mode réel : pont Python → vraie IA ──
+  if(window.pywebview && window.pywebview.api){
+    if(!consumeCredits()) return;
+    isThinking=true; showTyping();
+    window.pywebview.api.ask_aria(msg, currentModel, ARIA_PRODUCT).then(res=>{
+      removeTyping(); isThinking=false;
+      if(res && res.ok){
+        addAria(res.reply); addXP(5);
+      } else if(res && res.error==='no_credits'){
+        addAria('⚠️ Plus de crédits aujourd\'hui ! Recharge ou attends minuit pour tes crédits gratuits. 🌙');
+      } else if(res && res.error==='no_key'){
+        addAria(res.reply);
+      } else {
+        ariaServiceDown();
+      }
+    }).catch(()=>{ removeTyping(); isThinking=false; ariaServiceDown(); });
+    return;
+  }
+  // ── Mode relais (mobile / PWA) : vraie IA via serveur sans état ──
+  if(ARIA_RELAY_URL){
+    if(!consumeCredits()) return;
+    isThinking=true; showTyping();
+    chatHistory.push({role:'user', content:msg});
+    fetch(ARIA_RELAY_URL + '/ask', {
+      method:'POST',
+      headers:(function(){
+        const h = {'Content-Type':'application/json'};
+        try{ const k = localStorage.getItem('aria_byok'); if(k) h['X-Aria-Key'] = k; const l = localStorage.getItem('aria_licence'); if(l) h['X-Aria-Licence'] = l; }catch(e){}
+        return h;
+      })(),
+      body: JSON.stringify({
+        message: msg, model: currentModel, product: ARIA_PRODUCT,
+        profile: curP, history: chatHistory.slice(-10)
+      })
+    }).then(r=>r.json()).then(res=>{
+      removeTyping(); isThinking=false;
+      if(res && res.reply){
+        chatHistory.push({role:'assistant', content:res.reply});
+        addAria(res.reply); addXP(5);
+        saveState();
+      } else { ariaServiceDown(); }
+    }).catch(()=>{ removeTyping(); isThinking=false; ariaServiceDown(); });
+    return;
+  }
+  // ── Mode démo (navigateur) ──
+  if(!consumeCredits()) return;
+  isThinking=true; showTyping();
+  setTimeout(()=>{
+    removeTyping(); isThinking=false;
+    const r=smartReply(msg,curP); addAria(r);
+    addXP(5);
+  },600+Math.random()*400);
+}
+
+function sendMsg(){
+  const v=document.getElementById('txt-in').value.trim();
+  if(!v||isThinking)return; addUser(v); document.getElementById('txt-in').value=''; reply(v);
+}
+function cancelAct(){
+  isThinking=false; if(recognition)try{recognition.stop();}catch(e){}
+  micOn=false; setMic(false); removeTyping();
+  addAria("OK ! Qu'est-ce que tu veux faire ?");
+}
+
+
+
+
+
+
+function getNotesEnfant(){
+  try{ return JSON.parse(localStorage.getItem('aria_rappels_kids') || '[]'); }
+  catch(e){ return []; }
+}
+
+function afficherNotesParents(){
+  const notes = getNotesEnfant();
+  const el = document.getElementById('parent-notes');
+  if(!el) return;
+  if(!notes.length){
+    el.innerHTML = '<div style="font-size:.75rem;color:var(--text3);text-align:center;padding:10px">Aucune note pour l\'instant</div>';
+    return;
+  }
+  el.innerHTML = notes.slice(-5).reverse().map(n =>
+    '<div style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.78rem">' +
+    (n.rappel ? '⏰ ' : '📝 ') + n.texte +
+    (n.rappel ? '<span style="color:var(--text3);font-size:.68rem"> · ' + new Date(n.rappel).toLocaleDateString("fr-FR") + '</span>' : '') +
+    '</div>'
+  ).join('');
+}
+
+// ── Offline / API down detection ──
+window.addEventListener('offline', ()=>{
+  addAria('📡 Oups, plus de connexion internet ! Tu peux continuer à jouer aux jeux, mais les nouvelles images attendront le retour du réseau.');
+});
+window.addEventListener('online', ()=>{
+  addAria('✅ La connexion est revenue ! Tout fonctionne à nouveau.');
+});
+function ariaServiceDown(){
+  addAria('😴 Aria se repose quelques instants (problème technique de notre côté). Réessaie dans 2-3 minutes — tes crédits ne sont pas consommés.');
+}
+
+// ── Parent Gate (RGPD consent) ──
+let pgChecks = [false, false, false];
+let parentEmail = '';
+let sessionStart = Date.now();
+let gateAnswer = 0;
+
+function togglePgCheck(el, idx){
+  pgChecks[idx] = !pgChecks[idx];
+  el.classList.toggle('on');
+  const allOk = pgChecks.every(c=>c);
+  document.getElementById('pg-cta').disabled = !allOk;
+}
+
+function validateParentGate(){
+  const email = document.getElementById('pg-email').value.trim();
+  if(!email || !email.includes('@')){
+    document.getElementById('pg-email').style.borderColor = '#EF4444';
+    return;
+  }
+  parentEmail = email;
+  // Consent horodate (RGPD proof)
+  const consent = {
+    email: email,
+    timestamp: new Date().toISOString(),
+    checks: ['parent_legal', 'rgpd_data', 'cgu_privacy']
+  };
+  console.log('Consentement parental enregistré:', consent);
+  goTo('s-onboard');
+}
+
+// ── Math gate (adults only) ──
+function openParentGate(){
+  setTimeout(afficherNotesParents, 100);
+  const a = Math.floor(Math.random()*8)+3;
+  const b = Math.floor(Math.random()*8)+3;
+  gateAnswer = a*b;
+  document.getElementById('gate-q').textContent = a+' × '+b+' = ?';
+  document.getElementById('gate-input').value = '';
+  document.getElementById('gate-modal').classList.add('show');
+  setTimeout(()=>document.getElementById('gate-input').focus(), 100);
+}
+function checkGate(){
+  const v = parseInt(document.getElementById('gate-input').value);
+  if(v === gateAnswer){
+    closeGate();
+    updateParentalStats();
+    goTo('s-parental');
+  } else {
+    document.getElementById('gate-input').value = '';
+    document.getElementById('gate-input').placeholder = 'Essaie encore';
+  }
+}
+function closeGate(){ document.getElementById('gate-modal').classList.remove('show'); }
+
+// ── Parental dashboard ──
+function updateParentalStats(){
+  const mins = Math.floor((Date.now()-sessionStart)/60000);
+  document.getElementById('pd-time').textContent = mins + ' min';
+  document.getElementById('pd-credits').textContent = dailyUsed;
+  document.getElementById('pd-xp').textContent = xp;
+  document.getElementById('pd-plan').textContent = isPro ? (trialDaysLeft>0 ? 'Essai Pro — '+trialDaysLeft+' jours restants' : 'Pro — 7,99€/mois') : 'Gratuit';
+  document.getElementById('pd-billing').textContent = isPro && trialDaysLeft<=0 ? 'Le 11 de chaque mois' : 'Aucun (essai)';
+}
+
+// ── Cancel subscription (3 clicks: Parents → Résilier → Confirmer) ──
+function startCancelFlow(){
+  document.getElementById('cancel-modal').classList.add('show');
+}
+function confirmCancel(){ isPaidPro = false; currentModel = "lite";
+  document.getElementById('cancel-modal').classList.remove('show');
+  isPro = false; dailyCredits = 10; trialDaysLeft = 0;
+  document.getElementById('trial-banner').style.display = 'none';
+  updateCreditBar(); updateParentalStats();
+  alert('Abonnement résilié. Votre enfant est maintenant sur le plan Gratuit. Aucun prélèvement ne sera effectué.');
+}
+
+// ── RGPD data flows ──
+function exportData(){
+  const data = {
+    profil: curP, xp: xp, niveau: level, streak: streak,
+    images_debloquees: Array.from(unlocked),
+    credits_bonus: bonusCredits,
+    email_parent: parentEmail,
+    export_date: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'aria_kids_donnees_' + (curP.name||'enfant') + '.json';
+  a.click();
+}
+function deleteDataFlow(){
+  if(confirm('Supprimer définitivement toutes les données de votre enfant ? Cette action est irréversible. (Profil, XP, collection, historique)')){
+    if(confirm('Vraiment sûr ? Tout sera effacé.')){
+      xp=0; level=1; streak=0; unlocked=new Set(); imgsUnlocked=0;
+      bonusCredits=0; dailyUsed=0; imageCache={};
+      alert('Toutes les données ont été supprimées conformément au RGPD.');
+      location.reload();
+    }
+  }
+}
+
+
+
+// ════════════════════════════════════════════
+// NOTES & RAPPELS — stockage local, zéro serveur
+// ════════════════════════════════════════════
+let ariaRappels = JSON.parse(localStorage.getItem('aria_rappels_kids') || '[]');
+
+function ariaNote(texte, dateRappel=null){
+  const note = {
+    id: Date.now(),
+    texte,
+    cree: new Date().toISOString(),
+    rappel: dateRappel,
+    fait: false
+  };
+  ariaRappels.push(note);
+  localStorage.setItem('aria_rappels_kids', JSON.stringify(ariaRappels));
+  return note;
+}
+
+function ariaSupprimerNote(id){
+  ariaRappels = ariaRappels.filter(n => n.id !== id);
+  localStorage.setItem('aria_rappels_kids', JSON.stringify(ariaRappels));
+}
+
+function ariaVerifierRappels(){
+  const maintenant = Date.now();
+  ariaRappels.forEach(n => {
+    if(n.rappel && !n.fait && new Date(n.rappel).getTime() <= maintenant){
+      n.fait = true;
+      addAria('⏰ Rappel : ' + n.texte); addXP(2);
+      setTimeout(()=>{ n.fait = true; }, 1000);
+    }
+  });
+  localStorage.setItem('aria_rappels_kids', JSON.stringify(ariaRappels));
+}
+// Vérification toutes les 60 secondes
+setInterval(ariaVerifierRappels, 60000);
+ariaVerifierRappels();
+
+function parseRappelDepuisMessage(msg){
+  const m = msg.toLowerCase();
+  let texte = msg;
+  let dateRappel = null;
+  const maintenant = new Date();
+
+  // Détection des mots-clés temporels
+  if(m.includes('dans 1h') || m.includes('dans une heure')){
+    dateRappel = new Date(maintenant.getTime() + 3600000).toISOString();
+  } else if(m.includes('dans 2h')){
+    dateRappel = new Date(maintenant.getTime() + 7200000).toISOString();
+  } else if(m.includes('dans 30 min') || m.includes('dans trente')){
+    dateRappel = new Date(maintenant.getTime() + 1800000).toISOString();
+  } else if(m.includes('demain')){
+    const dem = new Date(maintenant); dem.setDate(dem.getDate()+1); dem.setHours(9,0,0,0);
+    dateRappel = dem.toISOString();
+  } else if(m.includes('ce soir')){
+    const soir = new Date(maintenant); soir.setHours(19,0,0,0);
+    dateRappel = soir.toISOString();
+  } else if(m.includes('lundi')){ dateRappel = _prochainJour(1).toISOString(); }
+    else if(m.includes('mardi')){ dateRappel = _prochainJour(2).toISOString(); }
+    else if(m.includes('mercredi')){ dateRappel = _prochainJour(3).toISOString(); }
+    else if(m.includes('jeudi')){ dateRappel = _prochainJour(4).toISOString(); }
+    else if(m.includes('vendredi')){ dateRappel = _prochainJour(5).toISOString(); }
+
+  // Extraire le texte de la note
+  texte = msg.replace(/^(aria,?\s*)?(note|rappelle-moi|rappelle moi|mémorise|retiens)\s*(que\s*)?/i, '').trim();
+  return { texte, dateRappel };
+}
+
+function _prochainJour(jourVoulu){
+  const d = new Date(); let j = d.getDay();
+  let diff = jourVoulu - j; if(diff <= 0) diff += 7;
+  d.setDate(d.getDate() + diff); d.setHours(9,0,0,0);
+  return d;
+}
+
+function intercepterNote(msg){
+  const m = msg.toLowerCase();
+  const estNote = /^(aria,?\s*)?(note|rappelle|mémorise|retiens|n'oublie pas)/i.test(msg);
+  if(!estNote) return false;
+  const { texte, dateRappel } = parseRappelDepuisMessage(msg);
+  ariaNote(texte, dateRappel);
+  const quand = dateRappel
+    ? ' Je te rappellerai ' + new Date(dateRappel).toLocaleString('fr-FR', {weekday:'long',hour:'2-digit',minute:'2-digit'})
+    : '';
+  addAria('📝 Noté !' + quand + ' 👍'); addXP(3);
+  return true;
+}
+
+// ════════════════════════════════════════════
+// MOBILE / PWA — configuration
+// ════════════════════════════════════════════
+// URL du serveur relais pour la vraie IA sur mobile.
+// Vide = mode démo. Exemple : 'https://aria-relais.onrender.com'
+const ARIA_RELAY_URL = '';
+const ARIA_PRODUCT = 'kids';
+let chatHistory = [];
+
+// Enregistrement du service worker (PWA installable)
+if('serviceWorker' in navigator && location.protocol === 'https:'){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+// ── Persistance locale (architecture zéro serveur) ──
+function saveState(){
+  try{
+    const s = {
+      profil: curP, dailyUsed, bonusCredits,
+      day: new Date().toISOString().slice(0,10),
+      trialStart: localStorage.getItem('aria_trial_start') || new Date().toISOString().slice(0,10),
+      xp, level, streak, unlocked: Array.from(unlocked),
+      consentDone: true,
+    };
+    localStorage.setItem('aria_state_' + ARIA_PRODUCT, JSON.stringify(s));
+    if(!localStorage.getItem('aria_trial_start'))
+      localStorage.setItem('aria_trial_start', s.trialStart);
+  }catch(e){}
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem('aria_state_' + ARIA_PRODUCT);
+    if(!raw) return false;
+    const s = JSON.parse(raw);
+    if(s.profil && s.profil.name) curP = s.profil;
+    bonusCredits = s.bonusCredits || 0;
+    // crédits journaliers : reset si nouveau jour
+    const today = new Date().toISOString().slice(0,10);
+    dailyUsed = (s.day === today) ? (s.dailyUsed || 0) : 0;
+    // essai 14 jours basé sur le premier lancement
+    const start = localStorage.getItem('aria_trial_start');
+    if(start){
+      const ecoules = Math.floor((Date.now() - new Date(start).getTime()) / 86400000);
+      trialDaysLeft = Math.max(0, 14 - ecoules);
+      if(trialDaysLeft <= 0){ isPro = false; dailyCredits = 10; }
+    }
+    if(typeof s.xp === 'number'){ xp = s.xp; level = s.level||1; streak = s.streak||0; }
+    if(Array.isArray(s.unlocked)){ unlocked = new Set(s.unlocked); imgsUnlocked = unlocked.size; }
+    return !!(s.profil && s.profil.name);
+  }catch(e){ return false; }
+}
+
+
+// ── Rappel de fin d'essai (J-2 avant expiration) ──
+function rappelFinEssai(){
+  if(!isPro || trialDaysLeft <= 0) return;
+  if(trialDaysLeft === 2){
+    addAria('⏳ L\'essai d\'Aria Kids se termine dans 2 jours ! 🎮 Pour garder le micro et toute la collection, passe au Pro.'); showTrialModal();
+  } else if(trialDaysLeft === 1){
+    addAria('⚠️ Dernier jour d\'essai ! Demain les images et le micro se verrouillent. Parle à tes parents pour rester Pro 🚀');
+  }
+}
+// Vérifier au chargement (une seule fois par session)
+if(!sessionStorage.getItem('essai_rappele')){
+  setTimeout(rappelFinEssai, 3000);
+  sessionStorage.setItem('essai_rappele','1');
+}
+
+// ── Trial System ──
+let trialDaysLeft = 11;
+let trialTotal    = 14;
+let isPro         = true;
+let isPaidPro     = false; // vrai uniquement après abonnement payant
+
+function updateTrialBanner(){
+  const fill = document.getElementById('trial-fill');
+  document.getElementById('trial-days').textContent = trialDaysLeft;
+  fill.style.width = (trialDaysLeft/trialTotal*100)+'%';
+  fill.className = 'trial-fill'+(trialDaysLeft<=3?' urgent':'');
+  if(trialDaysLeft<=1) setTimeout(showTrialModal,2000);
+}
+function showTrialModal(){ document.getElementById('trial-modal').classList.add('show'); }
+function hideTrialModal(){
+  document.getElementById('trial-modal').classList.remove('show');
+  dailyCredits=10; updateCreditBar();
+  addAria('Tu es sur le plan Gratuit — 10 crédits par jour. Demande à tes parents de passer Pro pour continuer à gagner des images ! 🖼️');
+}
+function activatePro(){ isPaidPro = true;
+  document.getElementById('trial-modal').classList.remove('show');
+  document.getElementById('trial-banner').style.display='none';
+  isPro=true; dailyCredits=100; updateCreditBar();
+  addAria('🎉 Bienvenue dans Aria Kids Pro ! 100 crédits par jour — continue à débloquer des images !');
+  launchConfetti();
+}
+
+// ── Credit System ──
+let dailyCredits = 100;
+let dailyUsed    = 13;
+let bonusCredits = 320;
+let currentModel = 'lite';
+const MODEL_COST = {lite:1, smart:3, expert:10};
+
+
+
+function updateModelLocks(){
+  const btns = document.querySelectorAll('.model-btn');
+  btns.forEach((b,i)=>{
+    const cost = b.querySelector('.model-cost');
+    if(!cost) return;
+    if(i===0){ b.style.opacity='1'; cost.textContent='1 crédit'; return; }
+    if(isPaidPro){
+      b.style.opacity='1';
+      cost.textContent = (i===1?'3 crédits':'10 crédits');
+    } else {
+      b.style.opacity='.45';
+      cost.textContent = '🔒 Pro';
+    }
+  });
+}
+function updateMicHint(){
+  const h = document.getElementById('mic-hint');
+  if(h) h.textContent = isPro ? "Appuie pour parler à Aria" : "🔒 Micro — réservé Pro";
+}
+function updateCreditBar(){
+  const rem = dailyCredits - dailyUsed;
+  const pct = Math.max(0,(rem/dailyCredits)*100);
+  document.getElementById('cr-left').textContent  = rem;
+  document.getElementById('cr-total').textContent = dailyCredits;
+  document.getElementById('cr-bonus').textContent = '🎁 '+bonusCredits;
+  const fill = document.getElementById('cr-fill');
+  fill.style.width = pct+'%';
+  fill.className = 'credit-fill'+(pct<=20?' low':'');
+  updateMicHint();
+  updateModelLocks();
+  const warn = document.getElementById('cr-warning');
+  document.getElementById('cr-warn-n').textContent = rem;
+  warn.className = 'credit-warning'+(rem<=10&&rem>0?' show':'');
+}
+
+function selectModel(m, el){
+  if((m==='smart'||m==='expert') && !isPaidPro){
+    addAria('🔒 Aria Smart et Expert arrivent avec l\'abonnement Pro ! Pendant ton essai tu utilises Aria Lite. 😉');
+    showTrialModal();
+    return;
+  }
+  currentModel = m;
+  document.querySelectorAll('.model-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function consumeCredits(){ setTimeout(saveState, 50);
+  const cost = MODEL_COST[currentModel]||1;
+  const rem  = dailyCredits - dailyUsed;
+  if(rem >= cost){ dailyUsed += cost; }
+  else if(bonusCredits >= cost){ bonusCredits -= cost; }
+  else {
+    addAria('⚠️ Plus de crédits aujourd\'hui ! Recharge ou attends minuit pour tes crédits gratuits. 🌙');
+    return false;
+  }
+  updateCreditBar();
+  return true;
+}
+
+function showRecharge(){ document.getElementById('recharge-modal').classList.add('show'); }
+function hideRecharge(){ document.getElementById('recharge-modal').classList.remove('show'); }
+function buyPack(credits, price){
+  bonusCredits += credits;
+  updateCreditBar();
+  hideRecharge();
+  addAria(`🎉 ${credits} crédits bonus ajoutés ! Continue à jouer ${curP.name} !`);
+}
+
+// Init — restauration de session si disponible
+if(loadState()){
+  document.querySelectorAll('.screen').forEach(sc=>sc.classList.remove('active'));
+  document.getElementById('s-main').classList.add('active');
+}
+apply(); buildColl(); updateXPBar(); updateCreditBar(); updateTrialBanner();
+</script>
+
+
+<!-- Trial modal -->
+<div class="trial-modal" id="trial-modal">
+  <div class="trial-card">
+    <div class="trial-card-ico">🏆</div>
+    <div class="trial-card-title">Ton essai se termine bientôt !</div>
+    <div class="trial-card-desc">Continue avec 100 crédits par jour, et débloque Aria Smart pour des réponses encore plus fortes !</div>
+    <div style="background:var(--orange-pale);border-radius:12px;padding:10px;margin-bottom:14px">
+      <div style="font-size:1.4rem;font-weight:900;color:var(--orange)">7,99€ <span style="font-size:.75rem;font-weight:600;color:var(--text3)">/mois</span></div>
+      <div style="font-size:.7rem;color:var(--text3);margin-top:2px">Sans engagement · Annulable à tout moment</div>
+    </div>
+    <button type="button" class="trial-card-price" onclick="activatePro()">🚀 Passer Pro maintenant !</button>
+    <button type="button" class="trial-card-free" onclick="hideTrialModal()">Continuer en Gratuit</button>
+  </div>
+</div>
+
+<!-- Recharge modal -->
+<div class="recharge-modal" id="recharge-modal">
+  <div class="recharge-card">
+    <div class="recharge-title">🎁 Acheter des crédits bonus</div>
+    <div class="recharge-sub">Sans expiration — jamais perdus !</div>
+    <div class="pack-list">
+      <div class="pack-item" onclick="buyPack(200,1.99)">
+        <span class="pack-ico">☕</span>
+        <div class="pack-info"><div class="pack-name">Petit café</div><div class="pack-desc">+200 crédits bonus</div></div>
+        <span class="pack-price">1,99€</span>
+      </div>
+      <div class="pack-item" onclick="buyPack(500,3.99)">
+        <span class="pack-ico">🍕</span>
+        <div class="pack-info"><div class="pack-name">Régulier</div><div class="pack-desc">+500 crédits bonus</div></div>
+        <span class="pack-price">3,99€</span>
+      </div>
+      <div class="pack-item" onclick="buyPack(1500,9.99)">
+        <span class="pack-ico">🚀</span>
+        <div class="pack-info"><div class="pack-name">Intensif</div><div class="pack-desc">+1500 crédits bonus</div></div>
+        <span class="pack-price">9,99€</span>
+      </div>
+    </div>
+    <button type="button" class="recharge-close" onclick="hideRecharge()">Fermer</button>
+  </div>
+</div>
+
+</body>
+</html>

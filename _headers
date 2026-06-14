@@ -1,0 +1,3 @@
+/*
+  Permissions-Policy: microphone=*
+  Feature-Policy: microphone *
