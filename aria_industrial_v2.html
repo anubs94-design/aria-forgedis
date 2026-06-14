@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Aria Industrial — Forgelis</title>
+<meta name="theme-color" content="#0A0E1A">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0A0E1A;--card:rgba(255,255,255,.04);--card2:rgba(255,255,255,.07);
+  --border:rgba(255,255,255,.09);--border2:rgba(255,255,255,.16);
+  --accent:#38BDF8;--accent2:#6366F1;--text:#EDF2F7;
+  --t2:rgba(237,242,247,.6);--t3:rgba(237,242,247,.35);
+  --green:#4ADE80;--amber:#FBBF24;--red:#F87171;--orange:#FB923C;
+}
+html,body{height:100%;overflow:hidden;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text)}
+
+/* ── LOGIN ── */
+#s-login{display:none;height:100vh;align-items:center;justify-content:center;padding:24px}
+#s-login.active{display:flex}
+.lg-card{width:100%;max-width:360px}
+.lg-brand{font-family:'Space Grotesk',sans-serif;font-size:1.5rem;font-weight:800;margin-bottom:4px}
+.lg-sub{font-size:.78rem;color:var(--t3);margin-bottom:28px}
+.lg-input{width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:13px;padding:13px 16px;font-family:'Inter',sans-serif;font-size:.9rem;color:var(--text);outline:none;margin-bottom:11px;transition:border .2s}
+.lg-input:focus{border-color:rgba(56,189,248,.5)}
+.lg-input::placeholder{color:var(--t3)}
+.lg-btn{width:100%;padding:14px;border-radius:13px;border:none;background:linear-gradient(135deg,#38BDF8,#6366F1);color:#fff;font-family:'Inter',sans-serif;font-size:.9rem;font-weight:600;cursor:pointer}
+.lg-note{font-size:.65rem;color:var(--t3);text-align:center;margin-top:12px;line-height:1.5}
+
+/* ── APP LAYOUT : grille fixe 2×2 ── */
+#s-app{display:none;height:100vh;flex-direction:column}
+#s-app.active{display:flex}
+.topbar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0;background:rgba(10,14,26,.95);backdrop-filter:blur(12px)}
+.tb-brand{font-family:'Space Grotesk',sans-serif;font-size:.95rem;font-weight:700;flex:1}
+.tb-role{font-size:.62rem;font-weight:700;color:var(--accent);background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);padding:4px 12px;border-radius:50px;cursor:pointer}
+.tb-tabs{display:flex;gap:2px}
+.tb-tab{font-size:.65rem;font-weight:600;color:var(--t3);background:transparent;border:1px solid transparent;padding:4px 10px;border-radius:8px;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif}
+.tb-tab:hover,.tb-tab.active{color:var(--accent);border-color:rgba(56,189,248,.3);background:rgba(56,189,248,.08)}
+
+/* Grille 4 quadrants */
+.grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;background:var(--border);flex:1;overflow:hidden}
+.quad{background:var(--bg);overflow:hidden;display:flex;flex-direction:column;padding:12px}
+.q-label{font-size:.6rem;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:9px;display:flex;align-items:center;gap:6px;flex-shrink:0}
+.q-label .q-badge{font-size:.55rem;font-weight:700;padding:2px 7px;border-radius:50px}
+.q-body{flex:1;overflow-y:auto;overflow-x:hidden}
+.q-body::-webkit-scrollbar{width:3px}
+.q-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ── QUADRANT HAUT-GAUCHE : Ordres vocaux ── */
+.voice-btn{width:44px;height:44px;border-radius:50%;border:none;background:linear-gradient(145deg,#38BDF8,#6366F1);font-size:1.1rem;cursor:pointer;box-shadow:0 4px 16px rgba(56,189,248,.3);flex-shrink:0;transition:all .2s}
+.voice-btn:active{transform:scale(.92)}
+.voice-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.voice-txt{flex:1}
+.voice-or-input{width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-family:'Inter',sans-serif;font-size:.78rem;color:var(--text);outline:none;margin-bottom:8px}
+.voice-or-input::placeholder{color:var(--t3)}
+.ex-btn{width:100%;text-align:left;padding:7px 10px;background:var(--card);border:1px solid var(--border);border-radius:9px;color:var(--t2);font-size:.72rem;font-family:'Inter',sans-serif;cursor:pointer;margin-bottom:4px;transition:all .15s;line-height:1.4}
+.ex-btn:hover{border-color:rgba(56,189,248,.4);color:var(--text)}
+.aria-rep{display:none;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.2);border-radius:11px;padding:11px;margin-top:8px}
+.aria-rep.show{display:block}
+.aria-rep-head{font-size:.6rem;font-weight:700;color:var(--accent);margin-bottom:5px}
+.aria-rep-txt{font-size:.78rem;line-height:1.55}
+.confirm-row{display:flex;gap:7px;margin-top:9px}
+.cb-yes{flex:1;padding:8px;border-radius:9px;border:none;background:linear-gradient(135deg,#38BDF8,#6366F1);color:#fff;font-family:'Inter',sans-serif;font-size:.75rem;font-weight:600;cursor:pointer}
+.cb-no{flex:1;padding:8px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--t2);font-family:'Inter',sans-serif;font-size:.75rem;cursor:pointer}
+
+/* ── QUADRANT HAUT-DROITE : Tâches ── */
+.task-item{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.task-item:last-child{border-bottom:none}
+.task-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.task-info{flex:1}
+.task-title{font-size:.78rem;font-weight:500}
+.task-meta{font-size:.63rem;color:var(--t3);margin-top:2px}
+.task-badge{font-size:.58rem;font-weight:700;padding:3px 8px;border-radius:50px;white-space:nowrap}
+.tb-red{background:rgba(248,113,113,.15);color:var(--red)}
+.tb-amber{background:rgba(251,191,36,.12);color:var(--amber)}
+.tb-green{background:rgba(74,222,128,.12);color:var(--green)}
+.exec-btn{font-size:.68rem;font-weight:600;color:var(--accent);background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);padding:4px 10px;border-radius:8px;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap}
+
+/* ── QUADRANT BAS-GAUCHE : Messages & délégation ── */
+.msg-item{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.msg-item:last-child{border-bottom:none}
+.msg-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#38BDF8,#6366F1);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0}
+.msg-body{flex:1}
+.msg-from{font-size:.72rem;font-weight:600}
+.msg-txt{font-size:.7rem;color:var(--t2);margin-top:1px;line-height:1.4}
+.msg-time{font-size:.6rem;color:var(--t3)}
+
+/* ── QUADRANT BAS-DROITE : Brief ── */
+.brief-line{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.76rem;line-height:1.5}
+.brief-line:last-child{border-bottom:none}
+.brief-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.brief-play{display:flex;align-items:center;gap:7px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:10px;padding:8px 12px;cursor:pointer;font-size:.75rem;font-weight:600;color:var(--accent);margin-top:10px;transition:all .2s;flex-shrink:0}
+.brief-play:hover{background:rgba(56,189,248,.14)}
+
+/* ── PAGES D'ONGLETS (plein écran) ── */
+.tab-page{display:none;position:fixed;inset:0;background:var(--bg);z-index:100;flex-direction:column}
+.tab-page.active{display:flex}
+.tp-header{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border);flex-shrink:0}
+.tp-back{width:32px;height:32px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--t2);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.tp-title{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;flex:1}
+.tp-body{flex:1;overflow-y:auto;padding:16px 18px}
+.tp-body::-webkit-scrollbar{width:4px}
+.tp-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+
+/* Postes */
+.cat-section{margin-bottom:14px}
+.cat-head{font-size:.7rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.9px;padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.poste-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px}
+.poste-card{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:10px 12px;cursor:pointer;transition:all .2s}
+.poste-card:hover{border-color:rgba(56,189,248,.4);background:var(--card2)}
+.pc-name{font-size:.78rem;font-weight:600;margin-bottom:2px}
+.pc-lvl{font-size:.6rem;color:var(--t3)}
+
+/* Fiche salarié modal */
+.fiche-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center;padding:20px}
+.fiche-modal.show{display:flex}
+.fiche-card{background:#0F1422;border:1px solid var(--border);border-radius:18px;padding:20px;max-width:340px;width:100%;max-height:80vh;overflow-y:auto}
+.fiche-title{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;margin-bottom:4px}
+.fiche-sub{font-size:.7rem;color:var(--t3);margin-bottom:14px}
+.fiche-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.78rem}
+.fiche-row:last-child{border-bottom:none}
+.fiche-lbl{color:var(--t3)}
+.fiche-val{font-weight:600;text-align:right}
+.fiche-section{font-size:.62rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;margin:12px 0 7px}
+.fiche-fn{font-size:.74rem;color:var(--t2);padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.fiche-close{width:100%;padding:11px;border-radius:11px;border:none;background:linear-gradient(135deg,#38BDF8,#6366F1);color:#fff;font-family:'Inter',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;margin-top:14px}
+
+/* Chaîne hiérarchique */
+.hier-node{display:flex;align-items:center;gap:11px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:7px;cursor:pointer;transition:all .2s}
+.hier-node:hover{border-color:rgba(56,189,248,.35)}
+.hn-ico{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;flex-shrink:0}
+.hn-info{flex:1}
+.hn-nom{font-size:.82rem;font-weight:600}
+.hn-role{font-size:.66rem;color:var(--t3)}
+.hn-arrow{color:var(--t3);font-size:.75rem}
+.hier-indent{padding-left:20px;border-left:2px solid rgba(56,189,248,.2);margin-left:17px;margin-bottom:4px}
+
+/* Module de gestion */
+.mod-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mod-card{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:14px}
+.mod-ico{font-size:1.4rem;margin-bottom:8px}
+.mod-name{font-size:.82rem;font-weight:700;margin-bottom:5px}
+.mod-desc{font-size:.7rem;color:var(--t2);line-height:1.5}
+.mod-btn{width:100%;margin-top:10px;padding:8px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--accent);font-family:'Inter',sans-serif;font-size:.72rem;font-weight:600;cursor:pointer}
+
+/* Système Aria (dirigeant) */
+.sys-row{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.sys-row:last-child{border-bottom:none}
+.sys-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sys-info{flex:1}
+.sys-title{font-size:.8rem;font-weight:600}
+.sys-desc{font-size:.68rem;color:var(--t2);margin-top:2px;line-height:1.4}
+.sys-status{font-size:.62rem;font-weight:700;padding:3px 9px;border-radius:50px}
+.ss-ok{background:rgba(74,222,128,.12);color:var(--green)}
+.ss-wait{background:rgba(251,191,36,.1);color:var(--amber)}
+.tarif-table{width:100%;border-collapse:collapse;margin-top:10px}
+.tarif-table th{font-size:.65rem;font-weight:700;color:var(--t3);text-transform:uppercase;padding:8px;border-bottom:1px solid var(--border);text-align:left}
+.tarif-table td{font-size:.76rem;padding:9px 8px;border-bottom:1px solid rgba(255,255,255,.04)}
+.tarif-table tr:last-child td{border-bottom:none}
+.t-price{font-weight:700;color:var(--accent)}
+
+/* Demo badge */
+.demo-badge{position:fixed;bottom:12px;right:12px;font-size:.58rem;font-weight:700;color:var(--amber);background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);padding:4px 11px;border-radius:50px;z-index:99;pointer-events:none}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div class="screen" id="s-login" style="display:flex;height:100vh;align-items:center;justify-content:center;padding:24px">
+  <div class="lg-card">
+    <div class="lg-brand">🏭 Aria Industrial</div>
+    <div class="lg-sub">par Forgelis — Espace entreprise</div>
+    <input class="lg-input" id="lg-code" placeholder="Code entreprise (ex: FORG-2026)" autocomplete="off" onkeydown="if(event.key==='Enter')document.getElementById('lg-name').focus()">
+    <input class="lg-input" id="lg-name" placeholder="Votre nom" autocomplete="off" onkeydown="if(event.key==='Enter')loginEnt()">
+    <button class="lg-btn" onclick="loginEnt()">Accéder →</button>
+    <div class="lg-note">🔒 Données sur votre infrastructure · Journal d'actions inviolable · Conforme RGPD</div>
+  </div>
+</div>
+
+<!-- ══ APP : 4 QUADRANTS ══ -->
+<div id="s-app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="tb-brand">🏭 Aria Industrial · <span id="tb-ent">—</span></div>
+    <div class="tb-tabs">
+      <button class="tb-tab" onclick="openTab('tab-postes')">👥 Postes</button>
+      <button class="tb-tab" onclick="openTab('tab-notes')">📝 Notes</button>
+      <button class="tb-tab" onclick="openTab('tab-hier')">🏛️ Hiérarchie</button>
+      <button class="tb-tab" onclick="openTab('tab-gestion')">🧩 Gestion</button>
+      <button class="tb-tab" onclick="openTab('tab-fonctions')">🚀 Fonctions</button>
+      <button class="tb-tab" id="tab-sys-btn" onclick="openTab('tab-sys')" style="display:none">⚙️ Système</button>
+    </div>
+    <button class="tb-role" id="role-btn" onclick="cycleRole()">👤 Dirigeant</button>
+  </div>
+
+  <!-- GRILLE 4 QUADRANTS -->
+  <div class="grid">
+
+    <!-- HAUT-GAUCHE : Ordres vocaux & messages rapides -->
+    <div class="quad">
+      <div class="q-label">🎙️ Donner un ordre à Aria
+        <span class="q-badge" style="background:rgba(56,189,248,.1);color:var(--accent)">Vocal ou écrit</span>
+      </div>
+      <div class="q-body">
+        <div class="voice-row">
+          <button class="voice-btn" onclick="demoVoice(0)">🎙️</button>
+          <div class="voice-txt">
+            <div style="font-size:.72rem;color:var(--t3);margin-bottom:5px">Maintenez pour parler ou écrivez :</div>
+            <input class="voice-or-input" id="order-input" placeholder="Ex: pose des congés à Thomas du 14 au 28…" onkeydown="if(event.key==='Enter')sendWritten()">
+          </div>
+        </div>
+        <button class="ex-btn" onclick="demoVoice(0)">« Pose 2 semaines de congés à Thomas du 14 au 28 juillet »</button>
+        <button class="ex-btn" onclick="demoVoice(1)">« Retrouve le devis plomberie de mars pour le client Martin »</button>
+        <button class="ex-btn" onclick="demoVoice(2)">« Transmets à Sophie (RH) : analyser les candidatures »</button>
+        <button class="ex-btn" onclick="demoVoice(3)">« Déclenche l'alerte niveau 2 — fuite atelier 3 »</button>
+        <button class="ex-btn" onclick="demoDeleg(0)">« Laisse un message à Karim : client Morel a rappelé »</button>
+        <div class="aria-rep" id="aria-rep">
+          <div class="aria-rep-head">✦ ARIA</div>
+          <div class="aria-rep-txt" id="aria-rep-txt"></div>
+          <div class="confirm-row" id="aria-confirm">
+            <button class="cb-yes" onclick="confirmAction()">✓ Confirmer</button>
+            <button class="cb-no" onclick="document.getElementById('aria-rep').classList.remove('show')">Annuler</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HAUT-DROITE : Tâches (rouge/jaune/vert) -->
+    <div class="quad">
+      <div class="q-label">📋 Tâches
+        <span class="q-badge tb-red" id="count-red">2 urgentes</span>
+        <span class="q-badge tb-amber" id="count-amber">3 en cours</span>
+        <span class="q-badge tb-green" id="count-green">5 faites</span>
+      </div>
+      <div class="q-body" id="task-list">
+        <div class="task-item">
+          <div class="task-dot" style="background:var(--red)"></div>
+          <div class="task-info"><div class="task-title">Valider devis #D-227 — Acier+</div><div class="task-meta">Urgent · de Marc (Chef atelier)</div></div>
+          <span class="task-badge tb-red">🔴 Urgent</span>
+        </div>
+        <div class="task-item">
+          <div class="task-dot" style="background:var(--red)"></div>
+          <div class="task-info"><div class="task-title">Contrat Dupont expire dans 5 jours</div><div class="task-meta">Alerte Aria · Renouvellement requis</div></div>
+          <span class="task-badge tb-red">🔴 Urgent</span>
+        </div>
+        <div class="task-item">
+          <div class="task-dot" style="background:var(--amber)"></div>
+          <div class="task-info"><div class="task-title">Envoyer contrat signé au notaire</div><div class="task-meta">Déléguée par Claire · 👁 Vue</div></div>
+          <button class="exec-btn" onclick="execTask(this)">▶ Exécuter</button>
+        </div>
+        <div class="task-item">
+          <div class="task-dot" style="background:var(--amber)"></div>
+          <div class="task-info"><div class="task-title">Relancer fournisseur Acier+</div><div class="task-meta">Déléguée par Marc · 📬 Reçue</div></div>
+          <button class="exec-btn" onclick="execTask(this)">▶ Exécuter</button>
+        </div>
+        <div class="task-item">
+          <div class="task-dot" style="background:var(--amber)"></div>
+          <div class="task-info"><div class="task-title">Analyse candidatures RH</div><div class="task-meta">Transmis par Direction · ⚙️ En cours</div></div>
+          <span class="task-badge tb-amber">🟡 En cours</span>
+        </div>
+        <div class="task-item">
+          <div class="task-dot" style="background:var(--green)"></div>
+          <div class="task-info"><div class="task-title">Email de relance — Garage Lemoine</div><div class="task-meta">Exécuté à 08:42 · PC Accueil</div></div>
+          <span class="task-badge tb-green">✅ Fait</span>
+        </div>
+        <div class="task-item">
+          <div class="task-dot" style="background:var(--green)"></div>
+          <div class="task-info"><div class="task-title">Facturation #2026-114 — reçue</div><div class="task-meta">3 850 € encaissés hier</div></div>
+          <span class="task-badge tb-green">✅ Fait</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- BAS-GAUCHE : Messages & tâches déléguées -->
+    <div class="quad">
+      <div class="q-label">📨 Messages & tâches déléguées</div>
+      <div class="q-body" id="msg-list">
+        <div class="msg-item">
+          <div class="msg-avatar">KM</div>
+          <div class="msg-body">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div class="msg-from">Karim Bensaïd</div>
+              <div class="msg-time">09:14</div>
+            </div>
+            <div class="msg-txt">Client Morel a rappelé — demande urgent de le recontacter avant 14h</div>
+          </div>
+        </div>
+        <div class="msg-item">
+          <div class="msg-avatar" style="background:linear-gradient(135deg,#FB923C,#F43F5E)">SB</div>
+          <div class="msg-body">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div class="msg-from">Sophie Bernard (RH)</div>
+              <div class="msg-time">08:55</div>
+            </div>
+            <div class="msg-txt">Synthèse des 4 candidatures prête — disponible dans Espace RH</div>
+          </div>
+        </div>
+        <div class="msg-item">
+          <div class="msg-avatar" style="background:linear-gradient(135deg,#4ADE80,#0EA5E9)">ML</div>
+          <div class="msg-body">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div class="msg-from">Marc Leblanc</div>
+              <div class="msg-time">08:30</div>
+            </div>
+            <div class="msg-txt">Tâche déléguée : relancer Acier+ sur délai — exécuter quand disponible</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+          <div style="font-size:.62rem;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px">Réunion → actions</div>
+          <button class="ex-btn" onclick="demoMeeting()">« Fin réunion : Marc relance Acier+, Julie prépare contrat »</button>
+          <div id="meet-rep" style="display:none;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.2);border-radius:10px;padding:10px;margin-top:7px;font-size:.74rem;line-height:1.5"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BAS-DROITE : Brief matinal -->
+    <div class="quad">
+      <div class="q-label">☀️ Brief matinal — <span id="brief-date" style="color:var(--accent);font-size:.65rem;font-weight:600"></span></div>
+      <div class="q-body">
+        <div class="brief-line"><div class="brief-dot" style="background:var(--amber)"></div><span><b>3 devis</b> en attente depuis +7 jours — total 14 200 €</span></div>
+        <div class="brief-line"><div class="brief-dot" style="background:var(--accent)"></div><span><b>Thomas Mercier</b> en congés aujourd'hui — retour lundi 21</span></div>
+        <div class="brief-line"><div class="brief-dot" style="background:var(--red)"></div><span>Contrat <b>Dupont SARL</b> expire dans 5 jours</span></div>
+        <div class="brief-line"><div class="brief-dot" style="background:var(--green)"></div><span>Facture <b>#2026-114</b> payée hier — 3 850 €</span></div>
+        <div class="brief-line"><div class="brief-dot" style="background:var(--orange)"></div><span>Relance J+15 envoyée : <b>Garage Lemoine</b> (1 200 €)</span></div>
+        <button class="brief-play" onclick="playBrief()">🔊 Écouter le brief vocal</button>
+        <div id="journal-log" style="margin-top:10px;flex:1">
+          <div style="font-size:.62rem;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Journal récent</div>
+          <div style="font-size:.7rem;color:var(--t2);padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="color:var(--t3);font-family:monospace;font-size:.65rem">09:14</span> · <b>Dirigeant</b> — validation devis #D-227 vocale</div>
+          <div style="font-size:.7rem;color:var(--t2);padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="color:var(--t3);font-family:monospace;font-size:.65rem">08:42</span> · <b>Aria</b> — relance J+15 envoyée automatiquement</div>
+          <div style="font-size:.7rem;color:var(--t2);padding:5px 0"><span style="color:var(--t3);font-family:monospace;font-size:.65rem">08:00</span> · <b>Aria</b> — brief matinal généré (4 points)</div>
+          <button onclick="openTab('tab-journal')" style="margin-top:9px;padding:6px 14px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--t2);font-family:'Inter',sans-serif;font-size:.7rem;cursor:pointer;width:100%">Voir le journal complet →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ONGLETS PLEIN ÉCRAN ══ -->
+
+<!-- Postes de l'entreprise -->
+<div class="tab-page" id="tab-postes">
+  <div class="tp-header">
+    <button class="tp-back" onclick="closeTab('tab-postes')">←</button>
+    <div class="tp-title">👥 Postes de l'entreprise</div>
+    <div style="font-size:.68rem;color:var(--t3)">141 postes · 23 secteurs · Cliquez pour la fiche</div>
+  </div>
+  <div class="tp-body" id="postes-body"></div>
+</div>
+
+<!-- Notes & rappels -->
+<div class="tab-page" id="tab-notes">
+  <div class="tp-header">
+    <button class="tp-back" onclick="closeTab('tab-notes')">←</button>
+    <div class="tp-title">📝 Notes & rappels terrain</div>
+  </div>
+  <div class="tp-body">
+    <div style="display:flex;gap:9px;margin-bottom:14px">
+      <input id="note-input" style="flex:1;background:var(--card);border:1.5px solid var(--border);border-radius:11px;padding:11px 14px;font-family:'Inter',sans-serif;font-size:.82rem;color:var(--text);outline:none" placeholder="Dictez ou écrivez une note, un rappel…" onkeydown="if(event.key==='Enter')addNote()">
+      <button onclick="addNote()" style="padding:11px 16px;border-radius:11px;border:none;background:linear-gradient(135deg,#38BDF8,#6366F1);color:#fff;font-family:'Inter',sans-serif;font-size:.8rem;font-weight:600;cursor:pointer">Ajouter</button>
+    </div>
+    <div id="notes-list">
+      <div style="font-size:.76rem;color:var(--t2);padding:10px 0;border-bottom:1px solid var(--border)">📝 Commander joints hydrauliques presse 3 · <span style="color:var(--amber);font-size:.68rem">⏰ Dans 1h</span></div>
+      <div style="font-size:.76rem;color:var(--t2);padding:10px 0;border-bottom:1px solid var(--border)">📝 Appeler client Martin pour devis toiture</div>
+      <div style="font-size:.76rem;color:var(--t2);padding:10px 0">📝 RDV fournisseur jeudi 14h — préparer cahier des charges</div>
+    </div>
+  </div>
+</div>
+
+<!-- Chaîne hiérarchique -->
+<div class="tab-page" id="tab-hier">
+  <div class="tp-header">
+    <button class="tp-back" onclick="closeTab('tab-hier')">←</button>
+    <div class="tp-title">🏛️ Chaîne hiérarchique</div>
+    <div style="font-size:.66rem;color:var(--t3)">Arbre généalogique de l'entreprise</div>
+  </div>
+  <div class="tp-body" id="hier-body"></div>
+</div>
+
+<!-- Modules de gestion -->
+<div class="tab-page" id="tab-gestion">
+  <div class="tp-header">
+    <button class="tp-back" onclick="closeTab('tab-gestion')">←</button>
+    <div class="tp-title">🧩 Modules de gestion</div>
+  </div>
+  <div class="tp-body">
+    <div class="mod-grid">
+      <div class="mod-card"><div class="mod-ico">📦</div><div class="mod-name">Stocks & inventaire</div><div class="mod-desc">Inventaires vocaux, alertes ruptures/DLC/surstocks, valorisation temps réel</div><button class="mod-btn">Accéder →</button></div>
+      <div class="mod-card"><div class="mod-ico">🛒</div><div class="mod-name">Achats & fournisseurs</div><div class="mod-desc">Commandes dictées ou automatiques, historique tarifs, relances livraisons</div><button class="mod-btn">Accéder →</button></div>
+      <div class="mod-card"><div class="mod-ico">🧾</div><div class="mod-name">Facturation</div><div class="mod-desc">Devis → facture → relance en un fil, exports comptables, suivi impayés</div><button class="mod-btn">Accéder →</button></div>
+      <div class="mod-card"><div class="mod-ico">📅</div><div class="mod-name">Planning & pointage</div><div class="mod-desc">Plannings équipes, heures pointées à la voix, détection conflits</div><button class="mod-btn">Accéder →</button></div>
+      <div class="mod-card"><div class="mod-ico">🏗️</div><div class="mod-name">Chantiers & interventions</div><div class="mod-desc">Avancement, rapports dictés sur site, photos liées aux dossiers</div><button class="mod-btn">Accéder →</button></div>
+      <div class="mod-card"><div class="mod-ico">📆</div><div class="mod-name">Réservations & agenda</div><div class="mod-desc">RDV, tables, chambres, rappels automatiques clients</div><button class="mod-btn">Accéder →</button></div>
+      <div class="mod-card"><div class="mod-ico">👤</div><div class="mod-name">CRM clients</div><div class="mod-desc">Fiche client complète avant chaque échange, relances intelligentes</div><button class="mod-btn">Accéder →</button></div>
+      <div class="mod-card"><div class="mod-ico">🔌</div><div class="mod-name">Synchronisation comptable</div><div class="mod-desc">Odoo · Sage · Cegid · Pennylane · QuickBooks · Excel/CSV</div><button class="mod-btn" onclick="openTab('tab-compta')">Configurer →</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Fonctions avancées -->
+<div class="tab-page" id="tab-fonctions">
+  <div class="tp-header">
+    <button class="tp-back" onclick="closeTab('tab-fonctions')">←</button>
+    <div class="tp-title">🚀 Fonctions avancées</div>
+  </div>
+  <div class="tp-body">
+    <div class="sys-row"><div class="sys-dot" style="background:var(--red)"></div><div class="sys-info"><div class="sys-title">🚨 Urgence & astreinte en cascade</div><div class="sys-desc">Alerte remonte la chaîne jusqu'à prise en charge — horodatée au journal</div></div><span class="sys-status ss-ok">Actif</span></div>
+    <div class="sys-row"><div class="sys-dot" style="background:var(--accent)"></div><div class="sys-info"><div class="sys-title">🎓 Intégration des nouveaux</div><div class="sys-desc">Aria tuteur — parcours poste, procédures, savoir du prédécesseur mémorisé</div></div><span class="sys-status ss-ok">Actif</span></div>
+    <div class="sys-row"><div class="sys-dot" style="background:var(--accent)"></div><div class="sys-info"><div class="sys-title">📊 KPI vocaux & prévisions</div><div class="sys-desc">CA semaine vs an dernier, anticipation ruptures, charge équipe</div></div><span class="sys-status ss-ok">Actif</span></div>
+    <div class="sys-row"><div class="sys-dot" style="background:var(--accent)"></div><div class="sys-info"><div class="sys-title">🌍 Traduction automatique</div><div class="sys-desc">Consignes en français → reçues dans la langue de chaque salarié</div></div><span class="sys-status ss-ok">Actif</span></div>
+    <div class="sys-row"><div class="sys-dot" style="background:var(--accent)"></div><div class="sys-info"><div class="sys-title">📡 Mode hors-ligne terrain</div><div class="sys-desc">Cave, chantier, zone blanche → dictée en local, sync au retour du réseau</div></div><span class="sys-status ss-ok">Actif</span></div>
+    <div class="sys-row"><div class="sys-dot" style="background:var(--accent)"></div><div class="sys-info"><div class="sys-title">🗳️ Sondage éclair d'équipe</div><div class="sys-desc">« Qui peut venir samedi ? » → résultat consolidé en 10 minutes</div></div><span class="sys-status ss-ok">Actif</span></div>
+    <div class="sys-row"><div class="sys-dot" style="background:var(--accent)"></div><div class="sys-info"><div class="sys-title">📜 Veille réglementaire</div><div class="sys-desc">HACCP, sécurité chantier, normes transport — alertes automatiques</div></div><span class="sys-status ss-ok">Actif</span></div>
+    <div class="sys-row"><div class="sys-dot" style="background:var(--accent)"></div><div class="sys-info"><div class="sys-title">✍️ Signature électronique</div><div class="sys-desc">Devis envoyé, client signe sur mobile, document classé automatiquement</div></div><span class="sys-status ss-ok">Actif</span></div>
+    <div class="sys-row"><div class="sys-dot" style="background:var(--t3)"></div><div class="sys-info"><div class="sys-title">☎️ Standard d'accueil intelligent</div><div class="sys-desc">Aria répond aux appels clients, qualifie, transmet au bon profil</div></div><span class="sys-status ss-wait">Bientôt</span></div>
+  </div>
+</div>
+
+<!-- Système Aria (dirigeant uniquement) -->
+<div class="tab-page" id="tab-sys">
+  <div class="tp-header">
+    <button class="tp-back" onclick="closeTab('tab-sys')">←</button>
+    <div class="tp-title">⚙️ Système Aria</div>
+    <div style="font-size:.65rem;color:var(--amber);background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);padding:3px 10px;border-radius:50px">🔒 Dirigeant uniquement</div>
+  </div>
+  <div class="tp-body">
+    <div style="font-size:.68rem;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">État du système</div>
+    <div class="sys-row"><div class="sys-dot" style="background:var(--green)"></div><div class="sys-info"><div class="sys-title">Auto-diagnostic & auto-réparation</div><div class="sys-desc">Aria surveille ses modules — restauration automatique en cas d'erreur</div></div><span class="sys-status ss-ok">Actif</span></div>
+    <div class="sys-row"><div class="sys-dot" style="background:var(--green)"></div><div class="sys-info"><div class="sys-title">Mises à jour automatiques</div><div class="sys-desc">Silencieuses, hors heures d'activité, sans interruption de service</div></div><span class="sys-status ss-ok">À jour</span></div>
+    <div class="sys-row"><div class="sys-dot" style="background:var(--green)"></div><div class="sys-info"><div class="sys-title">Notifications hors-ligne</div><div class="sys-desc">Push PWA · Email · SMS — respecte le droit à la déconnexion (art. L2242-17)</div></div><span class="sys-status ss-ok">Actif</span></div>
+    <div style="font-size:.68rem;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin:16px 0 10px">Synchronisation comptable</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+      <span style="font-size:.72rem;font-weight:600;color:var(--t2);background:var(--card);border:1px solid var(--border);padding:5px 12px;border-radius:50px">🟣 Odoo</span>
+      <span style="font-size:.72rem;font-weight:600;color:var(--t2);background:var(--card);border:1px solid var(--border);padding:5px 12px;border-radius:50px">🟢 Sage</span>
+      <span style="font-size:.72rem;font-weight:600;color:var(--t2);background:var(--card);border:1px solid var(--border);padding:5px 12px;border-radius:50px">🔵 Cegid</span>
+      <span style="font-size:.72rem;font-weight:600;color:var(--t2);background:var(--card);border:1px solid var(--border);padding:5px 12px;border-radius:50px">🟩 QuickBooks</span>
+      <span style="font-size:.72rem;font-weight:600;color:var(--t2);background:var(--card);border:1px solid var(--border);padding:5px 12px;border-radius:50px">🟡 Pennylane</span>
+      <span style="font-size:.72rem;font-weight:600;color:var(--amber);background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);padding:5px 12px;border-radius:50px">⚙️ Sur mesure</span>
+    </div>
+    <div style="font-size:.68rem;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Tarification Aria Industrial</div>
+    <table class="tarif-table">
+      <tr><th>Plan</th><th>Identifiés</th><th>Prix/mois</th></tr>
+      <tr><td>Solo</td><td>1 dirigeant + 2</td><td class="t-price">29 €</td></tr>
+      <tr><td>TPE</td><td>Jusqu'à 15</td><td class="t-price">79 €</td></tr>
+      <tr><td>PME</td><td>Jusqu'à 50</td><td class="t-price">199 €</td></tr>
+      <tr><td>ETI</td><td>51 à 5 000+</td><td class="t-price">Sur devis</td></tr>
+      <tr><td>Sur mesure</td><td>—</td><td class="t-price">Sur devis</td></tr>
+    </table>
+    <div style="margin-top:14px;font-size:.68rem;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Contact Forgelis</div>
+    <div style="font-size:.78rem;color:var(--t2);line-height:1.8">📧 contact@forgelis.fr<br>🌐 forgelis.fr<br>📍 2 rue des Écoles, 45600 Guilly<br>SIRET 106 013 899 00013</div>
+  </div>
+</div>
+
+<!-- Journal complet -->
+<div class="tab-page" id="tab-journal">
+  <div class="tp-header">
+    <button class="tp-back" onclick="closeTab('tab-journal')">←</button>
+    <div class="tp-title">🛡️ Journal d'actions — inviolable</div>
+    <button onclick="exportJournal()" style="padding:6px 14px;border-radius:9px;border:1px solid rgba(56,189,248,.3);background:rgba(56,189,248,.08);color:var(--accent);font-family:'Inter',sans-serif;font-size:.7rem;font-weight:600;cursor:pointer">Export CSV</button>
+  </div>
+  <div class="tp-body" id="journal-body">
+    <div style="font-size:.74rem;color:var(--t2);padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--t3);font-family:monospace">09:14</span> · <b>Dirigeant</b> — validation devis #D-227 (4 100 €) par commande vocale mobile</div>
+    <div style="font-size:.74rem;color:var(--t2);padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--t3);font-family:monospace">08:55</span> · <b>Sophie Bernard (RH)</b> — synthèse candidatures déposée</div>
+    <div style="font-size:.74rem;color:var(--t2);padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--t3);font-family:monospace">08:42</span> · <b>Aria</b> — relance J+15 automatique → Garage Lemoine (1 200 €)</div>
+    <div style="font-size:.74rem;color:var(--t2);padding:9px 0"><span style="color:var(--t3);font-family:monospace">08:00</span> · <b>Aria</b> — brief matinal généré (4 points signalés)</div>
+  </div>
+</div>
+
+<!-- Fiche salarié modal -->
+<div class="fiche-modal" id="fiche-modal" onclick="this.classList.remove('show')">
+  <div class="fiche-card" onclick="event.stopPropagation()">
+    <div class="fiche-title" id="fiche-title">Poste</div>
+    <div class="fiche-sub" id="fiche-sub">Niveau d'accès</div>
+    <div class="fiche-section">Informations professionnelles</div>
+    <div class="fiche-row"><span class="fiche-lbl">Nom</span><span class="fiche-val" id="fiche-nom">—</span></div>
+    <div class="fiche-row"><span class="fiche-lbl">Email bureau</span><span class="fiche-val" id="fiche-email">—</span></div>
+    <div class="fiche-row"><span class="fiche-lbl">Téléphone bureau</span><span class="fiche-val" id="fiche-tel">—</span></div>
+    <div class="fiche-row"><span class="fiche-lbl">Service</span><span class="fiche-val" id="fiche-service">—</span></div>
+    <div class="fiche-section">Fonctions Aria</div>
+    <div id="fiche-fonctions"></div>
+    <button class="fiche-close" onclick="document.getElementById('fiche-modal').classList.remove('show')">Fermer</button>
+  </div>
+</div>
+
+<div class="demo-badge">DÉMO</div>
+
+<script>
+// ════════════════════════════════════════════
+// ARIA INDUSTRIAL V2 — Interface redesignée
+// Inspirée de Linear (layout), Salesforce (rôles), Notion (onglets)
+// ════════════════════════════════════════════
+
+const ROLES = ['👤 Dirigeant','🗂️ Secrétaire','🧑‍💼 RH','📈 Commercial','🔧 Technicien'];
+let roleIdx = 0;
+
+function getNiveauRole(){ return roleIdx + 1; }
+
+function loginEnt(){
+  const code = document.getElementById('lg-code').value.trim() || 'DEMO-2026';
+  const nom = document.getElementById('lg-name').value.trim();
+  if(!nom){ document.getElementById('lg-name').style.borderColor='rgba(248,113,113,.6)'; return; }
+  document.getElementById('tb-ent').textContent = code.split('-')[0];
+  document.getElementById('s-login').classList.remove('active');
+  document.getElementById('s-app').classList.add('active');
+  // Onglet système visible uniquement pour le dirigeant
+  if(roleIdx===0) document.getElementById('tab-sys-btn').style.display='block';
+}
+
+function cycleRole(){
+  roleIdx = (roleIdx+1) % ROLES.length;
+  document.getElementById('role-btn').textContent = ROLES[roleIdx];
+  document.getElementById('tab-sys-btn').style.display = roleIdx===0 ? 'block' : 'none';
+}
+
+// ── Onglets ──
+function openTab(id){
+  document.querySelectorAll('.tab-page').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='tab-postes') renderPostes();
+  if(id==='tab-hier') renderHier();
+}
+function closeTab(id){
+  document.getElementById(id).classList.remove('active');
+}
+
+// ── Ordres vocaux ──
+const ORDRES = [
+  {resume:"Je vais poser <b>2 semaines de congés à Thomas Mercier</b> du 14 au 28 juillet, mettre à jour le planning et lui envoyer une notification. Je confirme ?",
+   fait:"✓ Congés posés. Planning mis à jour. Thomas notifié — notification à l'allumage si PC éteint."},
+  {resume:"J'ai trouvé <b>Devis_Plomberie_Martin_032026.pdf</b> — 2 340 €, envoyé le 14 mars, sans réponse depuis 12 jours. Je prépare une relance ?",
+   fait:"✓ Relance préparée en brouillon — à valider avant envoi."},
+  {resume:"Je vais transmettre à <b>Sophie Bernard (RH)</b> : analyser les 4 candidatures avec synthèse comparative pour vendredi. Je confirme ?",
+   fait:"✓ Transmis à Sophie. Rappel jeudi si non commencée."},
+  {resume:"🚨 <b>Alerte niveau 2 — fuite atelier 3.</b> Cascade : 1️⃣ Karim (maintenance) → 5 min → 2️⃣ Marc (chef atelier) → 3️⃣ vous. QHSE informé. Je lance ?",
+   fait:"✓ Cascade lancée. Karim a confirmé en 1 min 40. Incident ouvert au journal."},
+];
+let ordreActif = 0;
+
+function demoVoice(i){
+  ordreActif = i;
+  document.getElementById('aria-rep-txt').innerHTML = ORDRES[i].resume;
+  document.getElementById('aria-confirm').style.display='flex';
+  document.getElementById('aria-rep').classList.add('show');
+}
+function sendWritten(){
+  const inp = document.getElementById('order-input');
+  const txt = inp.value.trim();
+  if(!txt) return;
+  inp.value='';
+  document.getElementById('aria-rep-txt').innerHTML = 'Je vais exécuter : <b>'+txt+'</b>. Action tracée au journal. Je confirme ?';
+  document.getElementById('aria-confirm').style.display='flex';
+  document.getElementById('aria-rep').classList.add('show');
+}
+function confirmAction(){
+  const txt = document.getElementById('aria-rep-txt').innerHTML;
+  if(ordreActif < ORDRES.length && txt === ORDRES[ordreActif].resume)
+    document.getElementById('aria-rep-txt').innerHTML = ORDRES[ordreActif].fait;
+  else
+    document.getElementById('aria-rep-txt').innerHTML = '✓ C\'est fait. Action exécutée et inscrite au journal.';
+  document.getElementById('aria-confirm').style.display='none';
+  addToJournal('Dirigeant — ordre confirmé : '+txt.replace(/<[^>]+>/g,'').substring(0,60)+'…');
+}
+
+// ── Délégation ──
+const DELEG = [
+  {resume:"Je dépose ce message pour <b>Karim Bensaïd</b> : « Client Morel a rappelé, c'est urgent ». Il sera notifié immédiatement. Je confirme ?",
+   fait:"✓ Message déposé. Karim notifié."},
+];
+function demoDeleg(i){
+  ordreActif = 999;
+  document.getElementById('aria-rep-txt').innerHTML = DELEG[i].resume;
+  document.getElementById('aria-confirm').style.display='flex';
+  document.getElementById('aria-rep').classList.add('show');
+}
+
+// ── Réunion → tâches ──
+function demoMeeting(){
+  const rep = document.getElementById('meet-rep');
+  rep.style.display='block';
+  rep.innerHTML='⏳ Analyse en cours…';
+  setTimeout(()=>{
+    rep.innerHTML='✅ <b>3 actions détectées</b> :<br>1️⃣ Tâche Marc : relancer Acier+ avant mercredi<br>2️⃣ Tâche Julie : préparer contrat Dupont<br><button onclick="confirmMeeting()" style="margin-top:8px;padding:6px 14px;border-radius:8px;border:none;background:linear-gradient(135deg,#38BDF8,#6366F1);color:#fff;font-size:.72rem;font-weight:600;cursor:pointer;font-family:\'Inter\',sans-serif">✓ Créer les tâches</button>';
+  },800);
+}
+function confirmMeeting(){
+  document.getElementById('meet-rep').innerHTML='✓ 2 tâches créées et transmises (📬 Reçue).';
+  addToJournal('Aria — réunion → 2 tâches déléguées créées');
+}
+
+// ── Tâches ──
+function execTask(btn){
+  const item = btn.closest('.task-item');
+  item.querySelector('.task-dot').style.background='var(--green)';
+  item.querySelector('.task-title').style.opacity='.5';
+  btn.outerHTML='<span class="task-badge tb-green">✅ Fait</span>';
+  addToJournal('Collaborateur — tâche exécutée');
+}
+
+// ── Journal ──
+function addToJournal(txt){
+  const h = new Date().toTimeString().slice(0,5);
+  const jb = document.getElementById('journal-body');
+  if(jb) jb.insertAdjacentHTML('afterbegin',
+    '<div style="font-size:.74rem;color:var(--t2);padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--t3);font-family:monospace">'+h+'</span> · '+txt+'</div>');
+}
+function exportJournal(){
+  const rows = document.querySelectorAll('#journal-body div');
+  let csv = 'Heure,Action\n';
+  rows.forEach(r=>{ csv += '"'+r.textContent.trim()+'"\n'; });
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv'}));
+  a.download='aria_journal.csv'; a.click();
+}
+
+// ── Brief vocal ──
+function playBrief(){
+  if(!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance("Bonjour. Brief du matin. 3 devis attendent une signature pour 14 200 euros. Thomas est en congés, retour lundi. Le contrat Dupont expire dans 5 jours. Et bonne nouvelle : la facture 114 a été payée, 3 850 euros.");
+  u.lang='fr-FR'; u.rate=.97; speechSynthesis.speak(u);
+}
+
+// ── Notes ──
+function addNote(){
+  const inp=document.getElementById('note-input');
+  const txt=inp.value.trim(); if(!txt) return;
+  inp.value='';
+  const list=document.getElementById('notes-list');
+  list.insertAdjacentHTML('afterbegin','<div style="font-size:.76rem;color:var(--t2);padding:10px 0;border-bottom:1px solid var(--border)">📝 '+txt+'</div>');
+}
+
+// ── Postes ══════════════════════════════════
+const FONCTIONS_BASE=['Poser des questions à Aria','Recherche vocale documents','Recevoir consignes','Laisser un message vocal à un collègue','Créer une tâche déléguée','Notes terrain & rappels','Demandes via la chaîne hiérarchique'];
+const FONCTIONS_DOC=FONCTIONS_BASE.concat(['Créer, modifier, transférer documents','Prendre et gérer des RDV','Dicter courriers et comptes-rendus']);
+const FONCTIONS_MGR=FONCTIONS_DOC.concat(['Brief matinal de son équipe','Transmettre consignes','Voir disponibilités et congés','Valider demandes du périmètre','Suppléance automatique en cas d\'absence','Sondage éclair équipe']);
+const FONCTIONS_DIR=FONCTIONS_MGR.concat(['Accès global tous services','Ordres vocaux à distance (mobile)','Poser/valider congés','Validation en chaîne','Journal complet','Alertes échéances','Automatisations','Rapports périodiques','Vue de charge équipes','KPI vocaux & prévisions','Onglet Système (dirigeant uniquement)']);
+const NIVEAUX={1:'Dirigeant — accès global',2:'Directeur de service',3:'Manager',4:'Employé qualifié',5:'Employé standard',6:'Stagiaire / Externe'};
+
+const CATEGORIES=[
+{ico:"👔",nom:"Direction & Pilotage",postes:[["Gérant / PDG",1,FONCTIONS_DIR],["Directeur général",1,FONCTIONS_DIR],["Directeur de site",2,FONCTIONS_MGR],["Chef de projet / PMO",3,FONCTIONS_MGR],["Assistant de direction",3,FONCTIONS_DOC]]},
+{ico:"🗂️",nom:"Administratif & Accueil",postes:[["Responsable administratif",3,FONCTIONS_MGR],["Secrétaire",4,FONCTIONS_DOC],["Office manager",3,FONCTIONS_DOC],["Agent d'accueil",5,FONCTIONS_BASE],["Archiviste",4,FONCTIONS_DOC]]},
+{ico:"🧑‍💼",nom:"Ressources Humaines",postes:[["DRH",2,FONCTIONS_MGR],["Responsable RH de site",3,FONCTIONS_MGR],["Chargé de recrutement",4,FONCTIONS_DOC],["Gestionnaire de paie",4,FONCTIONS_DOC],["Responsable formation",4,FONCTIONS_DOC],["Gestionnaire planning GTA",4,FONCTIONS_DOC]]},
+{ico:"📈",nom:"Commercial & Marketing",postes:[["Directeur commercial",2,FONCTIONS_MGR],["Responsable grands comptes",3,FONCTIONS_DOC],["Commercial terrain",4,FONCTIONS_DOC],["Téléprospecteur",5,FONCTIONS_BASE],["Chargé de marketing",4,FONCTIONS_DOC],["Community manager",4,FONCTIONS_DOC],["Responsable e-commerce",4,FONCTIONS_DOC]]},
+{ico:"🧾",nom:"Finance & Comptabilité",postes:[["DAF",2,FONCTIONS_MGR],["Comptable",4,FONCTIONS_DOC.concat(["Synchro Odoo/Sage/Cegid","Consultation soldes vocale","Création factures à la voix"])],["Aide-comptable",5,FONCTIONS_BASE],["Contrôleur de gestion",4,FONCTIONS_DOC],["Responsable facturation",4,FONCTIONS_DOC]]},
+{ico:"⚖️",nom:"Juridique & Conformité",postes:[["Juriste",4,FONCTIONS_DOC],["Assistant juridique",5,FONCTIONS_DOC],["DPO",4,FONCTIONS_DOC],["Responsable conformité",3,FONCTIONS_MGR]]},
+{ico:"💻",nom:"IT & Technique",postes:[["DSI",2,FONCTIONS_MGR],["Développeur",4,FONCTIONS_DOC],["Admin systèmes",4,FONCTIONS_DOC],["Technicien helpdesk",5,FONCTIONS_BASE],["Data analyst",4,FONCTIONS_DOC]]},
+{ico:"🚚",nom:"Transport & Logistique",postes:[["Directeur exploitation",2,FONCTIONS_MGR],["Exploitant / Dispatcheur",3,FONCTIONS_MGR],["Affréteur",4,FONCTIONS_DOC],["Gestionnaire de flotte",4,FONCTIONS_DOC],["Responsable entrepôt",3,FONCTIONS_MGR],["Conducteur PL / SPL",5,FONCTIONS_BASE],["Chauffeur-livreur",5,FONCTIONS_BASE],["Magasinier / Cariste",5,FONCTIONS_BASE],["Agent de transit",4,FONCTIONS_DOC]]},
+{ico:"🏭",nom:"Production & Industrie",postes:[["Directeur de production",2,FONCTIONS_MGR],["Responsable production",3,FONCTIONS_MGR],["Chef d'atelier",3,FONCTIONS_MGR],["Opérateur de production",5,FONCTIONS_BASE],["Technicien de maintenance",4,FONCTIONS_DOC],["Responsable ordonnancement",4,FONCTIONS_DOC]]},
+{ico:"🏥",nom:"Santé & Médico-social",postes:[["Directeur établissement santé",1,FONCTIONS_DIR],["Cadre de santé",3,FONCTIONS_MGR],["Médecin / Praticien",4,FONCTIONS_DOC],["Infirmier(ère)",4,FONCTIONS_BASE],["Aide-soignant(e)",5,FONCTIONS_BASE],["Secrétaire médicale",4,FONCTIONS_DOC],["Pharmacien",4,FONCTIONS_DOC],["Brancardier",5,FONCTIONS_BASE],["Aide à domicile",5,FONCTIONS_BASE],["Éducateur spécialisé",4,FONCTIONS_DOC]]},
+{ico:"🏛️",nom:"Service public & Collectivités",postes:[["DGS",1,FONCTIONS_DIR],["Secrétaire de mairie",3,FONCTIONS_DOC],["Resp. marchés publics",4,FONCTIONS_DOC],["Agent état civil",4,FONCTIONS_DOC],["Responsable urbanisme",3,FONCTIONS_DOC],["Comptable public",4,FONCTIONS_DOC],["Agent technique municipal",5,FONCTIONS_BASE],["Policier municipal",4,FONCTIONS_BASE],["ATSEM",5,FONCTIONS_BASE],["Enseignant / Formateur",4,FONCTIONS_DOC]]},
+{ico:"🔧",nom:"Artisanat & Commerce",postes:[["Garagiste / Mécanicien",4,FONCTIONS_DOC],["Plombier / Chauffagiste",4,FONCTIONS_DOC],["Électricien",4,FONCTIONS_DOC],["Maçon / Conducteur travaux",3,FONCTIONS_MGR],["Coiffeur / Esthéticienne",4,FONCTIONS_DOC],["Boulanger",4,FONCTIONS_DOC],["Restaurateur / Cuisinier",4,FONCTIONS_DOC],["Chef de salle",3,FONCTIONS_MGR],["Serveur",5,FONCTIONS_BASE],["Commerçant indépendant",4,FONCTIONS_DOC]]},
+{ico:"🎧",nom:"Support client & SAV",postes:[["Responsable SAV",3,FONCTIONS_MGR],["Superviseur plateau",3,FONCTIONS_MGR],["Conseiller clientèle",4,FONCTIONS_DOC],["Technicien support",5,FONCTIONS_BASE]]},
+{ico:"🦺",nom:"Qualité, Sécurité & Environnement",postes:[["Responsable QHSE",3,FONCTIONS_MGR],["Préventeur sécurité",4,FONCTIONS_DOC],["Responsable qualité",4,FONCTIONS_DOC],["Infirmier santé travail",4,FONCTIONS_DOC]]},
+{ico:"🧹",nom:"Propreté & Services généraux",postes:[["Responsable de site",3,FONCTIONS_MGR],["Chef équipe propreté",3,FONCTIONS_MGR],["Agent d'entretien",5,FONCTIONS_BASE],["Agent de sécurité",5,FONCTIONS_BASE],["Responsable sûreté",3,FONCTIONS_MGR]]},
+{ico:"🍽️",nom:"Hôtellerie & Restauration",postes:[["Directeur restaurant/hôtel",2,FONCTIONS_MGR],["Chef de cuisine",3,FONCTIONS_MGR.concat(["Food cost & stocks vocaux","Commandes fournisseurs dictées"])],["Responsable de salle",3,FONCTIONS_MGR],["Réceptionniste hôtel",4,FONCTIONS_DOC],["Gouvernante",3,FONCTIONS_MGR]]},
+{ico:"🏗️",nom:"BTP & Construction",postes:[["Directeur de travaux",2,FONCTIONS_MGR],["Conducteur de travaux",3,FONCTIONS_MGR],["Chef de chantier",3,FONCTIONS_MGR],["Économiste / Métreur",4,FONCTIONS_DOC],["Chef d'équipe / Ouvrier",5,FONCTIONS_BASE],["Géomètre",4,FONCTIONS_DOC]]},
+{ico:"🏪",nom:"Commerce & Distribution",postes:[["Directeur de magasin",2,FONCTIONS_MGR],["Chef de rayon",3,FONCTIONS_MGR],["Resp. approvisionnement",4,FONCTIONS_DOC],["Hôte de caisse",5,FONCTIONS_BASE],["Employé libre-service",5,FONCTIONS_BASE]]},
+{ico:"🏦",nom:"Banque & Assurance",postes:[["Directeur d'agence",2,FONCTIONS_MGR],["Conseiller bancaire",4,FONCTIONS_DOC],["Gestionnaire sinistres",4,FONCTIONS_DOC],["Courtier",4,FONCTIONS_DOC],["Chargé conformité",4,FONCTIONS_DOC]]},
+{ico:"🏠",nom:"Immobilier",postes:[["Directeur d'agence",2,FONCTIONS_MGR],["Agent / Négociateur",4,FONCTIONS_DOC],["Gestionnaire locatif",4,FONCTIONS_DOC],["Syndic de copropriété",4,FONCTIONS_DOC]]},
+{ico:"🌾",nom:"Agriculture & Agroalimentaire",postes:[["Exploitant agricole",1,FONCTIONS_DIR],["Chef de culture",3,FONCTIONS_MGR],["Salarié agricole",5,FONCTIONS_BASE],["Resp. qualité agroalimentaire",4,FONCTIONS_DOC]]},
+{ico:"📣",nom:"Communication",postes:[["Responsable communication",3,FONCTIONS_MGR],["Chargé de communication",4,FONCTIONS_DOC],["Graphiste",4,FONCTIONS_DOC]]},
+{ico:"🔬",nom:"R&D & Études",postes:[["Responsable R&D",2,FONCTIONS_MGR],["Ingénieur d'études",4,FONCTIONS_DOC],["Technicien de laboratoire",5,FONCTIONS_BASE]]},
+];
+
+function renderPostes(){
+  const root=document.getElementById('postes-body');
+  root.innerHTML=CATEGORIES.map((cat,ci)=>`
+    <div class="cat-section">
+      <div class="cat-head">${cat.ico} ${cat.nom} <span style="color:var(--t3);font-weight:400">(${cat.postes.length})</span></div>
+      <div class="poste-grid">
+        ${cat.postes.map((p,pi)=>`
+          <div class="poste-card" onclick="showFiche(${ci},${pi})">
+            <div class="pc-name">${p[0]}</div>
+            <div class="pc-lvl">Niv. ${p[1]} · ${NIVEAUX[p[1]].split(' ')[0]}</div>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function showFiche(ci,pi){
+  const p=CATEGORIES[ci].postes[pi];
+  document.getElementById('fiche-title').textContent=p[0];
+  document.getElementById('fiche-sub').textContent=NIVEAUX[p[1]];
+  document.getElementById('fiche-nom').textContent='[Prénom NOM]';
+  document.getElementById('fiche-email').textContent='prenom.nom@entreprise.fr';
+  document.getElementById('fiche-tel').textContent='01 XX XX XX XX (poste XXX)';
+  document.getElementById('fiche-service').textContent=CATEGORIES[ci].nom;
+  document.getElementById('fiche-fonctions').innerHTML=p[2].slice(0,8).map(f=>`<div class="fiche-fn">✓ ${f}</div>`).join('');
+  document.getElementById('fiche-modal').classList.add('show');
+}
+
+// ── Hiérarchie (arbre généalogique) ──
+function renderHier(){
+  document.getElementById('hier-body').innerHTML=`
+    <div style="font-size:.7rem;color:var(--t3);margin-bottom:14px;line-height:1.6">L'arbre hiérarchique de votre entreprise. Un salarié ne peut contacter que son N+1 direct — sauf pour les questions de paie (droit fondamental, art. L3243-2) et les urgences.</div>
+    <div class="hier-node"><div class="hn-ico" style="background:linear-gradient(135deg,#38BDF8,#6366F1)">D</div><div class="hn-info"><div class="hn-nom">Dirigeant / PDG</div><div class="hn-role">Niveau 1 · Accès total</div></div><span class="hn-arrow">▼</span></div>
+    <div class="hier-indent">
+      <div class="hier-node"><div class="hn-ico" style="background:linear-gradient(135deg,#6366F1,#8B5CF6)">D</div><div class="hn-info"><div class="hn-nom">Directeurs de service</div><div class="hn-role">Niveau 2 · Accès RH, direction</div></div><span class="hn-arrow">▼</span></div>
+      <div class="hier-indent">
+        <div class="hier-node"><div class="hn-ico" style="background:linear-gradient(135deg,#FB923C,#F43F5E)">M</div><div class="hn-info"><div class="hn-nom">Managers / Chefs d'équipe</div><div class="hn-role">Niveau 3 · Accès RH (hors paie)</div></div><span class="hn-arrow">▼</span></div>
+        <div class="hier-indent">
+          <div class="hier-node"><div class="hn-ico" style="background:linear-gradient(135deg,#4ADE80,#0EA5E9)">E</div><div class="hn-info"><div class="hn-nom">Employés qualifiés</div><div class="hn-role">Niveau 4 · Contact N+1 uniquement + RH pour paie</div></div><span class="hn-arrow">▼</span></div>
+          <div class="hier-indent">
+            <div class="hier-node"><div class="hn-ico" style="background:rgba(255,255,255,.1)">E</div><div class="hn-info"><div class="hn-nom">Employés standard</div><div class="hn-role">Niveau 5 · Contact N+1 uniquement + RH pour paie</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:16px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:12px;padding:12px 14px;font-size:.74rem;color:var(--t2);line-height:1.6">
+      <b style="color:var(--amber)">⚠️ Service RH :</b> accessible aux niveaux 1-3 uniquement — sauf pour les <b>questions de paie</b> qui sont un droit fondamental accessible à tous les salariés.
+    </div>`;
+}
+
+// Init
+document.getElementById('brief-date').textContent = new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+</script>
+</body>
+</html>

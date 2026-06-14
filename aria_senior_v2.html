@@ -648,7 +648,7 @@ body { padding-bottom: env(safe-area-inset-bottom); }
     <div class="ob-step-num">01 — Bienvenue</div>
     <div class="ob-step-title">Comment vous appelez-vous ?</div>
     <div class="ob-step-desc">Aria utilise votre prénom pour rendre chaque échange plus personnel.</div>
-    <input class="ob-input" type="text" id="ob-name" placeholder="Votre prénom…" autocomplete="off">
+    <input class="ob-input" type="text" id="ob-name" placeholder="Votre prénom…" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();obGo(2)}">
     <div style="flex:1"></div>
     <button type="button" class="ob-cta" onclick="obGo(2)">Continuer →</button>
   </div>
@@ -661,7 +661,7 @@ body { padding-bottom: env(safe-area-inset-bottom); }
     <div class="age-block">
       <div class="age-ctrl">
         <button type="button" class="age-dec" onclick="chAge(-1)">−</button>
-        <input class="age-field" type="number" id="age-val" value="70" min="4" max="110" oninput="syncAge()">
+        <input class="age-field" type="number" id="age-val" value="70" min="4" max="110" oninput="syncAge()" onkeydown="if(event.key==='Enter'){event.preventDefault();obGo(3)}">
         <button type="button" class="age-inc" onclick="chAge(1)">+</button>
       </div>
       <div class="age-tag">
