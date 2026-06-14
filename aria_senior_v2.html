@@ -1345,58 +1345,9 @@ function verifierRecurrents(){
   });
 }
 // Vérification toutes les 30 secondes (plus précis pour les rappels à la minute)
-setInterval(verifierRecurrents, 30000);
 
-function parseRappelRecurrent(msg){
-  const m = msg.toLowerCase();
-  // Détecter "tous les jours", "chaque matin", "chaque soir"...
-  const estRecurrent = /tous les jours|chaque (matin|soir|jour|lundi|mardi|mercredi|jeudi|vendredi)|toutes les semaines|chaque semaine/.test(m);
-  if(!estRecurrent) return null;
 
-  // Extraire l'heure
-  const heureMatch = m.match(/à (\d{1,2})h(\d{0,2})/);
-  let heure = '08:00';
-  if(heureMatch){
-    const h = heureMatch[1].padStart(2,'0');
-    const min = (heureMatch[2]||'00').padStart(2,'0');
-    heure = h + ':' + min;
-  } else if(m.includes('matin')) heure = '08:00';
-  else if(m.includes('midi')) heure = '12:00';
-  else if(m.includes('soir')) heure = '19:00';
 
-  // Extraire les jours
-  let jours = 'tous';
-  if(m.includes('semaine') && !m.includes('week')) jours = 'semaine';
-  else if(m.includes('weekend') || m.includes('week-end')) jours = 'weekend';
-  else {
-    const joursDetectes = [];
-    ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'].forEach(j => {
-      if(m.includes(j)) joursDetectes.push(j);
-    });
-    if(joursDetectes.length) jours = joursDetectes.join(',');
-  }
-
-  const texte = msg.replace(/^(aria,?\s*)?(rappelle-moi|rappelle moi)\s*/i,'')
-                   .replace(/tous les jours|chaque (matin|soir|jour)|à \d{1,2}h\d{0,2}/gi,'').trim();
-  return { texte, heure, jours };
-}
-
-// Enrichir intercepterNote pour les récurrents
-const _intercepterNoteOrig = intercepterNote;
-function intercepterNote(msg){
-  const recurrent = parseRappelRecurrent(msg);
-  if(recurrent && recurrent.texte){
-    ariaRappelRecurrent(recurrent.texte, recurrent.heure, recurrent.jours);
-    const desc = recurrent.jours === 'tous' ? 'tous les jours' :
-                 recurrent.jours === 'semaine' ? 'les jours de semaine' :
-                 recurrent.jours === 'weekend' ? 'le weekend' : recurrent.jours;
-    addAria('📅 Rappel récurrent créé : <b>' + recurrent.texte + '</b><br>' +
-            desc + ' à ' + recurrent.heure + '. Pour l\'arrêter, dites "supprime mon rappel médicaments".');
-    speak('Rappel récurrent programmé pour ' + desc + ' à ' + recurrent.heure);
-    return true;
-  }
-  return _intercepterNoteOrig(msg);
-}
 
 // ════════════════════════════════════════════
 // MOBILE / PWA — configuration
