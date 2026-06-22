@@ -10,17 +10,17 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
-    "expo": "^56.0.0",
-    "expo-location": "~56.0.18",
-    "expo-speech": "~56.0.3",
-    "expo-splash-screen": "~56.0.10",
-    "expo-status-bar": "~56.0.4",
-    "react": "19.2.3",
-    "react-native": "0.85.3"
+    "expo": "^55.0.0",
+    "expo-location": "~55.1.10",
+    "expo-speech": "~55.0.14",
+    "expo-splash-screen": "~55.0.21",
+    "expo-status-bar": "~55.0.6",
+    "react": "19.2.0",
+    "react-native": "0.83.6"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
-    "babel-preset-expo": "^56.0.15"
+    "babel-preset-expo": "~55.0.8"
   },
   "private": true
 }
