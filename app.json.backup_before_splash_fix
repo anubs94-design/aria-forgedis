@@ -6,6 +6,11 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0A0F"
+    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.forgedis.ariasenior",
@@ -36,15 +41,7 @@
       }
     },
     "plugins": [
-      "expo-status-bar",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/splash.png",
-          "resizeMode": "contain",
-          "backgroundColor": "#0A0A0F"
-        }
-      ]
+      "expo-status-bar"
     ]
   }
 }
