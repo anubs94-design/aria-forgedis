@@ -20,6 +20,7 @@ export default function App() {
   const [status, setStatus] = useState('disconnected');
   const [logs, setLogs] = useState([]);
   const [taskText, setTaskText] = useState('');
+  const [pendingContext, setPendingContext] = useState(null);
   const ws = useRef(null);
 
   const addLog = useCallback((message) => {
@@ -89,10 +90,18 @@ export default function App() {
           addLog(`Resultat commande: ${JSON.stringify(data)}`);
           break;
 
-        case 'task_result':
+        case 'task_result': {
           const r = data.result || {};
-          addLog(`Tache terminee [${r.statut}]: ${r.message || '(pas de message)'}`);
+          if (r.statut === 'needs_help' && r.message) {
+            setPendingContext(r.message);
+            addLog(`Aria demande : ${r.message}`);
+          } else if (r.statut === 'succes') {
+            addLog('Tache terminee avec succes.');
+          } else {
+            addLog(`Tache terminee [${r.statut}]: ${r.message || '(pas de message)'}`);
+          }
           break;
+        }
 
         default:
           addLog(`Message recu (type=${data.type}): ${JSON.stringify(data)}`);
@@ -152,14 +161,19 @@ export default function App() {
 
   const sendTask = useCallback(() => {
     if (ws.current && status === 'connected' && taskText.trim().length > 0) {
-      const msg = { type: 'task', task: taskText.trim() };
+      let finalTask = taskText.trim();
+      if (pendingContext) {
+        finalTask = `Contexte precedent : tu as demande "${pendingContext}"\nReponse de l'utilisateur : ${taskText.trim()}`;
+        setPendingContext(null);
+      }
+      const msg = { type: 'task', task: finalTask };
       ws.current.send(JSON.stringify(msg));
       addLog(`Tache envoyee: ${taskText.trim()}`);
       setTaskText('');
     } else if (status !== 'connected') {
       addLog("Impossible d\'envoyer: pas connecte.");
     }
-  }, [status, taskText, addLog]);
+  }, [status, taskText, pendingContext, addLog]);
 
   const statusColor = {
     disconnected: '#888888',
