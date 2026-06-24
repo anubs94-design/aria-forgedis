@@ -122,6 +122,23 @@ export default function App() {
     }
   }, [status, addLog]);
 
+  const sendCommand = useCallback((action, target, params = {}) => {
+    if (ws.current && status === 'connected') {
+      const cmd = {
+        type: 'command',
+        command: { action, target, params },
+      };
+      ws.current.send(JSON.stringify(cmd));
+      addLog(`Commande envoyee: ${action} ${target}`);
+    } else {
+      addLog('Impossible d\'envoyer la commande: pas connecte.');
+    }
+  }, [status, addLog]);
+
+  const sendOpenChrome = useCallback(() => {
+    sendCommand('open_app', 'chrome');
+  }, [sendCommand]);
+
   const statusColor = {
     disconnected: '#888888',
     connecting: '#f0ad4e',
@@ -174,6 +191,16 @@ export default function App() {
           onPress={disconnect}
         >
           <Text style={styles.buttonText}>Deconnecter</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.buttonRow}>
+        <TouchableOpacity
+          style={[styles.button, styles.buttonCommand]}
+          onPress={sendOpenChrome}
+          disabled={status !== 'connected'}
+        >
+          <Text style={styles.buttonText}>Ouvrir Chrome</Text>
         </TouchableOpacity>
       </View>
 
@@ -241,6 +268,9 @@ const styles = StyleSheet.create({
   },
   buttonDisconnect: {
     backgroundColor: '#444444',
+  },
+  buttonCommand: {
+    backgroundColor: '#FF9500',
   },
   buttonText: {
     color: '#ffffff',
