@@ -139,6 +139,10 @@ export default function App() {
     sendCommand('open_app', 'chrome');
   }, [sendCommand]);
 
+  const sendSearchYoutube = useCallback(() => {
+    sendCommand('search_youtube', 'chat mignon');
+  }, [sendCommand]);
+
   const statusColor = {
     disconnected: '#888888',
     connecting: '#f0ad4e',
@@ -201,6 +205,14 @@ export default function App() {
           disabled={status !== 'connected'}
         >
           <Text style={styles.buttonText}>Ouvrir Chrome</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, styles.buttonCommand]}
+          onPress={sendSearchYoutube}
+          disabled={status !== 'connected'}
+        >
+          <Text style={styles.buttonText}>YouTube chat</Text>
         </TouchableOpacity>
       </View>
 
