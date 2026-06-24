@@ -249,11 +249,17 @@ export default function App() {
       </View>
 
       <View style={styles.taskInputContainer}>
+        {pendingContext && (
+          <View style={styles.pendingBanner}>
+            <Text style={styles.pendingBannerText}>Aria attend ta reponse :</Text>
+            <Text style={styles.pendingBannerMessage}>{pendingContext}</Text>
+          </View>
+        )}
         <TextInput
           style={styles.taskInput}
           value={taskText}
           onChangeText={setTaskText}
-          placeholder="Dis a Aria ce que tu veux faire..."
+          placeholder={pendingContext ? "Ecris ta reponse..." : "Dis a Aria ce que tu veux faire..."}
           placeholderTextColor="#666666"
           editable={status === 'connected'}
           multiline
@@ -350,6 +356,24 @@ const styles = StyleSheet.create({
   },
   buttonSend: {
     backgroundColor: '#34C759',
+  },
+  pendingBanner: {
+    backgroundColor: '#2a1f00',
+    borderLeftWidth: 3,
+    borderLeftColor: '#FF9500',
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 8,
+  },
+  pendingBannerText: {
+    color: '#FF9500',
+    fontSize: 11,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  pendingBannerMessage: {
+    color: '#ffffff',
+    fontSize: 13,
   },
   buttonText: {
     color: '#ffffff',
