@@ -21,6 +21,7 @@ export default function App() {
   const [logs, setLogs] = useState([]);
   const [taskText, setTaskText] = useState('');
   const [pendingContext, setPendingContext] = useState(null);
+  const [fileChoices, setFileChoices] = useState(null);
   const ws = useRef(null);
 
   const addLog = useCallback((message) => {
@@ -92,14 +93,25 @@ export default function App() {
 
         case 'task_result': {
           const r = data.result || {};
-          if (r.statut === 'needs_help' && r.message) {
+          if (r.statut === 'needs_help' && r.cible === 'choix_fichiers' && r.donnees && r.donnees.fichiers) {
+            setFileChoices(r.donnees.fichiers);
+            setPendingContext(null);
+            addLog(`Aria demande : ${r.message}`);
+          } else if (r.statut === 'needs_help' && r.message) {
+            setFileChoices(null);
             setPendingContext(r.message);
             addLog(`Aria demande : ${r.message}`);
           } else if (r.statut === 'succes') {
+            setFileChoices(null);
             addLog('Tache terminee avec succes.');
           } else {
+            setFileChoices(null);
             addLog(`Tache terminee [${r.statut}]: ${r.message || '(pas de message)'}`);
           }
+          break;
+        }
+        case 'open_file_result': {
+          addLog(`Ouverture fichier [${data.statut}]: ${data.message}`);
           break;
         }
 
@@ -158,6 +170,15 @@ export default function App() {
   const sendSearchYoutube = useCallback(() => {
     sendCommand('search_youtube', 'chat mignon');
   }, [sendCommand]);
+
+  const sendOpenFile = useCallback((chemin, nom) => {
+    if (ws.current && status === 'connected') {
+      ws.current.send(JSON.stringify({ type: 'open_file', chemin }));
+      addLog(`Ouverture demandee: ${nom}`);
+      setFileChoices(null);
+      setPendingContext(null);
+    }
+  }, [status, addLog]);
 
   const sendTask = useCallback(() => {
     if (ws.current && status === 'connected' && taskText.trim().length > 0) {
@@ -249,6 +270,20 @@ export default function App() {
       </View>
 
       <View style={styles.taskInputContainer}>
+        {fileChoices && (
+          <View style={styles.pendingBanner}>
+            <Text style={styles.pendingBannerText}>Aria propose ces fichiers :</Text>
+            {fileChoices.map((fichier, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={styles.fileChoiceButton}
+                onPress={() => sendOpenFile(fichier.chemin, fichier.nom)}
+              >
+                <Text style={styles.fileChoiceText}>{idx + 1}. {fichier.nom}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
         {pendingContext && (
           <View style={styles.pendingBanner}>
             <Text style={styles.pendingBannerText}>Aria attend ta reponse :</Text>
@@ -373,6 +408,16 @@ const styles = StyleSheet.create({
   },
   pendingBannerMessage: {
     color: '#ffffff',
+    fontSize: 13,
+  },
+  fileChoiceButton: {
+    backgroundColor: '#1a1a1f',
+    borderRadius: 6,
+    padding: 10,
+    marginTop: 6,
+  },
+  fileChoiceText: {
+    color: '#4FB8D6',
     fontSize: 13,
   },
   buttonText: {
