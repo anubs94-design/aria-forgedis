@@ -33,3 +33,12 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Aria - fichiers de travail temporaires (ne jamais committer)
+App.js.backup_*
+*.backup_*
+*.bak_*
+apercu_*.txt
+fix_*.py
+patch_*.py
+*.backup_before_*
