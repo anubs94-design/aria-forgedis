@@ -1,47 +1,38 @@
 // src/services/MicroService.js
-// Gere les permissions micro et l'envoi de l'audio enregistre
-// vers le proxy Render pour transcription (Google Speech-to-Text).
-// La capture elle-meme (useAudioRecorder) reste dans MainScreen.js
-// car c'est un hook React, qui ne peut pas vivre dans un service pur.
+// Helper pour la reconnaissance vocale native (expo-speech-recognition).
+// La reconnaissance se fait directement sur le telephone (moteur natif
+// Android/iOS) : pas d'envoi de fichier audio, pas de proxy, pas de
+// quota cloud. On recupere directement du texte via les evenements,
+// qui sont ecoutes dans MainScreen.js (hooks React).
 //
-// NOTE: on utilise la classe File (API moderne SDK 54+) plutot que
-// expo-file-system/legacy, qui ne se resolvait pas correctement
-// dans ce build (redirigeait vers l'API moderne deprecated).
+// Ce fichier ne contient que les fonctions non-hook : demander les
+// permissions et demarrer/arreter l'ecoute avec la bonne config.
 
-import { File } from "expo-file-system";
+import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
 
-const TRANSCRIBE_URL = "https://aria-forgelis.onrender.com/transcribe";
-
-export async function lireAudioEnBase64(uri) {
-  const file = new File(uri);
-  const base64 = await file.base64();
-  return base64;
+export async function demanderPermissionMicro(onLog) {
+  try {
+    const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    if (!result.granted) {
+      if (onLog) onLog("Permission micro/reconnaissance refusee.");
+      return false;
+    }
+    return true;
+  } catch (e) {
+    if (onLog) onLog("Erreur permission micro: " + e.message);
+    return false;
+  }
 }
 
-export async function transcrireAudio(uri, langue, proxyToken, onLog) {
-  try {
-    const base64Audio = await lireAudioEnBase64(uri);
+export function demarrerEcoute(langue) {
+  ExpoSpeechRecognitionModule.start({
+    lang: langue,
+    interimResults: false,
+    continuous: false,
+    maxAlternatives: 1,
+  });
+}
 
-    const response = await fetch(TRANSCRIBE_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        token: proxyToken,
-        audio: base64Audio,
-        langue: langue,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (data.erreur) {
-      if (onLog) onLog("Erreur transcription: " + data.erreur);
-      return null;
-    }
-
-    return data.texte || null;
-  } catch (e) {
-    if (onLog) onLog("Erreur reseau transcription: " + e.message);
-    return null;
-  }
+export function arreterEcoute() {
+  ExpoSpeechRecognitionModule.stop();
 }
