@@ -102,8 +102,8 @@ export default function App() {
           if (data.audio && voixActiveRef.current) {
               jouerAudio(data.audio);
             }
-          if (r.statut === 'needs_help' && r.cible === 'choix_fichiers' && r.donnees && r.donnees.fichiers) {
-            setFileChoices(r.donnees.fichiers);
+          if (r.statut === 'needs_help' && r.cible === 'choix_fichiers' && r.donnees && Array.isArray(r.donnees)) {
+            setFileChoices(r.donnees);
             setPendingContext(null);
             addLog(`Aria demande : ${r.message}`);
           } else if (r.statut === 'needs_help' && r.message) {
