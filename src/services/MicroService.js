@@ -3,15 +3,18 @@
 // vers le proxy Render pour transcription (Google Speech-to-Text).
 // La capture elle-meme (useAudioRecorder) reste dans MainScreen.js
 // car c'est un hook React, qui ne peut pas vivre dans un service pur.
+//
+// NOTE: on utilise la classe File (API moderne SDK 54+) plutot que
+// expo-file-system/legacy, qui ne se resolvait pas correctement
+// dans ce build (redirigeait vers l'API moderne deprecated).
 
-import * as FileSystem from "expo-file-system";
+import { File } from "expo-file-system";
 
 const TRANSCRIBE_URL = "https://aria-forgelis.onrender.com/transcribe";
 
 export async function lireAudioEnBase64(uri) {
-  const base64 = await FileSystem.readAsStringAsync(uri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
+  const file = new File(uri);
+  const base64 = await file.base64();
   return base64;
 }
 
