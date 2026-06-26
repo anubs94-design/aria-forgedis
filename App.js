@@ -94,8 +94,8 @@ export default function App() {
 
         case 'task_result': {
           const r = data.result || {};
-          if (r.audio) {
-              jouerAudio(r.audio);
+          if (data.audio) {
+              jouerAudio(data.audio);
             }
           if (r.statut === 'needs_help' && r.cible === 'choix_fichiers' && r.donnees && r.donnees.fichiers) {
             setFileChoices(r.donnees.fichiers);
