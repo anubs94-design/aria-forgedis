@@ -1,6 +1,11 @@
 // src/screens/MainScreen.js
 // Ecran principal Aria Senior. Gere l'etat React et orchestre les
 // services WebSocket/Audio/Micro (logique reseau dans src/services/).
+//
+// MICRO: utilise la reconnaissance vocale NATIVE du telephone via
+// expo-speech-recognition. La transcription se fait sur l'appareil
+// (pas de fichier audio envoye, pas de proxy, pas de quota cloud).
+// On recupere directement le texte via les evenements "result".
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
@@ -16,12 +21,9 @@ import {
   Alert,
 } from "react-native";
 import {
-  useAudioRecorder,
-  useAudioRecorderState,
-  AudioModule,
-  RecordingPresets,
-  setAudioModeAsync,
-} from "expo-audio";
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from "expo-speech-recognition";
 
 import {
   createConnection,
@@ -32,14 +34,17 @@ import {
   sendTask as wsSendTask,
 } from "../services/WebSocketService";
 import { jouerAudio } from "../services/AudioService";
-import { transcrireAudio } from "../services/MicroService";
+import {
+  demanderPermissionMicro,
+  demarrerEcoute,
+  arreterEcoute,
+} from "../services/MicroService";
 import { StorageService } from "../services/StorageService";
 
 const SERVER_HOST = "192.168.1.31";
 const SERVER_PORT = 8765;
 const SERVER_URL = "wss://" + SERVER_HOST + ":" + SERVER_PORT;
 const AGENT_TOKEN = "f259bf284425082d68c23006e8d2be047ac5ddd29c5539ae93dc2c4c34ed1853";
-const PROXY_TOKEN = "aria_1bcbb653f5fd462c4ba2243f4bce9f48b6a657ba966ace5e5fe7429540cdd014";
 
 export default function MainScreen() {
   const [status, setStatus] = useState("disconnected");
@@ -49,29 +54,13 @@ export default function MainScreen() {
   const [fileChoices, setFileChoices] = useState(null);
   const [voixActive, setVoixActive] = useState(true);
   const [langue, setLangue] = useState("fr-FR");
-  const [transcription, setTranscription] = useState(false);
+  const [ecouteActive, setEcouteActive] = useState(false);
   const voixActiveRef = useRef(voixActive);
   const socketRef = useRef(null);
-
-  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const recorderState = useAudioRecorderState(audioRecorder);
 
   useEffect(() => {
     voixActiveRef.current = voixActive;
   }, [voixActive]);
-
-  useEffect(() => {
-    (async () => {
-      const status = await AudioModule.requestRecordingPermissionsAsync();
-      if (!status.granted) {
-        Alert.alert("Permission requise", "Le micro est necessaire pour parler a Aria.");
-      }
-      await setAudioModeAsync({
-        playsInSilentMode: true,
-        allowsRecording: true,
-      });
-    })();
-  }, []);
 
   useEffect(() => {
     StorageService.getProfile().then((profile) => {
@@ -163,38 +152,49 @@ export default function MainScreen() {
     }
   }, [status, taskText, pendingContext, addLog]);
 
-  const demarrerEnregistrement = useCallback(async () => {
-    try {
-      await audioRecorder.prepareToRecordAsync();
-      audioRecorder.record();
-      addLog("Enregistrement demarre...");
-    } catch (e) {
-      addLog("Erreur demarrage micro: " + e.message);
+  // --- Reconnaissance vocale native ---
+
+  useSpeechRecognitionEvent("start", () => {
+    setEcouteActive(true);
+    addLog("Ecoute en cours...");
+  });
+
+  useSpeechRecognitionEvent("end", () => {
+    setEcouteActive(false);
+  });
+
+  useSpeechRecognitionEvent("result", (event) => {
+    const texte = event.results && event.results[0] ? event.results[0].transcript : "";
+    if (texte && texte.trim().length > 0) {
+      addLog("Reconnu : " + texte);
+      sendTask(texte);
+    } else {
+      addLog("Rien compris, reessayez.");
     }
-  }, [audioRecorder, addLog]);
+  });
 
-  const arreterEnregistrement = useCallback(async () => {
+  useSpeechRecognitionEvent("error", (event) => {
+    setEcouteActive(false);
+    addLog("Erreur reconnaissance: " + (event.error || "inconnue") + " " + (event.message || ""));
+  });
+
+  const demarrerEcouteMicro = useCallback(async () => {
+    const ok = await demanderPermissionMicro(addLog);
+    if (!ok) return;
     try {
-      await audioRecorder.stop();
-      const uri = audioRecorder.uri;
-      addLog("Enregistrement termine. Transcription en cours...");
-      setTranscription(true);
-
-      const texte = await transcrireAudio(uri, langue, PROXY_TOKEN, addLog);
-
-      setTranscription(false);
-
-      if (texte) {
-        addLog("Transcrit : " + texte);
-        sendTask(texte);
-      } else {
-        addLog("Transcription vide ou echouee.");
-      }
+      demarrerEcoute(langue);
     } catch (e) {
-      setTranscription(false);
-      addLog("Erreur arret micro: " + e.message);
+      addLog("Erreur demarrage ecoute: " + e.message);
     }
-  }, [audioRecorder, langue, addLog, sendTask]);
+  }, [langue, addLog]);
+
+  const arreterEcouteMicro = useCallback(() => {
+    try {
+      arreterEcoute();
+    } catch (e) {
+      addLog("Erreur arret ecoute: " + e.message);
+    }
+  }, [addLog]);
 
   const statusColor =
     {
@@ -281,18 +281,15 @@ export default function MainScreen() {
       <TouchableOpacity
         style={[
           styles.micButton,
-          recorderState.isRecording && styles.micButtonActive,
-          transcription && styles.micButtonTranscribing,
+          ecouteActive && styles.micButtonActive,
         ]}
-        onPressIn={demarrerEnregistrement}
-        onPressOut={arreterEnregistrement}
-        disabled={status !== "connected" || transcription}
+        onPressIn={demarrerEcouteMicro}
+        onPressOut={arreterEcouteMicro}
+        disabled={status !== "connected"}
       >
         <Text style={styles.micButtonText}>
-          {transcription
-            ? "Transcription..."
-            : recorderState.isRecording
-            ? "Relachez pour envoyer"
+          {ecouteActive
+            ? "Relachez quand vous avez fini"
             : "Maintenez pour parler"}
         </Text>
       </TouchableOpacity>
@@ -426,9 +423,6 @@ const styles = StyleSheet.create({
   },
   micButtonActive: {
     backgroundColor: "#FF3B30",
-  },
-  micButtonTranscribing: {
-    backgroundColor: "#FFA500",
   },
   micButtonText: {
     color: "#ffffff",

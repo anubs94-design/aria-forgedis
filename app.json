@@ -50,7 +50,10 @@
           "networkSecurityConfig": "./assets/configs/network_security_config.xml",
           "enable": true
         }
-      ]
+      ],
+      "expo-audio",
+      "expo-asset",
+      "expo-speech-recognition"
     ]
   }
 }
