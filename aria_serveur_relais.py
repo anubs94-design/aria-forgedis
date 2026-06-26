@@ -66,3 +66,47 @@ async def vision(body: dict):
             json=payload,
         )
     return r.json()
+GOOGLE_SPEECH_KEY = os.environ.get("ARIA_GOOGLE_SPEECH_KEY", "")
+
+
+@app.post("/transcribe")
+async def transcribe(body: dict):
+    token_recu = body.get("token", "")
+    if not PROXY_TOKEN or token_recu != PROXY_TOKEN:
+        return {"erreur": "token_invalide"}
+    if not GOOGLE_SPEECH_KEY:
+        return {"erreur": "cle_google_manquante"}
+
+    audio_b64 = body.get("audio", "")
+    langue = body.get("langue", "fr-FR")
+    if not audio_b64:
+        return {"erreur": "audio_vide"}
+
+    payload = {
+        "config": {
+            "encoding": "AAC",
+            "sampleRateHertz": 44100,
+            "languageCode": langue,
+        },
+        "audio": {
+            "content": audio_b64,
+        },
+    }
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        r = await client.post(
+            "https://speech.googleapis.com/v1/speech:recognize?key=" + GOOGLE_SPEECH_KEY,
+            json=payload,
+        )
+
+    data = r.json()
+
+    if "error" in data:
+        return {"erreur": data["error"].get("message", "erreur_google")}
+
+    resultats = data.get("results", [])
+    if not resultats:
+        return {"texte": ""}
+
+    texte = resultats[0]["alternatives"][0]["transcript"]
+    return {"texte": texte}
