@@ -52,14 +52,15 @@
         }
       ],
       "expo-audio",
-    "expo-asset",
-    [
-      "expo-speech-recognition",
-      {
-        "microphonePermission": "Aria a besoin du micro pour vous ecouter.",
-        "speechRecognitionPermission": "Aria a besoin de la reconnaissance vocale pour comprendre vos demandes.",
-        "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
-      }
+      "expo-asset",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Aria a besoin du micro pour vous ecouter.",
+          "speechRecognitionPermission": "Aria a besoin de la reconnaissance vocale pour comprendre vos demandes.",
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+        }
+      ]
     ]
-  ]
+  }
 }
