@@ -1,7 +1,16 @@
 // src/screens/OnboardingScreen.js
-// Premier ecran vu par le client : choix de la langue et du mode
-// d'interaction (vocal / vocal+ecrit / ecrit). Stocke le profil via
-// StorageService, puis appelle onDone() pour passer a l'app principale.
+// Premier ecran vu par le client : choix de la langue.
+//
+// Cascade :
+//   Ecran 1 = langues principales (vocales) + "Arabe +" + "Autres (ecrit)"
+//   Ecran 2a (Arabe +) = dialectes arabes, tous vocaux
+//   Ecran 2b (Autres ecrit) = langues sans reco vocale (ecrit seulement)
+//
+// Chaque langue porte un statut "vocal" :
+//   vocal = true  -> micro actif dans MainScreen
+//   vocal = false -> clavier seul (langue ecrit-seulement)
+//
+// Stocke { langue, vocal } via StorageService, puis appelle onDone().
 
 import React, { useState } from "react";
 import {
@@ -9,94 +18,159 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  ScrollView,
   ActivityIndicator,
 } from "react-native";
 
 import { StorageService } from "../services/StorageService";
 import { ClientService } from "../services/ClientService";
-import { COMMUNICATION_MODES } from "../constants/theme";
 
+// --- Langues principales (vocales) ---
 const LANGUES = [
   { code: "fr-FR", label: "Francais" },
   { code: "en-US", label: "English" },
   { code: "es-ES", label: "Espanol" },
+  { code: "pt-BR", label: "Portugues" },
+  { code: "cmn-Hans-CN", label: "Chinois" },
+  { code: "hi-IN", label: "Hindi" },
+  { code: "de-DE", label: "Deutsch" },
+  { code: "it-IT", label: "Italiano" },
+  { code: "ru-RU", label: "Russe" },
+  { code: "tr-TR", label: "Turc" },
+  { code: "pl-PL", label: "Polski" },
+  { code: "ja-JP", label: "Japonais" },
 ];
 
-const MODES = [
-  { value: COMMUNICATION_MODES.VOCAL, label: "Vocal uniquement", description: "Je parle, Aria me repond a voix haute" },
-  { value: COMMUNICATION_MODES.VOCAL_ECRIT, label: "Vocal et ecrit", description: "Je peux parler ou ecrire, Aria me repond des deux facons" },
-  { value: COMMUNICATION_MODES.ECRIT, label: "Ecrit uniquement", description: "J'ecris mes demandes, Aria repond par ecrit" },
+// --- Dialectes arabes (tous vocaux) ---
+const ARABE = [
+  { code: "ar-DZ", label: "Arabe - Algerie" },
+  { code: "ar-MA", label: "Arabe - Maroc" },
+  { code: "ar-TN", label: "Arabe - Tunisie" },
+  { code: "ar-EG", label: "Arabe - Egypte" },
+  { code: "ar-SA", label: "Arabe - standard / Golfe" },
+  { code: "ar-AE", label: "Arabe - Emirats" },
+  { code: "ar-LB", label: "Arabe - Liban" },
+  { code: "ar-SY", label: "Arabe - Syrie" },
+  { code: "ar-JO", label: "Arabe - Jordanie" },
+  { code: "ar-IQ", label: "Arabe - Irak" },
+];
+
+// --- Langues ecrit seulement (pas de reco vocale) ---
+const ECRIT = [
+  { code: "kab", label: "Kabyle (Tizi Ouzou)" },
+  { code: "gcf", label: "Creole antillais" },
+  { code: "rcf", label: "Creole reunionnais" },
+  { code: "ht", label: "Creole haitien" },
+  { code: "oc", label: "Occitan" },
+  { code: "br", label: "Breton" },
+  { code: "co", label: "Corse" },
+  { code: "eu", label: "Basque" },
 ];
 
 export default function OnboardingScreen({ onDone }) {
-  const [step, setStep] = useState(1);
-  const [langue, setLangue] = useState(null);
-  const [mode, setMode] = useState(null);
+  const [ecran, setEcran] = useState("principal");
   const [saving, setSaving] = useState(false);
 
-  const choisirLangue = (code) => {
-    setLangue(code);
-    setStep(2);
-  };
-
-  const choisirMode = async (value) => {
-    setMode(value);
+  const choisir = async (code, vocal) => {
     setSaving(true);
-
     await ClientService.getOrCreateClientId();
-    await StorageService.saveProfile({ langue, mode: value });
+    await StorageService.saveProfile({ langue: code, vocal: vocal });
     await StorageService.setOnboardingDone();
-
     setSaving(false);
-    onDone({ langue, mode: value });
+    onDone({ langue: code, vocal: vocal });
   };
 
   if (saving) {
     return (
-      <View style={styles.container}>
+      <View style={styles.center}>
         <ActivityIndicator size="large" color="#34C759" />
         <Text style={styles.savingText}>Preparation d Aria...</Text>
       </View>
     );
   }
 
-  if (step === 1) {
+  // --- Ecran 2a : dialectes arabes ---
+  if (ecran === "arabe") {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Bienvenue</Text>
-        <Text style={styles.subtitle}>Dans quelle langue souhaitez-vous parler avec Aria ?</Text>
-
-        {LANGUES.map((l) => (
-          <TouchableOpacity
-            key={l.code}
-            style={styles.optionButton}
-            onPress={() => choisirLangue(l.code)}
-          >
-            <Text style={styles.optionLabel}>{l.label}</Text>
-          </TouchableOpacity>
-        ))}
+        <Text style={styles.title}>Quel arabe parlez-vous ?</Text>
+        <ScrollView style={styles.scroll}>
+          {ARABE.map((l) => (
+            <TouchableOpacity
+              key={l.code}
+              style={styles.optionButton}
+              onPress={() => choisir(l.code, true)}
+            >
+              <Text style={styles.optionLabel}>{l.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        <TouchableOpacity style={styles.backButton} onPress={() => setEcran("principal")}>
+          <Text style={styles.backButtonText}>Retour</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
+  // --- Ecran 2b : langues ecrit seulement ---
+  if (ecran === "ecrit") {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Langues a l ecrit</Text>
+        <Text style={styles.subtitle}>
+          Ces langues fonctionnent au clavier. La voix n est pas encore disponible.
+        </Text>
+        <ScrollView style={styles.scroll}>
+          {ECRIT.map((l) => (
+            <TouchableOpacity
+              key={l.code}
+              style={styles.optionButton}
+              onPress={() => choisir(l.code, false)}
+            >
+              <Text style={styles.optionLabel}>{l.label}</Text>
+              <Text style={styles.optionTag}>ecrit seulement</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        <TouchableOpacity style={styles.backButton} onPress={() => setEcran("principal")}>
+          <Text style={styles.backButtonText}>Retour</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // --- Ecran 1 : langues principales ---
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Comment voulez-vous parler a Aria ?</Text>
+      <Text style={styles.title}>Bienvenue</Text>
+      <Text style={styles.subtitle}>Dans quelle langue voulez-vous parler avec Aria ?</Text>
+      <ScrollView style={styles.scroll}>
+        {LANGUES.map((l) => (
+          <TouchableOpacity
+            key={l.code}
+            style={styles.optionButton}
+            onPress={() => choisir(l.code, true)}
+          >
+            <Text style={styles.optionLabel}>{l.label}</Text>
+          </TouchableOpacity>
+        ))}
 
-      {MODES.map((m) => (
         <TouchableOpacity
-          key={m.value}
-          style={styles.optionButtonLarge}
-          onPress={() => choisirMode(m.value)}
+          style={[styles.optionButton, styles.optionSpecial]}
+          onPress={() => setEcran("arabe")}
         >
-          <Text style={styles.optionLabel}>{m.label}</Text>
-          <Text style={styles.optionDescription}>{m.description}</Text>
+          <Text style={styles.optionLabel}>Arabe +</Text>
+          <Text style={styles.optionTag}>choisir le dialecte</Text>
         </TouchableOpacity>
-      ))}
 
-      <TouchableOpacity style={styles.backButton} onPress={() => setStep(1)}>
-        <Text style={styles.backButtonText}>Retour</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.optionButton, styles.optionSpecial]}
+          onPress={() => setEcran("ecrit")}
+        >
+          <Text style={styles.optionLabel}>Autres langues</Text>
+          <Text style={styles.optionTag}>kabyle, creole... (ecrit)</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </View>
   );
 }
@@ -105,52 +179,56 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#0A0A0F",
-    paddingTop: 80,
+    paddingTop: 70,
     paddingHorizontal: 24,
-    alignItems: "stretch",
+  },
+  center: {
+    flex: 1,
+    backgroundColor: "#0A0A0F",
+    justifyContent: "center",
+    alignItems: "center",
   },
   title: {
     color: "#ffffff",
     fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 12,
+    marginBottom: 10,
     textAlign: "center",
   },
   subtitle: {
     color: "#cccccc",
     fontSize: 15,
-    marginBottom: 32,
+    marginBottom: 20,
     textAlign: "center",
+  },
+  scroll: {
+    flex: 1,
   },
   optionButton: {
     backgroundColor: "#1a1a1f",
     borderRadius: 10,
-    paddingVertical: 18,
+    paddingVertical: 16,
     paddingHorizontal: 20,
-    marginBottom: 12,
-    alignItems: "center",
+    marginBottom: 10,
   },
-  optionButtonLarge: {
-    backgroundColor: "#1a1a1f",
-    borderRadius: 10,
-    paddingVertical: 20,
-    paddingHorizontal: 20,
-    marginBottom: 14,
+  optionSpecial: {
+    backgroundColor: "#1f1a2a",
+    borderLeftWidth: 3,
+    borderLeftColor: "#FF9500",
   },
   optionLabel: {
     color: "#ffffff",
     fontSize: 17,
     fontWeight: "bold",
-    marginBottom: 4,
   },
-  optionDescription: {
+  optionTag: {
     color: "#999999",
-    fontSize: 13,
+    fontSize: 12,
+    marginTop: 3,
   },
   backButton: {
-    marginTop: 12,
+    paddingVertical: 14,
     alignItems: "center",
-    paddingVertical: 10,
   },
   backButtonText: {
     color: "#888888",
