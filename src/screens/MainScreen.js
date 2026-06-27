@@ -69,6 +69,7 @@ export default function MainScreen() {
       }
     });
   }, []);
+  
 
   const addLog = useCallback((message) => {
     const time = new Date().toLocaleTimeString();
