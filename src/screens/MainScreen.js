@@ -53,7 +53,7 @@ export default function MainScreen() {
   const [pendingContext, setPendingContext] = useState(null);
   const [fileChoices, setFileChoices] = useState(null);
   const [voixActive, setVoixActive] = useState(true);
-  const [langue, setLangue] = useState("fr-FR");
+  const [vocalActif, setVocalActif] = useState(true);
   const [ecouteActive, setEcouteActive] = useState(false);
   const voixActiveRef = useRef(voixActive);
   const socketRef = useRef(null);
@@ -66,6 +66,9 @@ export default function MainScreen() {
     StorageService.getProfile().then((profile) => {
       if (profile && profile.langue) {
         setLangue(profile.langue);
+      }
+      if (profile && profile.vocal === false) {
+        setVocalActif(false);
       }
     });
   }, []);
@@ -279,21 +282,23 @@ export default function MainScreen() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        style={[
-          styles.micButton,
-          ecouteActive && styles.micButtonActive,
-        ]}
-        onPressIn={demarrerEcouteMicro}
-        onPressOut={arreterEcouteMicro}
-        disabled={status !== "connected"}
-      >
-        <Text style={styles.micButtonText}>
-          {ecouteActive
-            ? "Relachez quand vous avez fini"
-            : "Maintenez pour parler"}
-        </Text>
-      </TouchableOpacity>
+      {vocalActif && (
+        <TouchableOpacity
+          style={[
+            styles.micButton,
+            ecouteActive && styles.micButtonActive,
+          ]}
+          onPressIn={demarrerEcouteMicro}
+          onPressOut={arreterEcouteMicro}
+          disabled={status !== "connected"}
+        >
+          <Text style={styles.micButtonText}>
+            {ecouteActive
+              ? "Relachez quand vous avez fini"
+              : "Maintenez pour parler"}
+          </Text>
+        </TouchableOpacity>
+      )}>
 
       <View style={styles.taskInputContainer}>
         {fileChoices && (
