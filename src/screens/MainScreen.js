@@ -416,7 +416,6 @@ export default function MainScreen() {
         </TouchableOpacity>
       </View>
 
-      </ScrollView>
 
       <Text style={styles.logsTitle}>Logs :</Text>
       <ScrollView style={styles.logsContainer}>
@@ -425,6 +424,8 @@ export default function MainScreen() {
             [{log.time}] {log.message}
           </Text>
         ))}
+      </ScrollView>
+
       </ScrollView>
     </View>
   );
@@ -639,7 +640,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   logsContainer: {
-    flex: 1,
+    height: 160,
     backgroundColor: "#1a1a1f",
     borderRadius: 8,
     padding: 10,
