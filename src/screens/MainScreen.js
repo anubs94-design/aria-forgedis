@@ -371,6 +371,7 @@ export default function MainScreen() {
             <Text style={styles.explicationText}>{explicationDocument}</Text>
           </View>
         )}
+      </View>
       )}
 
       <View style={styles.taskInputContainer}>
@@ -422,7 +423,6 @@ export default function MainScreen() {
           </Text>
         ))}
       </ScrollView>
-    </View>
     </View>
   );
 }
