@@ -6,6 +6,10 @@
 // expo-speech-recognition. La transcription se fait sur l'appareil
 // (pas de fichier audio envoye, pas de proxy, pas de quota cloud).
 // On recupere directement le texte via les evenements "result".
+//
+// DESIGN: charte FORGEDIS (palette du site vitrine forgedis.fr).
+// Zone "debug" (Connecter/Ping/Chrome/YouTube/Logs) masquee par
+// defaut, visible en triple-tapant le titre "Aria".
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
@@ -61,8 +65,10 @@ export default function MainScreen() {
   const [vocalActif, setVocalActif] = useState(true);
   const [langue, setLangue] = useState("fr-FR");
   const [ecouteActive, setEcouteActive] = useState(false);
+  const [debugVisible, setDebugVisible] = useState(false);
   const voixActiveRef = useRef(voixActive);
   const socketRef = useRef(null);
+  const tapTimesRef = useRef([]);
 
   useEffect(() => {
     voixActiveRef.current = voixActive;
@@ -78,11 +84,19 @@ export default function MainScreen() {
       }
     });
   }, []);
-  
 
   const addLog = useCallback((message) => {
     const time = new Date().toLocaleTimeString();
     setLogs((prev) => [...prev, { time, message }]);
+  }, []);
+
+  const handleTitlePress = useCallback(() => {
+    const now = Date.now();
+    tapTimesRef.current = [...tapTimesRef.current.filter((t) => now - t < 1000), now];
+    if (tapTimesRef.current.length >= 3) {
+      tapTimesRef.current = [];
+      setDebugVisible((v) => !v);
+    }
   }, []);
 
   const handleTaskResult = useCallback((r) => {
@@ -228,13 +242,13 @@ export default function MainScreen() {
 
   const statusColor =
     {
-      disconnected: "#444444",
+      disconnected: "#6D7799",
       connecting: "#FFA500",
       handshake_pending: "#FFA500",
-      connected: "#34C759",
-      refused: "#FF3B30",
-      error: "#FF3B30",
-    }[status] || "#444444";
+      connected: "#5BE3D8",
+      refused: "#FF7A59",
+      error: "#FF7A59",
+    }[status] || "#6D7799";
 
   const statusLabel =
     {
@@ -249,404 +263,481 @@ export default function MainScreen() {
   return (
     <View style={styles.container}>
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-      <StatusBar style="light" />
-      <Text style={styles.title}>Aria Senior - Test WebSocket</Text>
+        <StatusBar style="light" />
 
-      <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-        <Text style={styles.statusText}>{statusLabel}</Text>
-      </View>
-      <View style={styles.voixToggleContainer}>
-        <Text style={styles.voixToggleLabel}>Voix d Aria</Text>
-        <Switch
-          value={voixActive}
-          onValueChange={setVoixActive}
-          trackColor={{ false: "#444", true: "#34C759" }}
-        />
-      </View>
-
-      <Text style={styles.serverInfo}>{SERVER_URL}</Text>
-
-      <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={[styles.button, styles.buttonConnect]}
-          onPress={connect}
-          disabled={status === "connected" || status === "connecting" || status === "handshake_pending"}
-        >
-          <Text style={styles.buttonText}>Connecter</Text>
+        <TouchableOpacity activeOpacity={1} onPress={handleTitlePress}>
+          <Text style={styles.title}>Aria</Text>
+          <Text style={styles.subtitle}>Votre assistant</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.button, styles.buttonPing]}
-          onPress={sendPing}
-          disabled={status !== "connected"}
-        >
-          <Text style={styles.buttonText}>Ping</Text>
-        </TouchableOpacity>
+        <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+          <Text style={styles.statusText}>{statusLabel}</Text>
+        </View>
 
-        <TouchableOpacity
-          style={[styles.button, styles.buttonDisconnect]}
-          onPress={disconnect}
-        >
-          <Text style={styles.buttonText}>Deconnecter</Text>
-        </TouchableOpacity>
-      </View>
+        {/* ===== ZONE CLIENT : fonctions principales ===== */}
 
-      <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={[styles.button, styles.buttonCommand]}
-          onPress={sendOpenChrome}
-          disabled={status !== "connected"}
-        >
-          <Text style={styles.buttonText}>Ouvrir Chrome</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.button, styles.buttonCommand]}
-          onPress={sendSearchYoutube}
-          disabled={status !== "connected"}
-        >
-          <Text style={styles.buttonText}>YouTube chat</Text>
-        </TouchableOpacity>
-      </View>
-
-      {vocalActif && (
-        <TouchableOpacity
-          style={[
-            styles.micButton,
-            ecouteActive && styles.micButtonActive,
-          ]}
-          onPressIn={demarrerEcouteMicro}
-          onPressOut={arreterEcouteMicro}
-          disabled={status !== "connected"}
-        >
-          <Text style={styles.micButtonText}>
-            {ecouteActive
-              ? "Relachez quand vous avez fini"
-              : "Maintenez pour parler"}
-          </Text>
-        </TouchableOpacity>
-      )}
-
-      <TouchableOpacity style={styles.docButton} onPress={prendrePhoto}>
-        <Text style={styles.docButtonText}>Photographier un document</Text>
-      </TouchableOpacity>
-
-      {photoDocument && (
-        <View style={styles.photoPreviewContainer}>
-          <Image
-            source={{ uri: photoDocument.uri }}
-            style={styles.photoPreview}
-            resizeMode="contain"
-          />
-          <View style={styles.photoActionsRow}>
-            <TouchableOpacity
-              style={[styles.photoActionButton, styles.photoActionRetry]}
-              onPress={prendrePhoto}
-            >
-              <Text style={styles.buttonText}>Reprendre</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.photoActionButton, styles.photoActionClear]}
-              onPress={() => {
-                setPhotoDocument(null);
-                setExplicationDocument(null);
-              }}
-            >
-              <Text style={styles.buttonText}>Effacer</Text>
-            </TouchableOpacity>
-          </View>
-
-        <TouchableOpacity
-          style={styles.docSendButton}
-          onPress={envoyerDocumentAAria}
-          disabled={analyseEnCours}
-        >
-          <Text style={styles.buttonText}>
-            {analyseEnCours ? "Aria lit le document..." : "Envoyer a Aria"}
-          </Text>
-        </TouchableOpacity>
-
-        {explicationDocument && (
-          <View style={styles.explicationContainer}>
-            <Text style={styles.explicationTitle}>Aria explique :</Text>
-            <Text style={styles.explicationText}>{explicationDocument}</Text>
-          </View>
+        {vocalActif && (
+          <TouchableOpacity
+            style={[
+              styles.primaryButton,
+              ecouteActive && styles.primaryButtonListening,
+            ]}
+            onPressIn={demarrerEcouteMicro}
+            onPressOut={arreterEcouteMicro}
+            disabled={status !== "connected"}
+          >
+            <Text style={styles.primaryButtonText}>
+              {ecouteActive ? "Relachez quand vous avez fini" : "Parler a Aria"}
+            </Text>
+            <Text style={styles.primaryButtonSub}>
+              {ecouteActive ? "Aria vous ecoute..." : "Maintenez pour parler"}
+            </Text>
+          </TouchableOpacity>
         )}
-      </View>
-      )}
 
-      <View style={styles.taskInputContainer}>
-        {fileChoices && (
-          <View style={styles.pendingBanner}>
-            <Text style={styles.pendingBannerText}>Aria propose ces fichiers :</Text>
-            {fileChoices.map((fichier, idx) => (
+        <TouchableOpacity style={styles.secondaryButton} onPress={prendrePhoto}>
+          <Text style={styles.secondaryButtonText}>Photographier un document</Text>
+          <Text style={styles.secondaryButtonSub}>Aria le lit et vous l'explique</Text>
+        </TouchableOpacity>
+
+        {photoDocument && (
+          <View style={styles.photoPreviewContainer}>
+            <Image
+              source={{ uri: photoDocument.uri }}
+              style={styles.photoPreview}
+              resizeMode="contain"
+            />
+            <View style={styles.photoActionsRow}>
               <TouchableOpacity
-                key={idx}
-                style={styles.fileChoiceButton}
-                onPress={() => sendOpenFile(fichier.chemin, fichier.nom)}
+                style={styles.ghostButton}
+                onPress={prendrePhoto}
               >
-                <Text style={styles.fileChoiceText}>{idx + 1}. {fichier.nom}</Text>
+                <Text style={styles.ghostButtonText}>Reprendre</Text>
               </TouchableOpacity>
-            ))}
+              <TouchableOpacity
+                style={styles.ghostButton}
+                onPress={() => {
+                  setPhotoDocument(null);
+                  setExplicationDocument(null);
+                }}
+              >
+                <Text style={styles.ghostButtonText}>Effacer</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.docSendButton}
+              onPress={envoyerDocumentAAria}
+              disabled={analyseEnCours}
+            >
+              <Text style={styles.docSendButtonText}>
+                {analyseEnCours ? "Aria lit le document..." : "Envoyer a Aria"}
+              </Text>
+            </TouchableOpacity>
+
+            {explicationDocument && (
+              <View style={styles.explicationContainer}>
+                <Text style={styles.explicationTitle}>Aria explique :</Text>
+                <Text style={styles.explicationText}>{explicationDocument}</Text>
+              </View>
+            )}
           </View>
         )}
 
-        {pendingContext && (
-          <View style={styles.pendingBanner}>
-            <Text style={styles.pendingBannerText}>Aria attend ta reponse :</Text>
-            <Text style={styles.pendingBannerMessage}>{pendingContext}</Text>
+        <View style={styles.taskInputContainer}>
+          {fileChoices && (
+            <View style={styles.pendingBanner}>
+              <Text style={styles.pendingBannerText}>Aria propose ces fichiers :</Text>
+              {fileChoices.map((fichier, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={styles.fileChoiceButton}
+                  onPress={() => sendOpenFile(fichier.chemin, fichier.nom)}
+                >
+                  <Text style={styles.fileChoiceText}>{idx + 1}. {fichier.nom}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {pendingContext && (
+            <View style={styles.pendingBanner}>
+              <Text style={styles.pendingBannerText}>Aria attend ta reponse :</Text>
+              <Text style={styles.pendingBannerMessage}>{pendingContext}</Text>
+            </View>
+          )}
+
+          <TextInput
+            style={styles.taskInput}
+            value={taskText}
+            onChangeText={setTaskText}
+            placeholder={pendingContext ? "Ecris ta reponse..." : "Ou ecrivez ici..."}
+            placeholderTextColor="#6D7799"
+            editable={status === "connected"}
+            multiline
+          />
+          <TouchableOpacity
+            style={styles.secondaryButtonSmall}
+            onPress={() => sendTask()}
+            disabled={status !== "connected" || taskText.trim().length === 0}
+          >
+            <Text style={styles.secondaryButtonSmallText}>Envoyer</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ===== ZONE DEBUG : masquee par defaut (triple-tap sur "Aria") ===== */}
+
+        {debugVisible && (
+          <View style={styles.debugZone}>
+            <Text style={styles.debugLabel}>Zone debug (visible: triple-tap sur "Aria")</Text>
+
+            <View style={styles.voixToggleContainer}>
+              <Text style={styles.voixToggleLabel}>Voix d Aria</Text>
+              <Switch
+                value={voixActive}
+                onValueChange={setVoixActive}
+                trackColor={{ false: "#444", true: "#5BE3D8" }}
+              />
+            </View>
+
+            <Text style={styles.serverInfo}>{SERVER_URL}</Text>
+
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={styles.debugButton}
+                onPress={connect}
+                disabled={status === "connected" || status === "connecting" || status === "handshake_pending"}
+              >
+                <Text style={styles.debugButtonText}>Connecter</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.debugButton}
+                onPress={sendPing}
+                disabled={status !== "connected"}
+              >
+                <Text style={styles.debugButtonText}>Ping</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.debugButton}
+                onPress={disconnect}
+              >
+                <Text style={styles.debugButtonText}>Deconnecter</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={styles.debugButton}
+                onPress={sendOpenChrome}
+                disabled={status !== "connected"}
+              >
+                <Text style={styles.debugButtonText}>Ouvrir Chrome</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.debugButton}
+                onPress={sendSearchYoutube}
+                disabled={status !== "connected"}
+              >
+                <Text style={styles.debugButtonText}>YouTube chat</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.logsTitle}>Logs :</Text>
+            <ScrollView style={styles.logsContainer}>
+              {logs.map((log, idx) => (
+                <Text key={idx} style={styles.logLine}>
+                  [{log.time}] {log.message}
+                </Text>
+              ))}
+            </ScrollView>
           </View>
         )}
-
-        <TextInput
-          style={styles.taskInput}
-          value={taskText}
-          onChangeText={setTaskText}
-          placeholder={pendingContext ? "Ecris ta reponse..." : "Dis a Aria ce que tu veux faire..."}
-          placeholderTextColor="#666666"
-          editable={status === "connected"}
-          multiline
-        />
-        <TouchableOpacity
-          style={[styles.button, styles.buttonSend]}
-          onPress={() => sendTask()}
-          disabled={status !== "connected" || taskText.trim().length === 0}
-        >
-          <Text style={styles.buttonText}>Envoyer</Text>
-        </TouchableOpacity>
-      </View>
-
-
-      <Text style={styles.logsTitle}>Logs :</Text>
-      <ScrollView style={styles.logsContainer}>
-        {logs.map((log, idx) => (
-          <Text key={idx} style={styles.logLine}>
-            [{log.time}] {log.message}
-          </Text>
-        ))}
-      </ScrollView>
-
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // ===== Palette FORGEDIS =====
+  // bg: #070B18 | panel: #111934 | text: #F0F3FB | text-soft: #A6B0CC
+  // coral: #FF7A59 | cyan: #5BE3D8 | violet: #9B8CFF
+
   container: {
     flex: 1,
-    backgroundColor: "#0A0A0F",
+    backgroundColor: "#070B18",
     paddingTop: 60,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
   },
   title: {
-    color: "#ffffff",
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 16,
+    color: "#F0F3FB",
+    fontSize: 34,
+    fontWeight: "800",
     textAlign: "center",
+    letterSpacing: -1,
+  },
+  subtitle: {
+    color: "#A6B0CC",
+    fontSize: 15,
+    textAlign: "center",
+    marginBottom: 18,
   },
   statusBadge: {
     alignSelf: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    marginBottom: 8,
-  },
-  voixToggleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  voixToggleLabel: {
-    color: "#cccccc",
-    fontSize: 13,
-    marginRight: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 18,
+    borderRadius: 999,
+    marginBottom: 28,
   },
   statusText: {
-    color: "#ffffff",
-    fontWeight: "bold",
-    fontSize: 14,
+    color: "#070B18",
+    fontWeight: "700",
+    fontSize: 13,
   },
-  serverInfo: {
-    color: "#888888",
-    textAlign: "center",
-    fontSize: 12,
-    marginBottom: 20,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 12,
-    marginHorizontal: 4,
-    borderRadius: 8,
+
+  // --- Boutons principaux (client) ---
+  primaryButton: {
+    backgroundColor: "#FF7A59",
+    borderRadius: 20,
+    paddingVertical: 26,
     alignItems: "center",
-  },
-  buttonConnect: {
-    backgroundColor: "#2196F3",
-  },
-  buttonPing: {
-    backgroundColor: "#673AB7",
-  },
-  buttonDisconnect: {
-    backgroundColor: "#444444",
-  },
-  buttonCommand: {
-    backgroundColor: "#FF9500",
-  },
-  docButton: {
-    backgroundColor: "#1a1a1f",
-    borderWidth: 1,
-    borderColor: "#4FB8D6",
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  docButtonText: {
-    color: "#4FB8D6",
-    fontWeight: "bold",
-    fontSize: 14,
-  },
-  photoPreviewContainer: {
-    backgroundColor: "#1a1a1f",
-    borderRadius: 10,
-    padding: 10,
     marginBottom: 16,
+    shadowColor: "#FF7A59",
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  primaryButtonListening: {
+    backgroundColor: "#5BE3D8",
+    shadowColor: "#5BE3D8",
+  },
+  primaryButtonText: {
+    color: "#1a0d08",
+    fontWeight: "800",
+    fontSize: 20,
+    marginBottom: 4,
+  },
+  primaryButtonSub: {
+    color: "#1a0d08",
+    fontSize: 14,
+    opacity: 0.75,
+  },
+
+  secondaryButton: {
+    backgroundColor: "#111934",
+    borderWidth: 1.5,
+    borderColor: "#FF7A59",
+    borderRadius: 18,
+    paddingVertical: 20,
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  secondaryButtonText: {
+    color: "#FF7A59",
+    fontWeight: "700",
+    fontSize: 17,
+    marginBottom: 3,
+  },
+  secondaryButtonSub: {
+    color: "#A6B0CC",
+    fontSize: 13,
+  },
+
+  // --- Photo / explication ---
+  photoPreviewContainer: {
+    backgroundColor: "#111934",
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 20,
     alignItems: "center",
   },
   photoPreview: {
     width: "100%",
     height: 220,
-    borderRadius: 8,
-    marginBottom: 10,
+    borderRadius: 12,
+    marginBottom: 12,
   },
   photoActionsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     width: "100%",
+    marginBottom: 12,
   },
-  photoActionButton: {
+  ghostButton: {
     flex: 1,
-    paddingVertical: 10,
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.09)",
+    paddingVertical: 12,
     marginHorizontal: 4,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: "center",
   },
-  photoActionRetry: {
-    backgroundColor: "#2196F3",
-  },
-  photoActionClear: {
-    backgroundColor: "#444444",
+  ghostButtonText: {
+    color: "#F0F3FB",
+    fontWeight: "600",
+    fontSize: 14,
   },
   docSendButton: {
-    backgroundColor: "#34C759",
-    borderRadius: 10,
-    paddingVertical: 14,
+    backgroundColor: "#FF7A59",
+    borderRadius: 14,
+    paddingVertical: 16,
     alignItems: "center",
-    marginTop: 10,
+    width: "100%",
+  },
+  docSendButtonText: {
+    color: "#1a0d08",
+    fontWeight: "700",
+    fontSize: 15,
   },
   explicationContainer: {
-    backgroundColor: "#1a2a1f",
+    backgroundColor: "rgba(91,227,216,0.07)",
     borderLeftWidth: 3,
-    borderLeftColor: "#34C759",
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 12,
+    borderLeftColor: "#5BE3D8",
+    borderRadius: 10,
+    padding: 14,
+    marginTop: 14,
+    width: "100%",
   },
   explicationTitle: {
-    color: "#34C759",
-    fontWeight: "bold",
+    color: "#5BE3D8",
+    fontWeight: "700",
     fontSize: 13,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   explicationText: {
-    color: "#ffffff",
-    fontSize: 14,
-    lineHeight: 20,
+    color: "#F0F3FB",
+    fontSize: 15,
+    lineHeight: 22,
   },
-  micButton: {
-    backgroundColor: "#34C759",
-    borderRadius: 12,
-    paddingVertical: 18,
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  micButtonActive: {
-    backgroundColor: "#FF3B30",
-  },
-  micButtonText: {
-    color: "#ffffff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
+
+  // --- Champ texte (fallback clavier) ---
   taskInputContainer: {
-    marginBottom: 16,
+    marginBottom: 24,
   },
   taskInput: {
-    backgroundColor: "#1a1a1f",
-    color: "#ffffff",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 14,
+    backgroundColor: "#111934",
+    color: "#F0F3FB",
+    borderRadius: 14,
+    padding: 14,
+    fontSize: 15,
     minHeight: 60,
-    marginBottom: 8,
+    marginBottom: 10,
     textAlignVertical: "top",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.09)",
   },
-  buttonSend: {
-    backgroundColor: "#34C759",
+  secondaryButtonSmall: {
+    backgroundColor: "rgba(155,140,255,0.12)",
+    borderWidth: 1,
+    borderColor: "#9B8CFF",
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: "center",
+  },
+  secondaryButtonSmallText: {
+    color: "#9B8CFF",
+    fontWeight: "700",
+    fontSize: 14,
   },
   pendingBanner: {
-    backgroundColor: "#2a1f00",
+    backgroundColor: "rgba(255,122,89,0.08)",
     borderLeftWidth: 3,
-    borderLeftColor: "#FF9500",
-    borderRadius: 6,
-    padding: 10,
-    marginBottom: 8,
+    borderLeftColor: "#FF7A59",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
   },
   pendingBannerText: {
-    color: "#FF9500",
-    fontSize: 11,
-    fontWeight: "bold",
+    color: "#FF7A59",
+    fontSize: 12,
+    fontWeight: "700",
     marginBottom: 4,
   },
   pendingBannerMessage: {
-    color: "#ffffff",
-    fontSize: 13,
+    color: "#F0F3FB",
+    fontSize: 14,
   },
   fileChoiceButton: {
-    backgroundColor: "#1a1a1f",
-    borderRadius: 6,
+    backgroundColor: "#111934",
+    borderRadius: 8,
     padding: 10,
     marginTop: 6,
   },
   fileChoiceText: {
-    color: "#4FB8D6",
+    color: "#5BE3D8",
     fontSize: 13,
   },
-  buttonText: {
-    color: "#ffffff",
-    fontWeight: "bold",
+
+  // --- Zone debug (masquee par defaut) ---
+  debugZone: {
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.09)",
+    paddingTop: 16,
+    marginBottom: 30,
+  },
+  debugLabel: {
+    color: "#6D7799",
+    fontSize: 11,
+    textAlign: "center",
+    marginBottom: 14,
+    fontStyle: "italic",
+  },
+  voixToggleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  voixToggleLabel: {
+    color: "#A6B0CC",
     fontSize: 13,
+    marginRight: 8,
+  },
+  serverInfo: {
+    color: "#6D7799",
+    textAlign: "center",
+    fontSize: 12,
+    marginBottom: 16,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  debugButton: {
+    flex: 1,
+    backgroundColor: "#111934",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.09)",
+    paddingVertical: 11,
+    marginHorizontal: 4,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  debugButtonText: {
+    color: "#A6B0CC",
+    fontWeight: "600",
+    fontSize: 12,
   },
   logsTitle: {
-    color: "#ffffff",
-    fontSize: 14,
-    fontWeight: "bold",
+    color: "#A6B0CC",
+    fontSize: 13,
+    fontWeight: "700",
     marginBottom: 8,
+    marginTop: 8,
   },
   logsContainer: {
     height: 160,
-    backgroundColor: "#1a1a1f",
-    borderRadius: 8,
+    backgroundColor: "#111934",
+    borderRadius: 10,
     padding: 10,
   },
   logLine: {
-    color: "#cccccc",
+    color: "#6D7799",
     fontSize: 11,
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
     marginBottom: 4,
