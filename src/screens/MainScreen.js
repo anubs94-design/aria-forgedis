@@ -10,6 +10,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
+  Image,
   Text,
   StyleSheet,
   TouchableOpacity,
@@ -40,6 +41,7 @@ import {
   arreterEcoute,
 } from "../services/MicroService";
 import { StorageService } from "../services/StorageService";
+import { prendrePhotoDocument } from "../services/DocumentService";
 
 const SERVER_HOST = "192.168.1.31";
 const SERVER_PORT = 8765;
@@ -52,6 +54,7 @@ export default function MainScreen() {
   const [taskText, setTaskText] = useState("");
   const [pendingContext, setPendingContext] = useState(null);
   const [fileChoices, setFileChoices] = useState(null);
+  const [photoDocument, setPhotoDocument] = useState(null);
   const [voixActive, setVoixActive] = useState(true);
   const [vocalActif, setVocalActif] = useState(true);
   const [langue, setLangue] = useState("fr-FR");
@@ -201,6 +204,13 @@ export default function MainScreen() {
     }
   }, [addLog]);
 
+  const prendrePhoto = useCallback(async () => {
+    const resultat = await prendrePhotoDocument(addLog);
+    if (resultat) {
+      setPhotoDocument(resultat);
+    }
+  }, [addLog]);
+
   const statusColor =
     {
       disconnected: "#444444",
@@ -299,6 +309,34 @@ export default function MainScreen() {
               : "Maintenez pour parler"}
           </Text>
         </TouchableOpacity>
+      )}
+
+      <TouchableOpacity style={styles.docButton} onPress={prendrePhoto}>
+        <Text style={styles.docButtonText}>Photographier un document</Text>
+      </TouchableOpacity>
+
+      {photoDocument && (
+        <View style={styles.photoPreviewContainer}>
+          <Image
+            source={{ uri: photoDocument.uri }}
+            style={styles.photoPreview}
+            resizeMode="contain"
+          />
+          <View style={styles.photoActionsRow}>
+            <TouchableOpacity
+              style={[styles.photoActionButton, styles.photoActionRetry]}
+              onPress={prendrePhoto}
+            >
+              <Text style={styles.buttonText}>Reprendre</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.photoActionButton, styles.photoActionClear]}
+              onPress={() => setPhotoDocument(null)}
+            >
+              <Text style={styles.buttonText}>Effacer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
 
       <View style={styles.taskInputContainer}>
@@ -420,6 +458,51 @@ const styles = StyleSheet.create({
   },
   buttonCommand: {
     backgroundColor: "#FF9500",
+  },
+  docButton: {
+    backgroundColor: "#1a1a1f",
+    borderWidth: 1,
+    borderColor: "#4FB8D6",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  docButtonText: {
+    color: "#4FB8D6",
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+  photoPreviewContainer: {
+    backgroundColor: "#1a1a1f",
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 16,
+    alignItems: "center",
+  },
+  photoPreview: {
+    width: "100%",
+    height: 220,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  photoActionsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  photoActionButton: {
+    flex: 1,
+    paddingVertical: 10,
+    marginHorizontal: 4,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  photoActionRetry: {
+    backgroundColor: "#2196F3",
+  },
+  photoActionClear: {
+    backgroundColor: "#444444",
   },
   micButton: {
     backgroundColor: "#34C759",
