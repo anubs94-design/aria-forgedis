@@ -11,7 +11,9 @@
       "bundleIdentifier": "com.forgedis.ariasenior",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Aria a besoin du microphone pour vous ecouter.",
-        "NSLocationWhenInUseUsageDescription": "Aria utilise votre position pour la meteo locale."
+        "NSLocationWhenInUseUsageDescription": "Aria utilise votre position pour la meteo locale.",
+        "NSCameraUsageDescription": "Aria utilise l'appareil photo pour lire et vous expliquer vos documents.",
+        "NSPhotoLibraryUsageDescription": "Aria accede a vos photos pour lire un document que vous avez deja pris."
       }
     },
     "android": {
@@ -24,7 +26,8 @@
         "RECORD_AUDIO",
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
-        "INTERNET"
+        "INTERNET",
+        "CAMERA"
       ]
     },
     "web": {
@@ -58,7 +61,16 @@
         {
           "microphonePermission": "Aria a besoin du micro pour vous ecouter.",
           "speechRecognitionPermission": "Aria a besoin de la reconnaissance vocale pour comprendre vos demandes.",
-          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Aria accede a vos photos pour lire un document que vous avez deja pris.",
+          "cameraPermission": "Aria utilise l'appareil photo pour lire et vous expliquer vos documents."
         }
       ]
     ]
