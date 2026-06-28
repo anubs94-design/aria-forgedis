@@ -423,6 +423,7 @@ export default function MainScreen() {
         ))}
       </ScrollView>
     </View>
+    </View>
   );
 }
 
