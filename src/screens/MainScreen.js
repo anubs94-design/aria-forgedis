@@ -370,7 +370,6 @@ export default function MainScreen() {
             <Text style={styles.explicationTitle}>Aria explique :</Text>
             <Text style={styles.explicationText}>{explicationDocument}</Text>
           </View>
-        </View>
         )}
       )}
 
