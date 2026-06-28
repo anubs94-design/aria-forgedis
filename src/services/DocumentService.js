@@ -139,7 +139,9 @@ export async function analyserDocument(base64, addLog) {
     if (addLog) addLog("Aria a explique le document.");
     return texte;
   } catch (e) {
-    if (addLog) addLog("Erreur envoi document: " + e.message);
+    if (addLog) {
+      addLog("Erreur envoi document: " + e.message + " | type: " + e.name + " | base64 len: " + (base64 ? base64.length : "null"));
+    }
     return null;
   }
 }
