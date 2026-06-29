@@ -2,33 +2,28 @@
 // Encapsule la connexion WebSocket vers l'agent PC Aria.
 // La logique reseau/protocole vit ici. L'etat React (useState) reste
 // dans le composant appelant, qui passe ses setters via "callbacks".
+//
+// CONNECTIVITE : essaie d'abord le wifi local (rapide). Si ca ne
+// repond pas dans un delai court, bascule automatiquement sur le
+// relais Render (fonctionne depuis n'importe ou avec internet).
+// Le protocole applicatif (handshake, commandes, taches) est
+// identique des deux cotes, transparent pour le composant appelant.
 
-export function createConnection({ serverUrl, agentToken, callbacks }) {
-  let socket;
-  try {
-    socket = new WebSocket(serverUrl);
-  } catch (e) {
-    callbacks.onStatusChange("error");
-    callbacks.onLog("Erreur creation WebSocket: " + e.message);
-    return null;
-  }
+import { PROXY_TOKEN } from "./DocumentService";
 
-  callbacks.onStatusChange("connecting");
-  callbacks.onLog("Connexion vers " + serverUrl + " ...");
+const RENDER_RELAIS_URL = "wss://aria-forgelis.onrender.com/relais";
+const TIMEOUT_LOCAL_MS = 3000;
 
+function attacherGestionnaires(socket, agentToken, callbacks, libelle, estAbandonne) {
   socket.onopen = () => {
-    callbacks.onLog("Connexion TCP/TLS etablie. Envoi du handshake...");
+    if (estAbandonne()) return;
+    callbacks.onLog("Connexion etablie (" + libelle + "). Envoi du handshake...");
     callbacks.onStatusChange("handshake_pending");
-
-    const handshakeMsg = {
-      type: "handshake",
-      token: agentToken,
-      platform: "mobile",
-    };
-    socket.send(JSON.stringify(handshakeMsg));
+    socket.send(JSON.stringify({ type: "handshake", token: agentToken, platform: "mobile" }));
   };
 
   socket.onmessage = (event) => {
+    if (estAbandonne()) return;
     let data;
     try {
       data = JSON.parse(event.data);
@@ -40,7 +35,7 @@ export function createConnection({ serverUrl, agentToken, callbacks }) {
     switch (data.type) {
       case "handshake_ack":
         callbacks.onStatusChange("connected");
-        callbacks.onLog("Handshake accepte. Connecte au PC Aria.");
+        callbacks.onLog("Handshake accepte. Connecte au PC Aria (" + libelle + ").");
         break;
 
       case "handshake_refused":
@@ -79,16 +74,86 @@ export function createConnection({ serverUrl, agentToken, callbacks }) {
   };
 
   socket.onerror = (event) => {
+    if (estAbandonne()) return;
     callbacks.onStatusChange("error");
-    callbacks.onLog("Erreur WebSocket: " + (event.message || "erreur inconnue (verifier le certificat TLS)"));
+    callbacks.onLog("Erreur WebSocket (" + libelle + "): " + (event.message || "erreur inconnue (verifier le certificat TLS)"));
   };
 
   socket.onclose = (event) => {
-    callbacks.onLog("Connexion fermee (code=" + event.code + ", raison=" + (event.reason || "aucune") + ")");
+    if (estAbandonne()) return;
+    callbacks.onLog("Connexion fermee (" + libelle + ", code=" + event.code + ", raison=" + (event.reason || "aucune") + ")");
     callbacks.onStatusChange("disconnected");
   };
+}
 
-  return socket;
+function demarrerRelais(etat, agentToken, callbacks) {
+  const url = RENDER_RELAIS_URL + "?role=phone&token=" + PROXY_TOKEN;
+  let socketRelais;
+  try {
+    socketRelais = new WebSocket(url);
+  } catch (e) {
+    callbacks.onStatusChange("error");
+    callbacks.onLog("Erreur creation WebSocket (relais): " + e.message);
+    return;
+  }
+  attacherGestionnaires(socketRelais, agentToken, callbacks, "relais Internet", () => false);
+  etat.socketActif = socketRelais;
+}
+
+function basculerVersRelais(ancienSocket, etat, agentToken, callbacks) {
+  if (etat.bascule) return;
+  etat.bascule = true;
+  try { ancienSocket.close(); } catch (e) {}
+  callbacks.onLog("Wifi local indisponible, bascule sur le relais Internet...");
+  callbacks.onStatusChange("connecting");
+  demarrerRelais(etat, agentToken, callbacks);
+}
+
+function creerFacade(etat) {
+  return {
+    close: () => {
+      try { if (etat.socketActif) etat.socketActif.close(); } catch (e) {}
+    },
+    send: (msg) => {
+      if (etat.socketActif && etat.socketActif.readyState === WebSocket.OPEN) {
+        etat.socketActif.send(msg);
+      }
+    },
+  };
+}
+
+export function createConnection({ serverUrlLocal, agentToken, callbacks }) {
+  const etat = { bascule: false, socketActif: null };
+
+  callbacks.onStatusChange("connecting");
+  callbacks.onLog("Tentative en wifi local...");
+
+  let socketLocal;
+  try {
+    socketLocal = new WebSocket(serverUrlLocal);
+  } catch (e) {
+    callbacks.onLog("Wifi local indisponible (" + e.message + "), bascule sur le relais...");
+    demarrerRelais(etat, agentToken, callbacks);
+    return creerFacade(etat);
+  }
+
+  const minuteur = setTimeout(() => {
+    basculerVersRelais(socketLocal, etat, agentToken, callbacks);
+  }, TIMEOUT_LOCAL_MS);
+
+  socketLocal.addEventListener("open", () => {
+    clearTimeout(minuteur);
+  });
+
+  socketLocal.addEventListener("error", () => {
+    clearTimeout(minuteur);
+    basculerVersRelais(socketLocal, etat, agentToken, callbacks);
+  });
+
+  attacherGestionnaires(socketLocal, agentToken, callbacks, "wifi local", () => etat.bascule);
+  etat.socketActif = socketLocal;
+
+  return creerFacade(etat);
 }
 
 export function disconnectSocket(socket) {

@@ -120,7 +120,7 @@ export default function MainScreen() {
   const connect = useCallback(() => {
     if (socketRef.current) return;
     const socket = createConnection({
-      serverUrl: SERVER_URL,
+      serverUrlLocal: SERVER_URL,
       agentToken: AGENT_TOKEN,
       callbacks: {
         onLog: addLog,

@@ -68,7 +68,7 @@ export async function prendrePhotoDocument(addLog) {
 // === BRIQUE 2 : envoi de la photo au proxy vision pour analyse ===
 
 const PROXY_URL = "https://aria-forgelis.onrender.com/vision";
-const PROXY_TOKEN = "aria_1bcbb653f5fd462c4ba2243f4bce9f48b6a657ba966ace5e5fe7429540cdd014";
+export const PROXY_TOKEN = "aria_1bcbb653f5fd462c4ba2243f4bce9f48b6a657ba966ace5e5fe7429540cdd014";
 
 const PROMPT_ASSISTANT_DOCUMENT =
   "Tu es Aria, assistante vocale intelligente pour seniors et personnes en " +
