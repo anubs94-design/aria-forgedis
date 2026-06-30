@@ -20,6 +20,7 @@
     "expo-image-picker": "~17.0.11",
     "expo-location": "~19.0.8",
     "expo-network-security-config": "^1.1.2",
+    "expo-notifications": "~0.32.17",
     "expo-speech": "~14.0.8",
     "expo-speech-recognition": "^56.0.1",
     "expo-splash-screen": "~31.0.13",

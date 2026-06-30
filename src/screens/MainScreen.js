@@ -46,6 +46,7 @@ import {
 } from "../services/MicroService";
 import { StorageService } from "../services/StorageService";
 import { prendrePhotoDocument, analyserDocument, demanderAideReponse, decrireImage } from "../services/DocumentService";
+import { chargerRappels, creerRappel, supprimerRappel, formaterHeure } from "../services/RappelService";
 
 const SERVER_HOST = "192.168.1.31";
 const SERVER_PORT = 8765;
@@ -64,6 +65,11 @@ export default function MainScreen() {
   const [analyseReponseEnCours, setAnalyseReponseEnCours] = useState(false);
   const [descriptionImage, setDescriptionImage] = useState(null);
   const [descriptionEnCours, setDescriptionEnCours] = useState(false);
+  const [rappels, setRappels] = useState([]);
+  const [showRappelForm, setShowRappelForm] = useState(false);
+  const [rappelNom, setRappelNom] = useState("");
+  const [rappelHeure, setRappelHeure] = useState("08");
+  const [rappelMinute, setRappelMinute] = useState("00");
   const [analyseEnCours, setAnalyseEnCours] = useState(false);
   const [voixActive, setVoixActive] = useState(true);
   const [vocalActif, setVocalActif] = useState(true);
@@ -243,6 +249,10 @@ export default function MainScreen() {
       Alert.alert("Erreur", "Aria n'a pas pu analyser ce document. Reessayez.");
     }
   }, [photoDocument, addLog]);
+
+  useEffect(() => {
+    chargerRappels().then(setRappels);
+  }, []);
 
   const statusColor =
     {
@@ -445,6 +455,83 @@ export default function MainScreen() {
                   <Text style={styles.fileChoiceText}>{idx + 1}. {fichier.nom}</Text>
                 </TouchableOpacity>
               ))}
+            </View>
+          )}
+
+          {/* === RAPPELS MEDICAMENTS === */}
+          <TouchableOpacity
+            style={{backgroundColor: "#5BE3D8", borderRadius: 14, paddingVertical: 14, alignItems: "center", marginBottom: 10}}
+            onPress={() => setShowRappelForm(!showRappelForm)}
+          >
+            <Text style={{color: "#070B18", fontWeight: "bold", fontSize: 16}}>
+              {showRappelForm ? "Fermer les rappels" : "Rappels medicaments (" + rappels.length + ")"}
+            </Text>
+          </TouchableOpacity>
+
+          {showRappelForm && (
+            <View style={{backgroundColor: "#111934", borderRadius: 12, padding: 14, marginBottom: 10}}>
+              <Text style={{color: "#F0F3FB", fontWeight: "bold", fontSize: 15, marginBottom: 8}}>Nouveau rappel :</Text>
+              <TextInput
+                style={{backgroundColor: "#1a2548", color: "#F0F3FB", borderRadius: 8, padding: 10, marginBottom: 8, fontSize: 16}}
+                placeholder="Ex: Doliprane, Tension..."
+                placeholderTextColor="#A6B0CC"
+                value={rappelNom}
+                onChangeText={setRappelNom}
+              />
+              <View style={{flexDirection: "row", alignItems: "center", marginBottom: 10}}>
+                <Text style={{color: "#A6B0CC", fontSize: 14, marginRight: 8}}>Heure :</Text>
+                <TextInput
+                  style={{backgroundColor: "#1a2548", color: "#F0F3FB", borderRadius: 8, padding: 8, width: 50, textAlign: "center", fontSize: 16}}
+                  value={rappelHeure}
+                  onChangeText={setRappelHeure}
+                  keyboardType="numeric"
+                  maxLength={2}
+                />
+                <Text style={{color: "#A6B0CC", fontSize: 18, marginHorizontal: 4}}>:</Text>
+                <TextInput
+                  style={{backgroundColor: "#1a2548", color: "#F0F3FB", borderRadius: 8, padding: 8, width: 50, textAlign: "center", fontSize: 16}}
+                  value={rappelMinute}
+                  onChangeText={setRappelMinute}
+                  keyboardType="numeric"
+                  maxLength={2}
+                />
+              </View>
+              <TouchableOpacity
+                style={{backgroundColor: "#FF7A59", borderRadius: 10, paddingVertical: 12, alignItems: "center"}}
+                onPress={async () => {
+                  if (!rappelNom.trim()) { alert("Donnez un nom au rappel."); return; }
+                  const h = parseInt(rappelHeure, 10);
+                  const m = parseInt(rappelMinute, 10);
+                  if (isNaN(h) || h < 0 || h > 23 || isNaN(m) || m < 0 || m > 59) { alert("Heure invalide."); return; }
+                  const r = await creerRappel(rappelNom.trim(), h, m, "quotidien");
+                  if (r) {
+                    setRappels(await chargerRappels());
+                    setRappelNom("");
+                    alert("Rappel cree : " + rappelNom.trim() + " a " + formaterHeure(h, m) + " chaque jour.");
+                  } else {
+                    alert("Impossible de creer le rappel. Verifiez les permissions de notifications.");
+                  }
+                }}
+              >
+                <Text style={{color: "#F0F3FB", fontWeight: "bold", fontSize: 15}}>Creer ce rappel</Text>
+              </TouchableOpacity>
+
+              {rappels.length > 0 && (
+                <View style={{marginTop: 12}}>
+                  <Text style={{color: "#F0F3FB", fontWeight: "bold", fontSize: 14, marginBottom: 6}}>Rappels actifs :</Text>
+                  {rappels.map((r) => (
+                    <View key={r.id} style={{flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#1a2548", borderRadius: 8, padding: 10, marginBottom: 6}}>
+                      <Text style={{color: "#F0F3FB", fontSize: 14, flex: 1}}>{r.nom} - {formaterHeure(r.heure, r.minute)}</Text>
+                      <TouchableOpacity onPress={async () => {
+                        const reste = await supprimerRappel(r.id);
+                        setRappels(reste);
+                      }}>
+                        <Text style={{color: "#FF3B30", fontWeight: "bold", fontSize: 13}}>Supprimer</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
           )}
 
