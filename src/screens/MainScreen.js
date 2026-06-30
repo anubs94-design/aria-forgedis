@@ -48,6 +48,7 @@ import { StorageService } from "../services/StorageService";
 import { prendrePhotoDocument, analyserDocument, demanderAideReponse, decrireImage } from "../services/DocumentService";
 import { chargerRappels, creerRappel, supprimerRappel, formaterHeure } from "../services/RappelService";
 import { parlerSansPc } from "../services/ConversationService";
+import { logActivite, partagerRapport, getProche, setProche, programmerRappelRapport } from "../services/VeilleFamilleService";
 
 const SERVER_HOST = "192.168.1.31";
 const SERVER_PORT = 8765;
@@ -73,6 +74,9 @@ export default function MainScreen() {
   const [rappelMinute, setRappelMinute] = useState("00");
   const [reponseConversation, setReponseConversation] = useState(null);
   const [conversationEnCours, setConversationEnCours] = useState(false);
+  const [procheNom, setProcheNom] = useState("");
+  const [procheTel, setProcheTel] = useState("");
+  const [showVeille, setShowVeille] = useState(false);
   const [analyseEnCours, setAnalyseEnCours] = useState(false);
   const [voixActive, setVoixActive] = useState(true);
   const [vocalActif, setVocalActif] = useState(true);
@@ -211,6 +215,7 @@ export default function MainScreen() {
     const texte = event.results && event.results[0] ? event.results[0].transcript : "";
     if (texte && texte.trim().length > 0) {
       addLog("Reconnu : " + texte);
+      logActivite("Commande vocale : " + texte);
       sendTask(texte);
     } else {
       addLog("Rien compris, reessayez.");
@@ -262,6 +267,7 @@ export default function MainScreen() {
 
   useEffect(() => {
     chargerRappels().then(setRappels);
+    programmerRappelRapport();
   }, []);
 
   const statusColor =
@@ -482,6 +488,57 @@ export default function MainScreen() {
                   <Text style={{color: "#F0F3FB", fontWeight: "bold", fontSize: 13}}>Fermer</Text>
                 </TouchableOpacity>
               </View>
+          )}
+
+          {/* === VEILLE FAMILLE === */}
+          <TouchableOpacity
+            style={{backgroundColor: "#9B8CFF", borderRadius: 14, paddingVertical: 14, alignItems: "center", marginBottom: 10}}
+            onPress={() => setShowVeille(!showVeille)}
+          >
+            <Text style={{color: "#F0F3FB", fontWeight: "bold", fontSize: 16}}>
+              {showVeille ? "Fermer la veille famille" : "Veille famille"}
+            </Text>
+          </TouchableOpacity>
+
+          {showVeille && (
+            <View style={{backgroundColor: "#111934", borderRadius: 12, padding: 14, marginBottom: 10}}>
+              <Text style={{color: "#F0F3FB", fontWeight: "bold", fontSize: 15, marginBottom: 8}}>Proche designe :</Text>
+              <TextInput
+                style={{backgroundColor: "#1a2548", color: "#F0F3FB", borderRadius: 8, padding: 10, marginBottom: 6, fontSize: 16}}
+                placeholder="Nom du proche (ex: Marie)"
+                placeholderTextColor="#A6B0CC"
+                value={procheNom}
+                onChangeText={setProcheNom}
+              />
+              <TextInput
+                style={{backgroundColor: "#1a2548", color: "#F0F3FB", borderRadius: 8, padding: 10, marginBottom: 8, fontSize: 16}}
+                placeholder="Telephone du proche"
+                placeholderTextColor="#A6B0CC"
+                value={procheTel}
+                onChangeText={setProcheTel}
+                keyboardType="phone-pad"
+              />
+              <TouchableOpacity
+                style={{backgroundColor: "#5BE3D8", borderRadius: 10, paddingVertical: 10, alignItems: "center", marginBottom: 10}}
+                onPress={async () => {
+                  if (procheNom.trim()) {
+                    await setProche(procheNom.trim(), procheTel.trim());
+                    alert("Proche enregistre : " + procheNom.trim());
+                  }
+                }}
+              >
+                <Text style={{color: "#070B18", fontWeight: "bold", fontSize: 14}}>Enregistrer le proche</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{backgroundColor: "#FF7A59", borderRadius: 10, paddingVertical: 12, alignItems: "center"}}
+                onPress={async () => {
+                  const ok = await partagerRapport();
+                  if (!ok) alert("Impossible de partager le rapport.");
+                }}
+              >
+                <Text style={{color: "#F0F3FB", fontWeight: "bold", fontSize: 15}}>Envoyer le rapport au proche</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
           {/* === RAPPELS MEDICAMENTS === */}
