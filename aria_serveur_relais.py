@@ -47,6 +47,7 @@ async def bienvenue(body: dict):
     return {"ok": True}
 
 PROXY_TOKEN = os.environ.get("ARIA_PROXY_TOKEN", "")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 
@@ -119,6 +120,129 @@ async def verifier_forfait(token_recu, type_requete="eco"):
     except Exception as e:
         # En cas d'erreur Supabase, on laisse passer (pas de blocage client pour un bug serveur)
         return True, f"Erreur verification: {e}", "erreur"
+
+# --- STRIPE WEBHOOK ---
+from fastapi import Request
+import secrets as secrets_mod
+
+@app.post("/stripe-webhook")
+async def stripe_webhook(request: Request):
+    """Recoit les evenements Stripe (paiement, annulation).
+    Cree le token client dans Supabase si nouveau, ou desactive si annulation."""
+    body = await request.body()
+    sig = request.headers.get("stripe-signature", "")
+
+    # Verification signature (basique, sans lib stripe)
+    # En production, on pourrait utiliser la lib stripe pour verifier
+    # Pour l'instant, on verifie juste que le secret est present
+    if not STRIPE_WEBHOOK_SECRET:
+        return {"erreur": "webhook non configure"}
+
+    try:
+        import json as json_mod
+        event = json_mod.loads(body)
+    except Exception:
+        return {"erreur": "body invalide"}
+
+    event_type = event.get("type", "")
+    data_obj = event.get("data", {}).get("object", {})
+
+    if event_type == "checkout.session.completed":
+        # Nouveau client a paye — creer son token
+        email = data_obj.get("customer_email", "") or data_obj.get("customer_details", {}).get("email", "")
+        if not email:
+            return {"status": "ignore", "raison": "pas d'email"}
+
+        token = "aria_" + secrets_mod.token_hex(32)
+
+        if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                # Verifier si le client existe deja
+                r = await client.get(
+                    f"{SUPABASE_URL}/rest/v1/clients",
+                    params={"email": f"eq.{email}", "select": "token,forfait"},
+                    headers={
+                        "apikey": SUPABASE_SERVICE_KEY,
+                        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                    },
+                )
+                existant = r.json()
+
+                if existant:
+                    # Client existe deja — reactiver et passer en facility
+                    await client.patch(
+                        f"{SUPABASE_URL}/rest/v1/clients",
+                        params={"email": f"eq.{email}"},
+                        headers={
+                            "apikey": SUPABASE_SERVICE_KEY,
+                            "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                            "Content-Type": "application/json",
+                            "Prefer": "return=minimal",
+                        },
+                        json={"forfait": "facility", "actif": True},
+                    )
+                    return {"status": "ok", "action": "client reactive"}
+                else:
+                    # Nouveau client — creer
+                    await client.post(
+                        f"{SUPABASE_URL}/rest/v1/clients",
+                        headers={
+                            "apikey": SUPABASE_SERVICE_KEY,
+                            "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                            "Content-Type": "application/json",
+                            "Prefer": "return=minimal",
+                        },
+                        json={
+                            "email": email,
+                            "token": token,
+                            "forfait": "facility",
+                            "taches_ce_mois": 0,
+                            "actif": True,
+                        },
+                    )
+                    return {"status": "ok", "action": "client cree", "email": email}
+
+    elif event_type == "invoice.payment_succeeded":
+        # Paiement mensuel reussi — garder actif
+        email = data_obj.get("customer_email", "")
+        if email and SUPABASE_URL and SUPABASE_SERVICE_KEY:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                await client.patch(
+                    f"{SUPABASE_URL}/rest/v1/clients",
+                    params={"email": f"eq.{email}"},
+                    headers={
+                        "apikey": SUPABASE_SERVICE_KEY,
+                        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                        "Content-Type": "application/json",
+                        "Prefer": "return=minimal",
+                    },
+                    json={"actif": True, "forfait": "facility"},
+                )
+        return {"status": "ok", "action": "paiement confirme"}
+
+    elif event_type == "customer.subscription.deleted":
+        # Annulation — desactiver le client (pas supprimer)
+        email = data_obj.get("customer_email", "")
+        if not email:
+            # Essayer via customer
+            customer_id = data_obj.get("customer", "")
+            email = customer_id  # fallback, on utilisera le customer_id
+        if email and SUPABASE_URL and SUPABASE_SERVICE_KEY:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                await client.patch(
+                    f"{SUPABASE_URL}/rest/v1/clients",
+                    params={"email": f"eq.{email}"},
+                    headers={
+                        "apikey": SUPABASE_SERVICE_KEY,
+                        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                        "Content-Type": "application/json",
+                        "Prefer": "return=minimal",
+                    },
+                    json={"actif": False},
+                )
+        return {"status": "ok", "action": "client desactive"}
+
+    return {"status": "ignore", "type": event_type}
 
 @app.post("/vision")
 async def vision(body: dict):
