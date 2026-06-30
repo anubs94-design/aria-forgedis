@@ -125,6 +125,34 @@ async def verifier_forfait(token_recu, type_requete="eco"):
 from fastapi import Request
 import secrets as secrets_mod
 
+@app.post("/client-token")
+async def client_token(body: dict):
+    """Le PC ou l'app envoie l'email du client, on renvoie son token."""
+    email = body.get("email", "").strip().lower()
+    if not email:
+        return {"erreur": "Email manquant."}
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return {"erreur": "Service indisponible."}
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(
+                f"{SUPABASE_URL}/rest/v1/clients",
+                params={"email": f"eq.{email}", "select": "token,forfait,actif"},
+                headers={
+                    "apikey": SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                },
+            )
+            data = r.json()
+            if not data:
+                return {"erreur": "Aucun compte trouve pour cet email."}
+            client_data = data[0]
+            if not client_data.get("actif", False):
+                return {"erreur": "Votre abonnement est inactif."}
+            return {"token": client_data["token"], "forfait": client_data["forfait"]}
+    except Exception as e:
+        return {"erreur": str(e)}
+
 @app.post("/stripe-webhook")
 async def stripe_webhook(request: Request):
     """Recoit les evenements Stripe (paiement, annulation).
