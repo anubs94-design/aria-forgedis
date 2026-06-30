@@ -106,7 +106,7 @@ export async function analyserDocument(base64, addLog) {
             },
             {
               type: "text",
-              text: "Voici la photo du document. Explique-moi simplement de quoi il s'agit.",
+              text: "Voici la photo du document. ETAPE 1 : verifie d'abord si ce document est une ARNAQUE ou du PHISHING (fautes, urgence excessive, menaces, demande de coordonnees bancaires, faux logos, expediteur suspect, lien ou QR code douteux, numero surtaxe). Commence ta reponse par exactement [ARNAQUE] ou [SUR] sur la premiere ligne, seul. Si [ARNAQUE], explique pourquoi et dis de NE PAS y repondre. Si [SUR], passe a l'ETAPE 2 : explique simplement de quoi il s'agit.",
             },
           ],
         },

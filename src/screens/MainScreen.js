@@ -339,8 +339,20 @@ export default function MainScreen() {
 
             {explicationDocument && (
               <View style={styles.explicationContainer}>
+                {explicationDocument.startsWith("[ARNAQUE]") && (
+                  <View style={{backgroundColor: "#FF3B30", borderRadius: 10, padding: 12, marginBottom: 10, flexDirection: "row", alignItems: "center"}}>
+                    <Text style={{fontSize: 22, marginRight: 8}}>{String.fromCodePoint(0x26A0, 0xFE0F)}</Text>
+                    <Text style={{color: "#FFFFFF", fontWeight: "bold", fontSize: 15, flex: 1}}>ATTENTION : Ce document semble etre une arnaque !</Text>
+                  </View>
+                )}
+                {explicationDocument.startsWith("[SUR]") && (
+                  <View style={{backgroundColor: "#34C759", borderRadius: 10, padding: 12, marginBottom: 10, flexDirection: "row", alignItems: "center"}}>
+                    <Text style={{fontSize: 22, marginRight: 8}}>{String.fromCodePoint(0x2705)}</Text>
+                    <Text style={{color: "#FFFFFF", fontWeight: "bold", fontSize: 15, flex: 1}}>Ce document semble authentique.</Text>
+                  </View>
+                )}
                 <Text style={styles.explicationTitle}>Aria explique :</Text>
-                <Text style={styles.explicationText}>{explicationDocument}</Text>
+                <Text style={styles.explicationText}>{explicationDocument.replace(/^\[ARNAQUE\]\n?/, "").replace(/^\[SUR\]\n?/, "")}</Text>
 
               <View style={{flexDirection: "row", justifyContent: "space-between", marginTop: 12, gap: 8}}>
                 <TouchableOpacity
