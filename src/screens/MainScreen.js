@@ -45,7 +45,7 @@ import {
   arreterEcoute,
 } from "../services/MicroService";
 import { StorageService } from "../services/StorageService";
-import { prendrePhotoDocument, analyserDocument } from "../services/DocumentService";
+import { prendrePhotoDocument, analyserDocument, demanderAideReponse } from "../services/DocumentService";
 
 const SERVER_HOST = "192.168.1.31";
 const SERVER_PORT = 8765;
@@ -60,6 +60,8 @@ export default function MainScreen() {
   const [fileChoices, setFileChoices] = useState(null);
   const [photoDocument, setPhotoDocument] = useState(null);
   const [explicationDocument, setExplicationDocument] = useState(null);
+  const [reponseDocument, setReponseDocument] = useState(null);
+  const [analyseReponseEnCours, setAnalyseReponseEnCours] = useState(false);
   const [analyseEnCours, setAnalyseEnCours] = useState(false);
   const [voixActive, setVoixActive] = useState(true);
   const [vocalActif, setVocalActif] = useState(true);
@@ -339,6 +341,63 @@ export default function MainScreen() {
               <View style={styles.explicationContainer}>
                 <Text style={styles.explicationTitle}>Aria explique :</Text>
                 <Text style={styles.explicationText}>{explicationDocument}</Text>
+
+              <View style={{flexDirection: "row", justifyContent: "space-between", marginTop: 12, gap: 8}}>
+                <TouchableOpacity
+                  style={{flex: 1, backgroundColor: "#5BE3D8", borderRadius: 10, paddingVertical: 10, alignItems: "center", opacity: analyseReponseEnCours ? 0.5 : 1}}
+                  onPress={async () => {
+                    if (analyseReponseEnCours) return;
+                    setAnalyseReponseEnCours(true);
+                    const aide = await demanderAideReponse(photoDocument.base64, explicationDocument, addLog);
+                    if (aide) setReponseDocument(aide);
+                    setAnalyseReponseEnCours(false);
+                  }}
+                  disabled={analyseReponseEnCours}
+                >
+                  <Text style={{color: "#070B18", fontWeight: "bold", fontSize: 13}}>
+                    {analyseReponseEnCours ? "Aria reflechit..." : "Aider a repondre"}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{flex: 1, backgroundColor: "#9B8CFF", borderRadius: 10, paddingVertical: 10, alignItems: "center"}}
+                  onPress={() => {
+                    if (socketRef.current && connectionStatus === "connected" && photoDocument && photoDocument.base64) {
+                      socketRef.current.send(JSON.stringify({
+                        type: "save_document",
+                        image_base64: photoDocument.base64,
+                        nom: "courrier_" + new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19) + ".jpg",
+                      }));
+                      addLog("Document envoye au PC pour archivage.");
+                      alert("Document envoye au PC pour archivage.");
+                    } else {
+                      alert("Le PC n'est pas connecte. Impossible de ranger le document.");
+                    }
+                  }}
+                >
+                  <Text style={{color: "#F0F3FB", fontWeight: "bold", fontSize: 13}}>Ranger sur le PC</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{flex: 1, backgroundColor: "#FF7A59", borderRadius: 10, paddingVertical: 10, alignItems: "center"}}
+                  onPress={() => {
+                    setPhotoDocument(null);
+                    setExplicationDocument(null);
+                    setReponseDocument(null);
+                    addLog("Document efface (RGPD).");
+                    alert("Document efface de l'appareil.");
+                  }}
+                >
+                  <Text style={{color: "#F0F3FB", fontWeight: "bold", fontSize: 13}}>Effacer (RGPD)</Text>
+                </TouchableOpacity>
+              </View>
+
+              {reponseDocument && (
+                <View style={{marginTop: 12, backgroundColor: "#1a2548", borderRadius: 10, padding: 12}}>
+                  <Text style={styles.explicationTitle}>Aide pour repondre :</Text>
+                  <Text style={styles.explicationText}>{reponseDocument}</Text>
+                </View>
+              )}
               </View>
             )}
           </View>

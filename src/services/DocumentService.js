@@ -145,3 +145,76 @@ export async function analyserDocument(base64, addLog) {
     return null;
   }
 }
+
+// === BRIQUE 3-4 : aide a repondre au document ===
+const PROMPT_AIDE_REPONSE =
+  "Tu es Aria, assistante vocale intelligente pour seniors. " +
+  "L'utilisateur t'a montre un document. Tu l'as deja explique. " +
+  "Maintenant il veut que tu l'aides a REPONDRE a ce document.\n\n" +
+  "TON ROLE :\n" +
+  "1. Propose une reponse claire et polie, prete a envoyer.\n" +
+  "2. Si c'est un formulaire, aide a le remplir etape par etape.\n" +
+  "3. Si aucune reponse n'est necessaire, dis-le simplement.\n\n" +
+  "Reponds TOUJOURS en francais, chaleureux et clair.";
+
+export async function demanderAideReponse(base64, explicationPrecedente, addLog) {
+  try {
+    if (addLog) addLog("Aria prepare une aide pour repondre...");
+
+    const payload = {
+      model: "claude-sonnet-4-6",
+      max_tokens: 1024,
+      system: [{ type: "text", text: PROMPT_AIDE_REPONSE }],
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: {
+                type: "base64",
+                media_type: "image/jpeg",
+                data: base64,
+              },
+            },
+            {
+              type: "text",
+              text: "Voici le document. Tu l'as deja explique ainsi : " + explicationPrecedente + "\n\nMaintenant, aide-moi a y repondre.",
+            },
+          ],
+        },
+      ],
+    };
+
+    const response = await fetch(PROXY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: PROXY_TOKEN, payload }),
+    });
+
+    const data = await response.json();
+
+    if (data.erreur) {
+      if (addLog) addLog("Erreur Aria: " + data.erreur);
+      return null;
+    }
+
+    const texte =
+      data.content && data.content[0] && data.content[0].text
+        ? data.content[0].text
+        : null;
+
+    if (!texte) {
+      if (addLog) addLog("Reponse vide ou inattendue d'Aria.");
+      return null;
+    }
+
+    if (addLog) addLog("Aria a prepare une aide pour repondre.");
+    return texte;
+  } catch (e) {
+    if (addLog) {
+      addLog("Erreur aide reponse: " + e.message);
+    }
+    return null;
+  }
+}
