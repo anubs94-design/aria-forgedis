@@ -27,7 +27,12 @@ def sante():
 @app.post("/ask")
 async def ask(body: dict):
     msg = body.get("message", "")
+    token_recu = body.get("token", "")
     system = body.get("system", SYSTEM_SENIOR)
+    if token_recu:
+        autorise, msg_err, forfait = await verifier_forfait(token_recu, "eco")
+        if not autorise:
+            return {"response": msg_err}
     if not CLAUDE_KEY:
         return {"response": "Cle API manquante"}
     async with httpx.AsyncClient(timeout=30.0) as client:
@@ -42,12 +47,87 @@ async def bienvenue(body: dict):
     return {"ok": True}
 
 PROXY_TOKEN = os.environ.get("ARIA_PROXY_TOKEN", "")
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+
+# --- Verification forfait client via Supabase ---
+async def verifier_forfait(token_recu, type_requete="eco"):
+    """Verifie le forfait du client. Retourne (autorise, message, forfait).
+    type_requete: 'eco' (conversation Haiku) ou 'reflexion' (vision Sonnet)
+    """
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return True, "", "dev"  # Pas de Supabase configure = mode dev, tout passe
+
+    # Si c'est le token de dev de Victor, toujours autoriser
+    if token_recu == PROXY_TOKEN:
+        return True, "", "dev"
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            # Chercher le client par token
+            r = await client.get(
+                f"{SUPABASE_URL}/rest/v1/clients",
+                params={"token": f"eq.{token_recu}", "select": "*"},
+                headers={
+                    "apikey": SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                },
+            )
+            data = r.json()
+
+            if not data:
+                return False, "Token inconnu.", "aucun"
+
+            client_data = data[0]
+
+            if not client_data.get("actif", False):
+                return False, "Votre abonnement est inactif. Contactez le support.", "inactif"
+
+            forfait = client_data.get("forfait", "gratuit")
+            taches = client_data.get("taches_ce_mois", 0)
+            mois = client_data.get("mois_en_cours", "")
+
+            # Reset compteur si nouveau mois
+            import datetime
+            mois_actuel = datetime.datetime.now().strftime("%Y-%m")
+            if mois != mois_actuel:
+                taches = 0
+                mois = mois_actuel
+
+            # Verifier les plafonds
+            if forfait == "gratuit":
+                if type_requete == "reflexion":
+                    return False, "Le pilotage PC est reserve a Aria Facility (12,99 euros/mois). Passez a Facility pour debloquer toutes les fonctions.", "gratuit"
+                if taches >= 30:
+                    return False, "Vous avez utilise vos 30 eco-taches du mois. Passez a Aria Facility pour continuer.", "gratuit"
+
+            # Incrementer le compteur
+            await client.patch(
+                f"{SUPABASE_URL}/rest/v1/clients",
+                params={"token": f"eq.{token_recu}"},
+                headers={
+                    "apikey": SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                    "Content-Type": "application/json",
+                    "Prefer": "return=minimal",
+                },
+                json={"taches_ce_mois": taches + 1, "mois_en_cours": mois},
+            )
+
+            return True, "", forfait
+
+    except Exception as e:
+        # En cas d'erreur Supabase, on laisse passer (pas de blocage client pour un bug serveur)
+        return True, f"Erreur verification: {e}", "erreur"
 
 @app.post("/vision")
 async def vision(body: dict):
     token_recu = body.get("token", "")
     if not PROXY_TOKEN or token_recu != PROXY_TOKEN:
-        return {"erreur": "token_invalide"}
+        # Verifier dans Supabase si c'est un token client
+        autorise, msg, forfait = await verifier_forfait(token_recu, "reflexion")
+        if not autorise:
+            return {"erreur": msg}
     if not CLAUDE_KEY:
         return {"erreur": "cle_manquante"}
     payload = body.get("payload", {})
