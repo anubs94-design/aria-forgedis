@@ -47,6 +47,7 @@ import {
 import { StorageService } from "../services/StorageService";
 import { prendrePhotoDocument, analyserDocument, demanderAideReponse, decrireImage } from "../services/DocumentService";
 import { chargerRappels, creerRappel, supprimerRappel, formaterHeure } from "../services/RappelService";
+import { parlerSansPc } from "../services/ConversationService";
 
 const SERVER_HOST = "192.168.1.31";
 const SERVER_PORT = 8765;
@@ -70,6 +71,8 @@ export default function MainScreen() {
   const [rappelNom, setRappelNom] = useState("");
   const [rappelHeure, setRappelHeure] = useState("08");
   const [rappelMinute, setRappelMinute] = useState("00");
+  const [reponseConversation, setReponseConversation] = useState(null);
+  const [conversationEnCours, setConversationEnCours] = useState(false);
   const [analyseEnCours, setAnalyseEnCours] = useState(false);
   const [voixActive, setVoixActive] = useState(true);
   const [vocalActif, setVocalActif] = useState(true);
@@ -183,6 +186,13 @@ export default function MainScreen() {
     if (reset) {
       setTaskText("");
       setPendingContext(null);
+    } else if (status !== "connected") {
+      setTaskText("");
+      setConversationEnCours(true);
+      parlerSansPc(texte, addLog).then((rep) => {
+        if (rep) setReponseConversation(rep);
+        setConversationEnCours(false);
+      });
     }
   }, [status, taskText, pendingContext, addLog]);
 
@@ -456,6 +466,22 @@ export default function MainScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+          )}
+
+          {reponseConversation && (
+              <View style={styles.explicationContainer}>
+                <View style={{backgroundColor: "#9B8CFF", borderRadius: 10, padding: 8, marginBottom: 8, alignItems: "center"}}>
+                  <Text style={{color: "#F0F3FB", fontWeight: "bold", fontSize: 12}}>Mode conversation (PC eteint)</Text>
+                </View>
+                <Text style={styles.explicationTitle}>Aria repond :</Text>
+                <Text style={styles.explicationText}>{reponseConversation}</Text>
+                <TouchableOpacity
+                  style={{backgroundColor: "#FF7A59", borderRadius: 10, paddingVertical: 8, alignItems: "center", marginTop: 8}}
+                  onPress={() => setReponseConversation(null)}
+                >
+                  <Text style={{color: "#F0F3FB", fontWeight: "bold", fontSize: 13}}>Fermer</Text>
+                </TouchableOpacity>
+              </View>
           )}
 
           {/* === RAPPELS MEDICAMENTS === */}
