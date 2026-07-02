@@ -1,309 +1,798 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Forgelis — Aria</title>
-<meta name="theme-color" content="#0B0F1E">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
+<title>Aria — votre assistant qui utilise l'ordinateur pour vous | FORGEDIS</title>
+<meta name="description" content="Aria utilise votre ordinateur à votre place. Vous parlez, Aria agit. Conçu pour les seniors et les personnes en situation de handicap.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-body {
-  font-family:'Inter',sans-serif; background:#0B0F1E; color:#F0F4FF;
-  min-height:100vh; display:flex; align-items:center; justify-content:center;
-  padding:24px; overflow-x:hidden;
-}
-.ambient { position:fixed; inset:0; pointer-events:none; overflow:hidden; }
-.orb { position:absolute; border-radius:50%; filter:blur(100px); opacity:.25; animation:drift 16s ease-in-out infinite alternate; }
-.o1 { width:480px;height:480px;background:radial-gradient(circle,#2563EB,transparent);top:-120px;left:-120px; }
-.o2 { width:400px;height:400px;background:radial-gradient(circle,#FF6B2B,transparent);bottom:-100px;right:-100px;animation-delay:-8s; }
-@keyframes drift { from{transform:translate(0,0)} to{transform:translate(40px,30px)} }
+  :root {
+    --bg: #070B18;
+    --bg-2: #0C1226;
+    --panel: #111934;
+    --line: rgba(255,255,255,0.09);
+    --line-soft: rgba(255,255,255,0.05);
+    --text: #F0F3FB;
+    --text-soft: #A6B0CC;
+    --text-dim: #6D7799;
+    --coral: #FF7A59;
+    --coral-soft: #FFA98F;
+    --cyan: #5BE3D8;
+    --violet: #9B8CFF;
+    --blue-glow: #3D6CFF;
+    --radius: 20px;
+    --maxw: 1120px;
+  }
 
-.hub { position:relative; z-index:1; width:100%; max-width:420px; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
 
-/* ── Header ── */
-.brand { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
-.brand-logo {
-  width:44px; height:44px; border-radius:14px;
-  background:linear-gradient(135deg,#2563EB,#FF6B2B);
-  display:flex; align-items:center; justify-content:center;
-  font-family:'Space Grotesk',sans-serif; font-size:1.3rem; font-weight:800; color:#fff;
-}
-.brand-name { font-family:'Space Grotesk',sans-serif; font-size:1.4rem; font-weight:800; letter-spacing:-.5px; }
-.brand-tag { font-size:.78rem; color:rgba(240,244,255,.45); margin-bottom:28px; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 19px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
 
-/* ── Étape identification ── */
-.step { display:none; animation:fadeUp .35s ease; }
-.step.active { display:block; }
-@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition: none !important; }
+  }
 
-.id-title { font-family:'Space Grotesk',sans-serif; font-size:1.5rem; font-weight:700; margin-bottom:6px; letter-spacing:-.3px; }
-.id-sub { font-size:.85rem; color:rgba(240,244,255,.5); line-height:1.6; margin-bottom:24px; }
-.id-input {
-  width:100%; background:rgba(255,255,255,.05); border:1.5px solid rgba(255,255,255,.12);
-  border-radius:14px; padding:15px 18px; font-family:'Inter',sans-serif;
-  font-size:1rem; color:#F0F4FF; outline:none; margin-bottom:14px; transition:border .2s;
-}
-.id-input::placeholder { color:rgba(240,244,255,.3); }
-.id-input:focus { border-color:rgba(59,110,232,.6); background:rgba(255,255,255,.07); }
-.id-cta {
-  width:100%; padding:15px; border-radius:14px; border:none;
-  background:linear-gradient(135deg,#2563EB,#7C3AED); color:#fff;
-  font-family:'Inter',sans-serif; font-size:.95rem; font-weight:600; cursor:pointer;
-  transition:all .2s;
-}
-.id-cta:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(37,99,235,.3); }
-.id-privacy { font-size:.68rem; color:rgba(240,244,255,.3); text-align:center; margin-top:14px; line-height:1.5; }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 28px; position: relative; z-index: 2; }
 
-/* ── Étape vitrine ── */
-.welcome { font-family:'Space Grotesk',sans-serif; font-size:1.4rem; font-weight:700; margin-bottom:4px; letter-spacing:-.3px; }
-.welcome-sub { font-size:.82rem; color:rgba(240,244,255,.5); margin-bottom:22px; }
-.products { display:flex; flex-direction:column; gap:12px; margin-bottom:18px; }
-.product {
-  display:flex; align-items:center; gap:14px;
-  background:rgba(255,255,255,.04); border:1.5px solid rgba(255,255,255,.08);
-  border-radius:18px; padding:16px; cursor:pointer; transition:all .2s;
-  text-decoration:none; color:inherit;
-}
-.product:hover { transform:translateY(-2px); background:rgba(255,255,255,.06); }
-.product.senior:hover { border-color:rgba(37,99,235,.5); box-shadow:0 8px 28px rgba(37,99,235,.15); }
-.product.kids:hover { border-color:rgba(255,107,43,.5); box-shadow:0 8px 28px rgba(255,107,43,.15); }
-.product.soon { opacity:.45; cursor:default; }
-.product.soon:hover { transform:none; box-shadow:none; border-color:rgba(255,255,255,.08); }
-.product-ico {
-  width:50px; height:50px; border-radius:15px; flex-shrink:0;
-  display:flex; align-items:center; justify-content:center; font-size:1.4rem;
-}
-.product.senior .product-ico { background:linear-gradient(135deg,#2563EB,#7C3AED); }
-.product.kids .product-ico { background:linear-gradient(135deg,#FF6B2B,#8B5CF6); }
-.product.soon .product-ico { background:rgba(255,255,255,.08); }
-.product-info { flex:1; }
-.product-name { font-family:'Space Grotesk',sans-serif; font-size:.98rem; font-weight:700; }
-.product-desc { font-size:.74rem; color:rgba(240,244,255,.45); margin-top:2px; line-height:1.4; }
-.product-arrow { font-size:1rem; color:rgba(240,244,255,.3); }
-.product-badge { font-size:.6rem; font-weight:700; color:rgba(240,244,255,.4); background:rgba(255,255,255,.08); padding:3px 9px; border-radius:50px; white-space:nowrap; }
+  h1, h2, h3 { font-family: 'Sora', sans-serif; font-weight: 700; line-height: 1.1; letter-spacing: -0.025em; }
+  a { color: inherit; text-decoration: none; }
 
-/* ── Mode avancé (BYOK) ── */
-.advanced { border:1.5px solid rgba(255,255,255,.08); border-radius:16px; overflow:hidden; margin-bottom:14px; }
-.advanced-head {
-  padding:13px 16px; display:flex; align-items:center; gap:10px; cursor:pointer;
-  font-size:.78rem; font-weight:600; color:rgba(240,244,255,.55);
-}
-.advanced-head:hover { background:rgba(255,255,255,.03); }
-.advanced-arrow { margin-left:auto; transition:transform .25s; font-size:.7rem; }
-.advanced.open .advanced-arrow { transform:rotate(180deg); }
-.advanced-body { display:none; padding:0 16px 16px; }
-.advanced.open .advanced-body { display:block; }
-.advanced-desc { font-size:.72rem; color:rgba(240,244,255,.4); line-height:1.6; margin-bottom:12px; }
-.advanced-input {
-  width:100%; background:rgba(255,255,255,.05); border:1.5px solid rgba(255,255,255,.1);
-  border-radius:11px; padding:11px 14px; font-family:monospace; font-size:.78rem;
-  color:#F0F4FF; outline:none; margin-bottom:10px;
-}
-.advanced-input:focus { border-color:rgba(59,110,232,.5); }
-.advanced-save {
-  padding:9px 16px; border-radius:10px; border:1px solid rgba(255,255,255,.15);
-  background:transparent; color:rgba(240,244,255,.7); font-family:'Inter',sans-serif;
-  font-size:.75rem; font-weight:600; cursor:pointer;
-}
-.advanced-save:hover { border-color:rgba(255,255,255,.3); color:#fff; }
-.advanced-status { font-size:.7rem; margin-left:10px; }
-.byok-on { display:inline-flex; align-items:center; gap:5px; font-size:.62rem; font-weight:700; color:#4ADE80; background:rgba(74,222,128,.1); padding:3px 9px; border-radius:50px; }
+  /* ONE focused glow behind hero only — not scattered everywhere */
+  .hero-glow { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+  .hero-glow::before {
+    content: ""; position: absolute; width: 900px; height: 600px;
+    top: -200px; left: 50%; transform: translateX(-50%);
+    background: radial-gradient(ellipse, rgba(61,108,255,0.22), rgba(155,140,255,0.10) 40%, transparent 70%);
+    filter: blur(40px);
+  }
 
-.switch-profile { text-align:center; }
-.switch-profile button {
-  background:none; border:none; color:rgba(240,244,255,.35);
-  font-family:'Inter',sans-serif; font-size:.72rem; cursor:pointer; text-decoration:underline;
-}
-.footer { text-align:center; margin-top:22px; font-size:.65rem; color:rgba(240,244,255,.25); }
+  /* ---------- NAV ---------- */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(7, 11, 24, 0.78);
+    backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .nav { display: flex; align-items: center; justify-content: space-between; height: 80px; }
+  .logo { font-family: 'Sora', sans-serif; font-weight: 800; font-size: 24px; color: var(--text); letter-spacing: -0.04em; }
+  .logo span { background: linear-gradient(120deg, var(--coral), var(--violet)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .nav-right { display: flex; align-items: center; gap: 14px; }
+
+  .lang-select {
+    font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 500;
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 9px 16px; cursor: pointer; transition: border-color .2s; appearance: none;
+  }
+  .lang-select:hover { border-color: var(--violet); }
+  .lang-select option { background: var(--bg-2); color: var(--text); }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    font-family: 'Inter', sans-serif; font-weight: 600; font-size: 17px;
+    border-radius: 999px; padding: 13px 26px; cursor: pointer;
+    border: none; transition: transform .15s ease, box-shadow .25s ease, background .2s, border-color .2s;
+    white-space: nowrap;
+  }
+  .btn-primary { background: linear-gradient(120deg, var(--coral), #FF9472); color: #1a0d08; box-shadow: 0 8px 28px rgba(255,122,89,0.32); }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(255,122,89,0.46); }
+  .btn-ghost { background: rgba(255,255,255,0.04); color: var(--text); border: 1px solid var(--line); }
+  .btn-ghost:hover { border-color: var(--violet); background: rgba(155,140,255,0.10); }
+  .btn-lg { font-size: 19px; padding: 17px 34px; }
+  .nav .btn-ghost { padding: 10px 20px; font-size: 16px; }
+
+  /* ---------- HERO ---------- */
+  .hero { padding: 100px 0 90px; position: relative; }
+  .hero-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 60px; align-items: center; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 13px; font-weight: 600; color: var(--cyan);
+    text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 28px;
+    padding: 8px 16px; border: 1px solid rgba(91,227,216,0.28); border-radius: 999px;
+    background: rgba(91,227,216,0.05);
+  }
+  .eyebrow .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(91,227,216,0.5)} 70%{box-shadow:0 0 0 9px rgba(91,227,216,0)} 100%{box-shadow:0 0 0 0 rgba(91,227,216,0)} }
+
+  .hero h1 { font-size: clamp(46px, 6vw, 72px); color: var(--text); margin-bottom: 28px; font-weight: 800; letter-spacing: -0.035em; }
+  .hero h1 em { font-style: normal; background: linear-gradient(115deg, var(--coral) 10%, var(--violet) 60%, var(--cyan)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero-lead { font-size: 22px; color: var(--text-soft); margin-bottom: 38px; max-width: 28em; line-height: 1.55; }
+  .hero-cta { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+  .hero-note { font-size: 16px; color: var(--text-soft); margin-top: 24px; display: flex; align-items: center; gap: 8px; }
+  .hero-note .chk { color: var(--cyan); font-weight: 700; }
+
+  /* ---------- VOICE DEMO (animated signature) ---------- */
+  .demo {
+    background: linear-gradient(165deg, rgba(20,28,54,0.9), rgba(10,15,32,0.85));
+    border: 1px solid var(--line); border-radius: 24px;
+    padding: 26px; position: relative; min-height: 340px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  .demo::before {
+    content: ""; position: absolute; inset: -1px; border-radius: 24px; padding: 1px;
+    background: linear-gradient(140deg, rgba(155,140,255,0.45), transparent 45%, rgba(91,227,216,0.35));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
+  }
+  .demo-head { display: flex; align-items: center; gap: 12px; padding-bottom: 18px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+  .wave { display: flex; align-items: center; gap: 3px; height: 22px; }
+  .wave span { width: 3px; background: var(--cyan); border-radius: 2px; height: 6px; }
+  .wave.live span { animation: wave 1s ease-in-out infinite; }
+  .wave span:nth-child(1){animation-delay:0s}
+  .wave span:nth-child(2){animation-delay:.12s}
+  .wave span:nth-child(3){animation-delay:.24s}
+  .wave span:nth-child(4){animation-delay:.36s}
+  .wave span:nth-child(5){animation-delay:.48s}
+  .wave span:nth-child(6){animation-delay:.6s}
+  @keyframes wave { 0%,100%{height:6px} 50%{height:20px} }
+  .demo-title { font-weight: 600; font-size: 15px; color: var(--text-soft); }
+
+  .demo-stream { display: flex; flex-direction: column; gap: 13px; }
+  .bubble {
+    border-radius: 16px; padding: 14px 18px; font-size: 18px; max-width: 90%;
+    opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease;
+  }
+  .bubble.show { opacity: 1; transform: none; }
+  .bubble-user { background: linear-gradient(120deg, rgba(61,108,255,0.28), rgba(155,140,255,0.20)); border: 1px solid rgba(155,140,255,0.3); color: var(--text); align-self: flex-end; border-bottom-right-radius: 5px; }
+  .bubble-aria { background: rgba(255,255,255,0.04); border: 1px solid var(--line); color: var(--text); align-self: flex-start; border-bottom-left-radius: 5px; }
+  .bubble-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; opacity: .6; margin-bottom: 5px; }
+  .bubble-label.aria { color: var(--cyan); opacity: 1; }
+  .demo-action {
+    display: flex; align-items: center; gap: 11px; padding: 13px 16px;
+    background: rgba(91,227,216,0.06); border: 1px solid rgba(91,227,216,0.18); border-radius: 13px;
+    font-size: 16px; color: var(--text-soft); align-self: stretch;
+    opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease;
+  }
+  .demo-action.show { opacity: 1; transform: none; }
+  .demo-action.done { background: rgba(91,227,216,0.10); border-color: rgba(91,227,216,0.4); color: var(--text); }
+  .spin { width: 18px; height: 18px; border: 2.5px solid rgba(91,227,216,0.25); border-top-color: var(--cyan); border-radius: 50%; animation: spin 0.9s linear infinite; flex-shrink: 0; }
+  .check { color: var(--cyan); font-weight: 700; font-size: 19px; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- SECTION SHELL ---------- */
+  section { padding: 96px 0; position: relative; z-index: 2; }
+  .sec-head { max-width: 38em; margin-bottom: 60px; }
+  .sec-eyebrow { font-size: 13px; font-weight: 600; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 16px; }
+  .sec-head h2 { font-size: clamp(34px, 4.6vw, 52px); color: var(--text); margin-bottom: 18px; }
+  .sec-head p { font-size: 20px; color: var(--text-soft); }
+
+  .card-base { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+
+  /* ---------- PROBLEM ---------- */
+  .problem-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .problem-card { padding: 34px; transition: transform .3s, border-color .3s; }
+  .problem-card:hover { transform: translateY(-4px); border-color: rgba(155,140,255,0.35); }
+  .problem-card .num { font-family: 'Sora', sans-serif; font-weight: 800; font-size: 24px; color: var(--text-dim); margin-bottom: 16px; letter-spacing: 0; }
+  .problem-card h3 { font-size: 22px; margin-bottom: 11px; color: var(--text); }
+  .problem-card p { font-size: 17px; color: var(--text-soft); }
+
+  /* ---------- STEPS ---------- */
+  .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; }
+  .step { padding: 4px; }
+  .step-badge {
+    width: 56px; height: 56px; border-radius: 16px;
+    background: linear-gradient(140deg, rgba(91,227,216,0.14), rgba(155,140,255,0.10));
+    border: 1px solid rgba(91,227,216,0.3); color: var(--cyan);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Sora', sans-serif; font-weight: 700; font-size: 23px; margin-bottom: 22px;
+  }
+  .step h3 { font-size: 24px; color: var(--text); margin-bottom: 11px; }
+  .step p { font-size: 18px; color: var(--text-soft); }
+
+  /* ---------- CAPABILITIES ---------- */
+  .caps-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .cap { display: flex; align-items: center; gap: 16px; padding: 20px 24px; font-size: 19px; font-weight: 500; color: var(--text); transition: transform .25s, border-color .25s; }
+  .cap:hover { transform: translateX(4px); border-color: rgba(91,227,216,0.3); }
+  .cap-icon { width: 46px; height: 46px; border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+
+  /* ---------- TRUST ---------- */
+  .trust-box { padding: 64px; text-align: center; position: relative; overflow: hidden; }
+  .trust-box::before { content: ""; position: absolute; top: -140px; left: 50%; transform: translateX(-50%); width: 460px; height: 320px; background: radial-gradient(circle, rgba(91,227,216,0.15), transparent 70%); filter: blur(36px); }
+  .trust-shield { font-size: 52px; margin-bottom: 22px; position: relative; }
+  .trust-box h2 { font-size: clamp(30px, 4vw, 44px); color: var(--text); margin-bottom: 20px; max-width: 18em; margin-left: auto; margin-right: auto; position: relative; }
+  .trust-box p { font-size: 20px; color: var(--text-soft); max-width: 34em; margin: 0 auto; position: relative; }
+
+  /* ---------- PRICING ---------- */
+  .pricing-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; max-width: 880px; margin: 0 auto; }
+  .plan { padding: 42px 36px; display: flex; flex-direction: column; position: relative; }
+  .plan-featured { border: 1px solid rgba(255,122,89,0.5); box-shadow: 0 24px 70px rgba(255,122,89,0.15); }
+  .plan-featured::before { content: ""; position: absolute; inset: -1px; border-radius: var(--radius); padding: 1px; background: linear-gradient(140deg, var(--coral), transparent 50%, var(--violet)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+  .plan-tag { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: linear-gradient(120deg, var(--coral), #FF9472); color: #1a0d08; font-size: 14px; font-weight: 700; padding: 6px 18px; border-radius: 999px; }
+  .plan-name { font-family: 'Sora', sans-serif; font-size: 25px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+  .plan-price { display: flex; align-items: baseline; gap: 6px; margin-bottom: 6px; }
+  .plan-price .amount { font-family: 'Sora', sans-serif; font-size: 56px; font-weight: 800; color: var(--text); letter-spacing: -0.03em; }
+  .plan-featured .plan-price .amount { background: linear-gradient(120deg, var(--coral), var(--coral-soft)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .plan-price .per { font-size: 18px; color: var(--text-soft); }
+  .plan-sub { font-size: 16px; color: var(--text-soft); margin-bottom: 28px; }
+  .plan ul { list-style: none; margin-bottom: 32px; flex-grow: 1; }
+  .plan li { display: flex; align-items: flex-start; gap: 11px; font-size: 18px; padding: 9px 0; color: var(--text); }
+  .plan li .tick { color: var(--cyan); font-weight: 700; font-size: 18px; flex-shrink: 0; }
+  .plan .btn { width: 100%; }
+
+  /* ---------- FINAL ---------- */
+  .final-box { padding: 70px 48px; text-align: center; position: relative; overflow: hidden; }
+  .final-box::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 0%, rgba(155,140,255,0.16), transparent 60%); }
+  .final-box h2 { font-size: clamp(34px, 4.6vw, 52px); color: var(--text); margin-bottom: 18px; max-width: 15em; margin-left: auto; margin-right: auto; position: relative; }
+  .final-box p { font-size: 21px; color: var(--text-soft); margin-bottom: 36px; max-width: 32em; margin-left: auto; margin-right: auto; position: relative; }
+  .final-form { display: flex; gap: 12px; max-width: 480px; margin: 0 auto; flex-wrap: wrap; justify-content: center; position: relative; }
+  .final-form input { flex: 1; min-width: 240px; font-family: 'Inter', sans-serif; font-size: 18px; padding: 16px 22px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,0.05); color: var(--text); }
+  .final-form input::placeholder { color: var(--text-dim); }
+  .final-form input:focus { outline: none; border-color: var(--cyan); }
+  .final-note { font-size: 15px; color: var(--text-dim); margin-top: 18px; position: relative; }
+
+  /* ---------- FOOTER ---------- */
+  footer { background: var(--bg-2); border-top: 1px solid var(--line-soft); color: var(--text-soft); padding: 56px 0 36px; font-size: 16px; position: relative; z-index: 2; }
+  .foot-top { display: flex; justify-content: space-between; gap: 40px; flex-wrap: wrap; margin-bottom: 36px; }
+  .foot-brand { font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 12px; }
+  .foot-brand span { background: linear-gradient(120deg, var(--coral), var(--violet)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .foot-col h4 { font-family: 'Inter', sans-serif; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 14px; }
+  .foot-col a { display: block; padding: 5px 0; color: var(--text-soft); transition: color .2s; }
+  .foot-col a:hover { color: var(--cyan); }
+  .foot-bottom { border-top: 1px solid var(--line-soft); padding-top: 24px; display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; font-size: 14px; color: var(--text-dim); }
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width: 880px) {
+    body { font-size: 18px; }
+    .hero-grid { grid-template-columns: 1fr; gap: 48px; }
+    .demo { order: 2; }
+    .problem-grid, .steps-grid, .caps-grid, .pricing-grid { grid-template-columns: 1fr; }
+    .nav .btn-ghost { display: none; }
+    section { padding: 68px 0; }
+    .hero { padding: 64px 0 54px; }
+    .trust-box, .final-box { padding: 44px 26px; }
+  }
+  @media (max-width: 480px) {
+    .wrap { padding: 0 20px; }
+    .hero h1 { font-size: 40px; }
+    .hero-cta { flex-direction: column; align-items: stretch; }
+    .hero-cta .btn { width: 100%; }
+  }
+
+  .reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+  [dir="rtl"] .cap:hover { transform: translateX(-4px); }
+  [dir="rtl"] .bubble-user { align-self: flex-start; }
+  [dir="rtl"] .bubble-aria { align-self: flex-end; }
 </style>
 </head>
 <body>
-<div class="ambient"><div class="orb o1"></div><div class="orb o2"></div></div>
 
-<div class="hub">
-  <div class="brand">
-    <div class="brand-logo">F</div>
-    <span class="brand-name">Forgelis</span>
-  </div>
-  <div class="brand-tag">La technologie, enfin pour tous.</div>
-
-  <!-- ── ÉTAPE 1 : IDENTIFICATION ── -->
-  <div class="step active" id="step-id">
-    <div class="id-title">Bienvenue 👋</div>
-    <div class="id-sub">Identifiez-vous pour accéder à vos assistants Aria. Votre profil reste sur cet appareil — Forgelis ne stocke rien.</div>
-    <input type="text" class="id-input" id="id-name" placeholder="Votre prénom" autocomplete="off" onkeydown="if(event.key==='Enter')identify()">
-    <button type="button" class="id-cta" onclick="identify()">Accéder à mes assistants →</button>
-    <div class="id-privacy">🔒 Identification 100% locale · Zéro donnée sur nos serveurs · Conforme RGPD</div>
-  </div>
-
-  <!-- ── ÉTAPE 2 : VITRINE ── -->
-  <div class="step" id="step-hub">
-    <div class="welcome">Bonjour <span id="hub-name">—</span> <span id="byok-badge" class="byok-on" style="display:none">🔑 Clé personnelle active</span></div>
-    <div class="welcome-sub">Choisissez votre assistant</div>
-
-    <div class="products">
-      <a class="product senior" href="https://buy.stripe.com/3cI8wP5fD8YxaD5cPrgMw00">
-        <div class="product-ico">🎙️</div>
-        <div class="product-info">
-          <div class="product-name">Aria Senior</div>
-          <div class="product-desc">L'assistant vocal qui simplifie le PC — 60 ans et + · 📱 mobile vocal avec Pro</div>
-        </div>
-        <span class="product-arrow">→</span>
-      </a>
-      <a class="product kids" href="aria_kids_v2.html">
-        <div class="product-ico">🎮</div>
-        <div class="product-info">
-          <div class="product-name">Aria Kids</div>
-          <div class="product-desc">Apprendre en jouant, du CP à la Terminale — 4 à 17 ans · 📱 micro avec Pro</div>
-        </div>
-        <span class="product-arrow">→</span>
-      </a>
-      <a class="product" href="aria_industrial_v1.html" style="border-color:rgba(56,189,248,.2)">
-        <div class="product-ico" style="background:linear-gradient(135deg,#38BDF8,#6366F1)">🏭</div>
-        <div class="product-info">
-          <div class="product-name">Aria Industrial</div>
-          <div class="product-desc">Le système nerveux de votre entreprise — ordres vocaux, brief matinal, postes & rôles</div>
-        </div>
-        <span class="product-badge" style="color:#38BDF8;background:rgba(56,189,248,.1)">Aperçu</span>
-      </a>
-    </div>
-
-    <!-- Activation licence Pro -->
-    <div class="advanced" id="lic-box">
-      <div class="advanced-head" onclick="document.getElementById('lic-box').classList.toggle('open')">
-        🔑 Activer ma licence Pro
-        <span class="advanced-arrow">▼</span>
-      </div>
-      <div class="advanced-body">
-        <div class="advanced-desc">Vous avez reçu une clé de licence après votre achat ? Collez-la ici — activation instantanée, 100% locale.</div>
-        <input type="text" class="advanced-input" id="lic-key" placeholder="ARIA-XXXXX-XXXXX-..." autocomplete="off">
-        <button type="button" class="advanced-save" onclick="activerLicence()">Activer</button>
-        <span class="advanced-status" id="lic-status"></span>
-      </div>
-    </div>
-
-    <!-- Mode avancé : clé personnelle (BYOK) -->
-    <div class="advanced" id="advanced">
-      <div class="advanced-head" onclick="document.getElementById('advanced').classList.toggle('open')">
-        ⚙️ Mode avancé — Utiliser ma propre clé IA
-        <span class="advanced-arrow">▼</span>
-      </div>
-      <div class="advanced-body">
-        <div class="advanced-desc">
-          Pour les utilisateurs expérimentés et les entreprises : connectez votre propre clé API Anthropic.
-          La consommation est alors <b>facturée directement sur votre compte</b>, sans intermédiaire.
-          La clé est stockée uniquement sur cet appareil et n'est jamais transmise à Forgelis.
-        </div>
-        <input type="password" class="advanced-input" id="byok-key" placeholder="sk-ant-..." autocomplete="off">
-        <button type="button" class="advanced-save" onclick="saveByok()">Enregistrer</button>
-        <button type="button" class="advanced-save" onclick="clearByok()" style="margin-left:6px">Retirer</button>
-        <span class="advanced-status" id="byok-status"></span>
-      </div>
-    </div>
-
-    <div class="switch-profile">
-      <button type="button" onclick="switchProfile()">Changer d'utilisateur</button>
+<header>
+  <div class="wrap nav">
+    <a href="#" class="logo">FORGE<span>DIS</span></a>
+    <div class="nav-right">
+      <select class="lang-select" id="langSelect" aria-label="Choisir la langue">
+        <option value="fr">🇫🇷 Français</option>
+        <option value="en">🇬🇧 English</option>
+        <option value="ar">🇸🇦 العربية</option>
+      </select>
+      <a href="#prevenez" class="btn btn-ghost" data-i18n="nav_login">Se connecter</a>
     </div>
   </div>
+</header>
 
-  <div class="footer">Forgelis © 2026 · forgelis.fr · Vos données restent chez vous</div>
-</div>
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow"><span class="pulse"></span><span data-i18n="hero_eyebrow">Intelligence artificielle au service de l'humain</span></span>
+      <h1 data-i18n="hero_title">Aria utilise l'ordinateur <em>à votre place.</em></h1>
+      <p class="hero-lead" data-i18n="hero_lead">Vous parlez, Aria agit. Naviguer, lancer une vidéo, ouvrir un programme — simplement en le demandant à voix haute.</p>
+      <div class="hero-cta">
+        <a href="https://buy.stripe.com/3cI8wP5fD8YxaD5cPrgMw00" class="btn btn-primary btn-lg" data-i18n="hero_cta1">Essayer gratuitement</a>
+        <a href="#comment" class="btn btn-ghost btn-lg" data-i18n="hero_cta2">Voir comment ça marche</a>
+      </div>
+      <p class="hero-note"><span class="chk">✓</span><span data-i18n="hero_note">Sans engagement — 10 actions gratuites chaque mois</span></p>
+    </div>
+
+    <div class="demo" id="demo">
+      <div class="demo-head">
+        <div class="wave" id="wave"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <span class="demo-title" id="demoTitle" data-i18n="demo_idle">Aria est prête</span>
+      </div>
+      <div class="demo-stream" id="demoStream"></div>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEM -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-eyebrow" data-i18n="prob_eyebrow">Le constat</div>
+      <h2 data-i18n="prob_title">L'informatique met trop de gens de côté.</h2>
+    </div>
+    <div class="problem-grid">
+      <div class="problem-card card-base reveal">
+        <div class="num" data-i18n="prob1_n">Constat 01</div>
+        <h3 data-i18n="prob1_t">Trop compliqué</h3>
+        <p data-i18n="prob1_p">Menus, mots de passe, fenêtres qui s'ouvrent partout. Un ordinateur demande d'apprendre une langue qu'on n'a jamais choisie.</p>
+      </div>
+      <div class="problem-card card-base reveal">
+        <div class="num" data-i18n="prob2_n">Constat 02</div>
+        <h3 data-i18n="prob2_t">Une perte d'autonomie</h3>
+        <p data-i18n="prob2_p">Devoir attendre qu'un proche soit disponible pour la moindre démarche en ligne. Dépendre des autres pour des gestes simples.</p>
+      </div>
+      <div class="problem-card card-base reveal">
+        <div class="num" data-i18n="prob3_n">Constat 03</div>
+        <h3 data-i18n="prob3_t">Un coût élevé</h3>
+        <p data-i18n="prob3_p">L'aide à domicile coûte 20 à 40 € de l'heure. Pour quelques minutes d'aide informatique, la facture grimpe vite.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STEPS -->
+<section id="comment">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-eyebrow" data-i18n="steps_eyebrow">Comment ça marche</div>
+      <h2 data-i18n="steps_title">Trois étapes. Aucune compétence requise.</h2>
+      <p data-i18n="steps_sub">Aria fonctionne depuis votre téléphone et agit sur votre ordinateur. Vous n'avez qu'à parler.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step reveal">
+        <div class="step-badge">1</div>
+        <h3 data-i18n="step1_t">Vous parlez</h3>
+        <p data-i18n="step1_p">Dites à Aria ce que vous voulez faire, dans vos mots, dans votre langue. Pas de menu à chercher.</p>
+      </div>
+      <div class="step reveal">
+        <div class="step-badge">2</div>
+        <h3 data-i18n="step2_t">Aria agit</h3>
+        <p data-i18n="step2_p">Aria regarde votre écran et fait les gestes à votre place : cliquer, écrire, naviguer.</p>
+      </div>
+      <div class="step reveal">
+        <div class="step-badge">3</div>
+        <h3 data-i18n="step3_t">C'est fait</h3>
+        <p data-i18n="step3_p">Votre demande est accomplie. Aria vous confirme à voix haute, simplement.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CAPABILITIES -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-eyebrow" data-i18n="caps_eyebrow">Au quotidien</div>
+      <h2 data-i18n="caps_title">Ce qu'Aria fait déjà pour vous</h2>
+      <p data-i18n="caps_sub">Voici quelques exemples testés et garantis. De nouvelles capacités arrivent régulièrement.</p>
+    </div>
+    <div class="caps-grid">
+      <div class="cap card-base reveal"><span class="cap-icon">🗣️</span><span data-i18n="cap1">Vous parler dans votre langue</span></div>
+      <div class="cap card-base reveal"><span class="cap-icon">🌐</span><span data-i18n="cap2">Naviguer sur internet à votre place</span></div>
+      <div class="cap card-base reveal"><span class="cap-icon">🖥️</span><span data-i18n="cap3">Ouvrir et utiliser vos programmes</span></div>
+      <div class="cap card-base reveal"><span class="cap-icon">▶️</span><span data-i18n="cap4">Lancer vos vidéos et votre musique</span></div>
+      <div class="cap card-base reveal"><span class="cap-icon">🔌</span><span data-i18n="cap5">Éteindre ou redémarrer l'ordinateur à la voix</span></div>
+      <div class="cap card-base reveal"><span class="cap-icon">🧮</span><span data-i18n="cap6">Faire des calculs et des recherches</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST -->
+<section>
+  <div class="wrap">
+    <div class="trust-box card-base reveal">
+      <div class="trust-shield">🛡️</div>
+      <h2 data-i18n="trust_title">Vos données restent chez vous.</h2>
+      <p data-i18n="trust_p">FORGEDIS ne conserve aucune de vos informations personnelles. Aria traite vos demandes sur le moment, sans rien archiver sur ses serveurs. Ce qui se passe sur votre ordinateur reste sur votre ordinateur.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="prix">
+  <div class="wrap">
+    <div class="sec-head" style="text-align:center; margin-left:auto; margin-right:auto;">
+      <div class="sec-eyebrow" data-i18n="price_eyebrow">Tarif simple</div>
+      <h2 data-i18n="price_title">Commencez gratuitement.</h2>
+      <p data-i18n="price_sub">Essayez sans payer. Passez à l'illimité quand vous êtes prêt.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="plan card-base reveal">
+        <div class="plan-name" data-i18n="plan_free_name">Découverte</div>
+        <div class="plan-price"><span class="amount">0€</span></div>
+        <div class="plan-sub" data-i18n="plan_free_sub">Pour essayer Aria à votre rythme</div>
+        <ul>
+          <li><span class="tick">✓</span><span data-i18n="plan_free_1">10 actions par mois</span></li>
+          <li><span class="tick">✓</span><span data-i18n="plan_free_2">Toutes les fonctions</span></li>
+          <li><span class="tick">✓</span><span data-i18n="plan_free_3">Toutes les langues, sans limite</span></li>
+          <li><span class="tick">✓</span><span data-i18n="plan_free_4">Vos données restent chez vous</span></li>
+        </ul>
+        <a href="#prevenez" class="btn btn-ghost btn-lg" data-i18n="plan_free_cta">Commencer</a>
+      </div>
+      <div class="plan card-base plan-featured reveal">
+        <div class="plan-tag" data-i18n="plan_pro_tag">Le plus choisi</div>
+        <div class="plan-name" data-i18n="plan_pro_name">Aria Facility</div>
+        <div class="plan-price"><span class="amount">12,99€</span><span class="per" data-i18n="plan_pro_per">/ mois</span></div>
+        <div class="plan-sub" data-i18n="plan_pro_sub">Sans engagement, résiliable à tout moment</div>
+        <ul>
+          <li><span class="tick">✓</span><span data-i18n="plan_pro_1">Actions illimitées</span></li>
+          <li><span class="tick">✓</span><span data-i18n="plan_pro_2">Toutes les fonctions</span></li>
+          <li><span class="tick">✓</span><span data-i18n="plan_pro_3">Toutes les langues, sans limite</span></li>
+          <li><span class="tick">✓</span><span data-i18n="plan_pro_4">Assistance prioritaire</span></li>
+          <li><span class="tick">✓</span><span data-i18n="plan_pro_5">14 jours d'essai gratuit</span></li>
+        </ul>
+        <a href="https://buy.stripe.com/3cI8wP5fD8YxaD5cPrgMw00" class="btn btn-primary btn-lg" data-i18n="plan_pro_cta">Essayer 14 jours</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section id="prevenez">
+  <div class="wrap">
+    <div class="final-box card-base reveal">
+      <h2 data-i18n="final_title">Soyez prévenu du lancement.</h2>
+      <p data-i18n="final_p">Aria arrive bientôt. Laissez votre adresse et soyez parmi les premiers à rendre l'ordinateur enfin simple.</p>
+      <form class="final-form" name="liste-attente" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+        <input type="hidden" name="form-name" value="liste-attente">
+        <p style="display:none;"><label>Ne pas remplir : <input name="bot-field"></label></p>
+        <input type="email" name="email" placeholder="votre@email.fr" aria-label="Votre adresse e-mail" data-i18n-ph="final_ph" required>
+        <button type="submit" class="btn btn-primary btn-lg" data-i18n="final_btn">Me prévenir</button>
+      </form>
+      <p class="final-note" data-i18n="final_note">Pas de spam. Juste un message le jour du lancement.</p>
+      <div class="final-thanks" id="finalThanks" style="display:none;">
+        <div style="font-size:46px; margin-bottom:14px;">✓</div>
+        <p style="font-size:21px; color:var(--text); margin:0;" data-i18n="thanks_msg">Merci ! Vous serez prévenu dès le lancement d'Aria.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="foot-top">
+      <div>
+        <div class="foot-brand">FORGE<span>DIS</span></div>
+        <p style="max-width:22em;" data-i18n="foot_tagline">L'intelligence artificielle au service de l'autonomie.</p>
+      </div>
+      <div class="foot-col">
+        <h4 data-i18n="foot_product">Produit</h4>
+        <a href="#comment" data-i18n="foot_how">Comment ça marche</a>
+        <a href="#prix" data-i18n="foot_price">Tarifs</a>
+        <a href="#" data-i18n="foot_login">Se connecter</a>
+      </div>
+      <div class="foot-col">
+        <h4 data-i18n="foot_company">Entreprise</h4>
+        <a href="mailto:contact@forgedis.fr">contact@forgedis.fr</a>
+        <a href="#" data-i18n="foot_legal">Mentions légales</a>
+        <a href="#" data-i18n="foot_privacy">Confidentialité</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 FORGEDIS — SIRET 106 013 899 00013</span>
+      <span data-i18n="foot_made">Conçu en France</span>
+    </div>
+  </div>
+</footer>
 
 <script>
-// ════════════════════════════════════════════
-// FORGELIS HUB — identification locale + vitrine
-// Architecture zéro-données : tout vit dans cet appareil.
-// ════════════════════════════════════════════
+  const I18N = {
+    fr: {},
+    en: {
+      nav_login: "Log in",
+      hero_eyebrow: "Artificial intelligence in service of people",
+      hero_title: "Aria uses the computer <em>for you.</em>",
+      hero_lead: "You speak, Aria acts. Browse, play a video, open a program — just by asking out loud.",
+      hero_cta1: "Try for free",
+      hero_cta2: "See how it works",
+      hero_note: "No commitment — 10 free actions every month",
+      demo_idle: "Aria is ready",
+      demo_listening: "Aria is listening",
+      demo_working: "Aria is working",
+      demo_done: "Done",
+      d_user: "You",
+      d_user_msg: "\u201CAria, play me a cooking video on YouTube.\u201D",
+      d_aria_msg: "Right away. I'm opening YouTube and finding a cooking video.",
+      d_action: "Aria opens YouTube and starts the video",
+      d_done: "Done — your video is playing.",
+      prob_eyebrow: "The problem",
+      prob_title: "Computers leave too many people behind.",
+      prob1_n: "Issue 01", prob2_n: "Issue 02", prob3_n: "Issue 03",
+      prob1_t: "Too complicated",
+      prob1_p: "Menus, passwords, windows popping up everywhere. A computer asks you to learn a language you never chose.",
+      prob2_t: "A loss of independence",
+      prob2_p: "Having to wait for a relative to be free for the smallest online task. Depending on others for simple things.",
+      prob3_t: "An expensive fix",
+      prob3_p: "Home help costs 20 to 40 € an hour. For a few minutes of computer help, the bill adds up fast.",
+      steps_eyebrow: "How it works",
+      steps_title: "Three steps. No skills needed.",
+      steps_sub: "Aria works from your phone and acts on your computer. All you do is speak.",
+      step1_t: "You speak",
+      step1_p: "Tell Aria what you want to do, in your own words, in your language. No menu to find.",
+      step2_t: "Aria acts",
+      step2_p: "Aria looks at your screen and does the steps for you: clicking, typing, navigating.",
+      step3_t: "It's done",
+      step3_p: "Your request is completed. Aria confirms out loud, simply.",
+      caps_eyebrow: "Every day",
+      caps_title: "What Aria already does for you",
+      caps_sub: "Here are a few tested, guaranteed examples. New abilities arrive regularly.",
+      cap1: "Speak to you in your language",
+      cap2: "Browse the internet for you",
+      cap3: "Open and use your programs",
+      cap4: "Play your videos and music",
+      cap5: "Shut down or restart the computer by voice",
+      cap6: "Run calculations and searches",
+      trust_title: "Your data stays with you.",
+      trust_p: "FORGEDIS keeps none of your personal information. Aria handles your requests in the moment, without archiving anything on its servers. What happens on your computer stays on your computer.",
+      price_eyebrow: "Simple pricing",
+      price_title: "Start for free.",
+      price_sub: "Try without paying. Go unlimited when you're ready.",
+      plan_free_name: "Discovery",
+      plan_free_sub: "To try Aria at your own pace",
+      plan_free_1: "10 actions per month",
+      plan_free_2: "All features",
+      plan_free_3: "All languages, no limit",
+      plan_free_4: "Your data stays with you",
+      plan_free_cta: "Get started",
+      plan_pro_tag: "Most popular",
+      plan_pro_name: "Aria Facility",
+      plan_pro_per: "/ month",
+      plan_pro_sub: "No commitment, cancel anytime",
+      plan_pro_1: "Unlimited actions",
+      plan_pro_2: "All features",
+      plan_pro_3: "All languages, no limit",
+      plan_pro_4: "Priority support",
+      plan_pro_5: "14-day free trial",
+      plan_pro_cta: "Try 14 days",
+      final_title: "Be the first to know.",
+      final_p: "Aria is coming soon. Leave your email and be among the first to make computers finally simple.",
+      final_ph: "your@email.com",
+      final_btn: "Notify me",
+      final_note: "No spam. Just one message on launch day.",
+      thanks_msg: "Thank you! You'll be notified as soon as Aria launches.",
+      foot_tagline: "Artificial intelligence in the service of independence.",
+      foot_product: "Product",
+      foot_how: "How it works",
+      foot_price: "Pricing",
+      foot_login: "Log in",
+      foot_company: "Company",
+      foot_legal: "Legal notice",
+      foot_privacy: "Privacy",
+      foot_made: "Made in France",
+    },
+    ar: {
+      nav_login: "تسجيل الدخول",
+      hero_eyebrow: "الذكاء الاصطناعي في خدمة الإنسان",
+      hero_title: "أريا تستخدم الكمبيوتر <em>بدلاً عنك.</em>",
+      hero_lead: "أنت تتكلم، وأريا تنفّذ. التصفّح، تشغيل فيديو، فتح برنامج — فقط بطلبها بصوتك.",
+      hero_cta1: "جرّب مجاناً",
+      hero_cta2: "شاهد كيف تعمل",
+      hero_note: "بدون التزام — 10 إجراءات مجانية كل شهر",
+      demo_idle: "أريا جاهزة",
+      demo_listening: "أريا تستمع",
+      demo_working: "أريا تعمل",
+      demo_done: "تمّ",
+      d_user: "أنت",
+      d_user_msg: "«أريا، شغّلي لي فيديو طبخ على يوتيوب.»",
+      d_aria_msg: "حالاً. أفتح يوتيوب وأبحث عن فيديو طبخ.",
+      d_action: "أريا تفتح يوتيوب وتشغّل الفيديو",
+      d_done: "تمّ — الفيديو يعمل الآن.",
+      prob_eyebrow: "الواقع",
+      prob_title: "الكمبيوتر يُقصي الكثير من الناس.",
+      prob1_n: "ملاحظة 01", prob2_n: "ملاحظة 02", prob3_n: "ملاحظة 03",
+      prob1_t: "معقّد جداً",
+      prob1_p: "قوائم وكلمات سر ونوافذ تفتح في كل مكان. الكمبيوتر يطلب منك تعلّم لغة لم تخترها.",
+      prob2_t: "فقدان الاستقلالية",
+      prob2_p: "انتظار أن يكون أحد الأقارب متاحاً لأبسط معاملة على الإنترنت. الاعتماد على الآخرين في أمور بسيطة.",
+      prob3_t: "تكلفة مرتفعة",
+      prob3_p: "المساعدة المنزلية تكلّف 20 إلى 40 يورو في الساعة. لدقائق من المساعدة، ترتفع الفاتورة بسرعة.",
+      steps_eyebrow: "كيف تعمل",
+      steps_title: "ثلاث خطوات. دون أي مهارة.",
+      steps_sub: "أريا تعمل من هاتفك وتنفّذ على كمبيوترك. كل ما عليك هو أن تتكلم.",
+      step1_t: "أنت تتكلم",
+      step1_p: "أخبر أريا بما تريد فعله، بكلماتك، وبلغتك. دون البحث عن أي قائمة.",
+      step2_t: "أريا تنفّذ",
+      step2_p: "تنظر أريا إلى شاشتك وتقوم بالخطوات بدلاً عنك: النقر، الكتابة، التصفّح.",
+      step3_t: "تمّ الأمر",
+      step3_p: "طلبك أُنجز. تؤكّد لك أريا بصوتها، ببساطة.",
+      caps_eyebrow: "في كل يوم",
+      caps_title: "ما تفعله أريا من أجلك بالفعل",
+      caps_sub: "إليك بعض الأمثلة المُختبرة والمضمونة. وتُضاف قدرات جديدة بانتظام.",
+      cap1: "تتحدث إليك بلغتك",
+      cap2: "تتصفّح الإنترنت بدلاً عنك",
+      cap3: "تفتح وتستخدم برامجك",
+      cap4: "تشغّل الفيديوهات والموسيقى",
+      cap5: "إطفاء أو إعادة تشغيل الكمبيوتر بالصوت",
+      cap6: "إجراء الحسابات وعمليات البحث",
+      trust_title: "بياناتك تبقى عندك.",
+      trust_p: "فورجيديس لا تحتفظ بأي من معلوماتك الشخصية. تعالج أريا طلباتك في حينها، دون أرشفة أي شيء على خوادمها. ما يجري على كمبيوترك يبقى على كمبيوترك.",
+      price_eyebrow: "سعر بسيط",
+      price_title: "ابدأ مجاناً.",
+      price_sub: "جرّب دون دفع. انتقل إلى اللامحدود عندما تكون جاهزاً.",
+      plan_free_name: "اكتشاف",
+      plan_free_sub: "لتجربة أريا على راحتك",
+      plan_free_1: "10 إجراءات شهرياً",
+      plan_free_2: "كل الميزات",
+      plan_free_3: "كل اللغات، دون حدود",
+      plan_free_4: "بياناتك تبقى عندك",
+      plan_free_cta: "ابدأ",
+      plan_pro_tag: "الأكثر اختياراً",
+      plan_pro_name: "أريا فاسيليتي",
+      plan_pro_per: "/ شهرياً",
+      plan_pro_sub: "بدون التزام، يمكن الإلغاء في أي وقت",
+      plan_pro_1: "إجراءات غير محدودة",
+      plan_pro_2: "كل الميزات",
+      plan_pro_3: "كل اللغات، دون حدود",
+      plan_pro_4: "دعم ذو أولوية",
+      plan_pro_5: "14 يوماً تجربة مجانية",
+      plan_pro_cta: "جرّب 14 يوماً",
+      final_title: "كن أول من يعلم.",
+      final_p: "أريا قادمة قريباً. اترك بريدك وكن من الأوائل في جعل الكمبيوتر بسيطاً أخيراً.",
+      final_ph: "بريدك@email.com",
+      final_btn: "أبلغني",
+      final_note: "لا رسائل مزعجة. فقط رسالة واحدة يوم الإطلاق.",
+      thanks_msg: "شكراً! سيتم إعلامك فور إطلاق أريا.",
+      foot_tagline: "الذكاء الاصطناعي في خدمة الاستقلالية.",
+      foot_product: "المنتج",
+      foot_how: "كيف تعمل",
+      foot_price: "الأسعار",
+      foot_login: "تسجيل الدخول",
+      foot_company: "الشركة",
+      foot_legal: "إشعار قانوني",
+      foot_privacy: "الخصوصية",
+      foot_made: "صُنع في فرنسا",
+    },
+  };
 
-function identify(){
-  const nom = document.getElementById('id-name').value.trim();
-  if(!nom){
-    document.getElementById('id-name').style.borderColor = 'rgba(239,68,68,.6)';
-    return;
+  // i18n texts not in HTML (demo dynamic strings) — FR defaults
+  const FR_EXTRA = {
+    demo_idle: "Aria est prête",
+    demo_listening: "Aria vous écoute",
+    demo_working: "Aria agit",
+    demo_done: "Terminé",
+    d_user: "Vous",
+    d_user_msg: "« Aria, mets-moi une vidéo de cuisine sur YouTube. »",
+    d_aria_msg: "Tout de suite. J'ouvre YouTube et je cherche une vidéo de cuisine.",
+    d_action: "Aria ouvre YouTube et lance la vidéo",
+    d_done: "Terminé — votre vidéo est lancée.",
+  };
+
+  const frStore = {};
+  document.querySelectorAll('[data-i18n]').forEach(el => { frStore[el.getAttribute('data-i18n')] = el.innerHTML; });
+  const frPh = {};
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => { frPh[el.getAttribute('data-i18n-ph')] = el.getAttribute('placeholder'); });
+
+  let currentLang = 'fr';
+
+  function t(key) {
+    if (currentLang === 'fr') return frStore[key] !== undefined ? frStore[key] : (FR_EXTRA[key] || key);
+    const dict = I18N[currentLang] || {};
+    if (dict[key] !== undefined) return dict[key];
+    return frStore[key] !== undefined ? frStore[key] : (FR_EXTRA[key] || key);
   }
-  try{ localStorage.setItem('forgelis_user', JSON.stringify({name: nom, since: new Date().toISOString()})); }catch(e){}
-  showHub(nom);
-}
 
-function showHub(nom){
-  document.getElementById('hub-name').textContent = nom;
-  document.getElementById('step-id').classList.remove('active');
-  document.getElementById('step-hub').classList.add('active');
-  refreshByokBadge();
-}
-
-function switchProfile(){
-  try{ localStorage.removeItem('forgelis_user'); }catch(e){}
-  document.getElementById('id-name').value = '';
-  document.getElementById('step-hub').classList.remove('active');
-  document.getElementById('step-id').classList.add('active');
-}
-
-
-// ── Activation de licence Pro (vérifiée localement par l'app) ──
-function activerLicence(){
-  const k = document.getElementById('lic-key').value.trim();
-  const st = document.getElementById('lic-status');
-  if(!k){ st.textContent = 'Entrez votre clé'; st.style.color = '#F87171'; return; }
-  try{ localStorage.setItem('aria_licence', k); }catch(e){}
-  if(window.pywebview && window.pywebview.api && window.pywebview.api.save_licence){
-    window.pywebview.api.save_licence(k).then(res=>{
-      if(res && res.ok){
-        st.textContent = '✅ Licence Pro activée jusqu\'au ' + res.expire; st.style.color = '#4ADE80';
-        document.getElementById('lic-key').value = '';
-      } else if(res && res.error === 'expiree'){
-        st.textContent = '❌ Licence expirée le ' + res.expire; st.style.color = '#F87171';
-      } else {
-        st.textContent = '❌ Clé invalide'; st.style.color = '#F87171';
-      }
+  function setLang(lang) {
+    currentLang = lang;
+    const dict = I18N[lang] || {};
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (lang === 'fr') { el.innerHTML = frStore[key]; }
+      else if (dict[key] !== undefined) { el.innerHTML = dict[key]; }
     });
-  } else {
-    st.textContent = '✓ Clé enregistrée — activation au prochain lancement de l\'application'; st.style.color = '#4ADE80';
+    document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+      const key = el.getAttribute('data-i18n-ph');
+      if (lang === 'fr') { el.setAttribute('placeholder', frPh[key]); }
+      else if (dict[key] !== undefined) { el.setAttribute('placeholder', dict[key]); }
+    });
+    document.documentElement.lang = lang;
+    document.documentElement.dir = (lang === 'ar') ? 'rtl' : 'ltr';
+    restartDemo();
   }
-}
 
-// ── Clé personnelle (BYOK) — stockée localement, jamais envoyée à Forgelis ──
-function saveByok(){
-  const k = document.getElementById('byok-key').value.trim();
-  const st = document.getElementById('byok-status');
-  if(!k || !k.startsWith('sk-')){
-    st.textContent = '❌ Format invalide'; st.style.color = '#F87171';
-    return;
+  const select = document.getElementById('langSelect');
+  const supported = ['fr', 'en', 'ar'];
+  const navLang = (navigator.language || 'fr').slice(0, 2).toLowerCase();
+  const initial = supported.includes(navLang) ? navLang : 'fr';
+  select.value = initial;
+
+  // ---------- animated voice demo ----------
+  const stream = document.getElementById('demoStream');
+  const wave = document.getElementById('wave');
+  const demoTitle = document.getElementById('demoTitle');
+  let demoTimers = [];
+
+  function clearDemo() {
+    demoTimers.forEach(clearTimeout);
+    demoTimers = [];
+    stream.innerHTML = '';
+    wave.classList.remove('live');
   }
-  // Stockage local. Si l'app tourne en mode bureau, on la transmet aussi à Python.
-  try{ localStorage.setItem('aria_byok', k); }catch(e){}
-  if(window.pywebview && window.pywebview.api && window.pywebview.api.save_api_key){
-    window.pywebview.api.save_api_key(k);
+
+  function addBubble(cls, labelKey, labelCls, msgKey) {
+    const b = document.createElement('div');
+    b.className = 'bubble ' + cls;
+    b.innerHTML = '<div class="bubble-label ' + (labelCls||'') + '">' + t(labelKey) + '</div>' + t(msgKey);
+    stream.appendChild(b);
+    requestAnimationFrame(() => b.classList.add('show'));
+    return b;
   }
-  document.getElementById('byok-key').value = '';
-  st.textContent = '✅ Clé enregistrée sur cet appareil'; st.style.color = '#4ADE80';
-  refreshByokBadge();
-}
 
-function clearByok(){
-  try{ localStorage.removeItem('aria_byok'); }catch(e){}
-  if(window.pywebview && window.pywebview.api && window.pywebview.api.save_api_key){
-    window.pywebview.api.save_api_key('');
+  function runDemo() {
+    clearDemo();
+    // 1. listening
+    wave.classList.add('live');
+    demoTitle.textContent = t('demo_listening');
+    // 2. user bubble
+    demoTimers.push(setTimeout(() => {
+      addBubble('bubble-user', 'd_user', '', 'd_user_msg');
+    }, 700));
+    // 3. aria reply
+    demoTimers.push(setTimeout(() => {
+      wave.classList.remove('live');
+      demoTitle.textContent = t('demo_working');
+      addBubble('bubble-aria', 'Aria', 'aria', 'd_aria_msg');
+    }, 1900));
+    // 4. action (spinner)
+    let actionEl;
+    demoTimers.push(setTimeout(() => {
+      actionEl = document.createElement('div');
+      actionEl.className = 'demo-action';
+      actionEl.innerHTML = '<span class="spin"></span><span>' + t('d_action') + '…</span>';
+      stream.appendChild(actionEl);
+      requestAnimationFrame(() => actionEl.classList.add('show'));
+    }, 3000));
+    // 5. done
+    demoTimers.push(setTimeout(() => {
+      if (actionEl) {
+        actionEl.classList.add('done');
+        actionEl.innerHTML = '<span class="check">✓</span><span>' + t('d_done') + '</span>';
+      }
+      demoTitle.textContent = t('demo_done');
+    }, 4800));
+    // 6. loop
+    demoTimers.push(setTimeout(runDemo, 7600));
   }
-  const st = document.getElementById('byok-status');
-  st.textContent = 'Clé retirée'; st.style.color = 'rgba(240,244,255,.5)';
-  refreshByokBadge();
-}
 
-function refreshByokBadge(){
-  let on = false;
-  try{ on = !!localStorage.getItem('aria_byok'); }catch(e){}
-  document.getElementById('byok-badge').style.display = on ? 'inline-flex' : 'none';
-}
+  function restartDemo() { runDemo(); }
 
-// ── Au chargement : profil déjà identifié ? ──
-(function(){
-  try{
-    const u = JSON.parse(localStorage.getItem('forgelis_user') || 'null');
-    if(u && u.name) showHub(u.name);
-  }catch(e){}
-})();
+  setLang(initial);
+  select.addEventListener('change', e => setLang(e.target.value));
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // ---------- Netlify form submit (AJAX, stays on page) ----------
+  const waitForm = document.querySelector('form[name="liste-attente"]');
+  if (waitForm) {
+    waitForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const data = new FormData(waitForm);
+      fetch('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(data).toString(),
+      }).then(() => {
+        waitForm.style.display = 'none';
+        const note = document.querySelector('.final-note');
+        if (note) note.style.display = 'none';
+        const thanks = document.getElementById('finalThanks');
+        if (thanks) thanks.style.display = 'block';
+      }).catch(() => {
+        // en cas d'erreur reseau, on laisse le comportement par defaut
+        waitForm.submit();
+      });
+    });
+  }
 </script>
+
 </body>
 </html>
