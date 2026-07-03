@@ -145,7 +145,25 @@ async def client_token(body: dict):
             )
             data = r.json()
             if not data:
-                return {"erreur": "Aucun compte trouve pour cet email."}
+                # Aucun compte : creation automatique d'un compte gratuit
+                # (offre Decouverte, sans carte, sans passer par Stripe)
+                nouveau_token = "aria_" + secrets_mod.token_hex(32)
+                r_create = await client.post(
+                    f"{SUPABASE_URL}/rest/v1/clients",
+                    headers={
+                        "apikey": SUPABASE_SERVICE_KEY,
+                        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                        "Content-Type": "application/json",
+                        "Prefer": "return=representation",
+                    },
+                    json={"email": email, "token": nouveau_token, "forfait": "gratuit", "actif": True},
+                )
+                if r_create.status_code not in (200, 201):
+                    return {"erreur": "Impossible de creer le compte."}
+                nouveau = r_create.json()
+                if not nouveau:
+                    return {"erreur": "Impossible de creer le compte."}
+                return {"token": nouveau[0]["token"], "forfait": nouveau[0]["forfait"], "nouveau_compte": True}
             client_data = data[0]
             if not client_data.get("actif", False):
                 return {"erreur": "Votre abonnement est inactif."}
