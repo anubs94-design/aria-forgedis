@@ -273,7 +273,7 @@ export default function MainScreen() {
   const envoyerDocumentAAria = useCallback(async () => {
     if (!photoDocument || !photoDocument.base64) return;
     setAnalyseEnCours(true);
-    const texte = await analyserDocument(photoDocument.base64, addLog);
+    const texte = await analyserDocument(photoDocument.base64, addLog, langue);
     setAnalyseEnCours(false);
     if (texte) {
       setExplicationDocument(texte);
@@ -353,7 +353,7 @@ export default function MainScreen() {
             setDescriptionEnCours(true);
             const photo = await prendrePhotoDocument(addLog);
             if (photo) {
-              const desc = await decrireImage(photo.base64, addLog);
+              const desc = await decrireImage(photo.base64, addLog, langue);
               if (desc) setDescriptionImage(desc);
             }
             setDescriptionEnCours(false);
@@ -420,7 +420,7 @@ export default function MainScreen() {
                   onPress={async () => {
                     if (analyseReponseEnCours) return;
                     setAnalyseReponseEnCours(true);
-                    const aide = await demanderAideReponse(photoDocument.base64, explicationDocument, addLog);
+                    const aide = await demanderAideReponse(photoDocument.base64, explicationDocument, addLog, langue);
                     if (aide) setReponseDocument(aide);
                     setAnalyseReponseEnCours(false);
                   }}

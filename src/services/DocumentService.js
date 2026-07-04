@@ -72,11 +72,25 @@ const PROXY_URL = "https://aria-forgelis.onrender.com/vision";
 // voir PairingScreen.js). Plus de token partage en dur : setProxyToken() est
 // appele une fois au demarrage de l'app avec le token stocke localement.
 export let PROXY_TOKEN = null;
+
+// Normalise le code langue BCP47 en nom naturel pour les prompts
+const normaliseLangagePrompt = (code) => {
+  const map = {
+    "fr-FR": "francais", "fr": "francais",
+    "en-US": "english", "en-GB": "english", "en": "english",
+    "ar-MA": "arabe", "ar-DZ": "arabe", "ar": "arabe",
+    "es-ES": "espagnol", "es": "espagnol",
+    "pt-PT": "portugais", "pt-BR": "portugais", "pt": "portugais",
+    "de-DE": "allemand", "de": "allemand",
+    "it-IT": "italien", "it": "italien",
+  };
+  return map[code] || map[code.split("-")[0]] || "francais";
+};
 export function setProxyToken(token) {
   PROXY_TOKEN = token;
 }
 
-const PROMPT_ASSISTANT_DOCUMENT =
+const getPromptAssistantDocument = (langue) =>
   "Tu es Aria, assistante vocale intelligente pour seniors et personnes en " +
   "situation de handicap. L'utilisateur te montre une photo d'un courrier, " +
   "formulaire ou document administratif.\n\n" +
@@ -90,14 +104,14 @@ const PROMPT_ASSISTANT_DOCUMENT =
 
 // Envoie l'image (base64) au proxy vision, retourne le texte d'explication
 // ou null en cas d'erreur (avec log).
-export async function analyserDocument(base64, addLog) {
+export async function analyserDocument(base64, addLog, langue) {
   try {
     if (addLog) addLog("Envoi du document a Aria...");
 
     const payload = {
       model: "claude-sonnet-4-6",
       max_tokens: 1024,
-      system: [{ type: "text", text: PROMPT_ASSISTANT_DOCUMENT }],
+      system: [{ type: "text", text: getPromptAssistantDocument(normaliseLangagePrompt(langue)) }],
       messages: [
         {
           role: "user",
@@ -153,7 +167,7 @@ export async function analyserDocument(base64, addLog) {
 }
 
 // === BRIQUE 3-4 : aide a repondre au document ===
-const PROMPT_AIDE_REPONSE =
+const getPromptAideReponse = (langue) =>
   "Tu es Aria, assistante vocale intelligente pour seniors. " +
   "L'utilisateur t'a montre un document. Tu l'as deja explique. " +
   "Maintenant il veut que tu l'aides a REPONDRE a ce document.\n\n" +
@@ -161,16 +175,16 @@ const PROMPT_AIDE_REPONSE =
   "1. Propose une reponse claire et polie, prete a envoyer.\n" +
   "2. Si c'est un formulaire, aide a le remplir etape par etape.\n" +
   "3. Si aucune reponse n'est necessaire, dis-le simplement.\n\n" +
-  "Reponds TOUJOURS en francais, chaleureux et clair.";
+  "Reponds TOUJOURS en " + langue + ", chaleureux et clair.";
 
-export async function demanderAideReponse(base64, explicationPrecedente, addLog) {
+export async function demanderAideReponse(base64, explicationPrecedente, addLog, langue) {
   try {
     if (addLog) addLog("Aria prepare une aide pour repondre...");
 
     const payload = {
       model: "claude-sonnet-4-6",
       max_tokens: 1024,
-      system: [{ type: "text", text: PROMPT_AIDE_REPONSE }],
+      system: [{ type: "text", text: getPromptAideReponse(normaliseLangagePrompt(langue)) }],
       messages: [
         {
           role: "user",
@@ -226,7 +240,7 @@ export async function demanderAideReponse(base64, explicationPrecedente, addLog)
 }
 
 // === DECRIRE IMAGE (malvoyants) ===
-const PROMPT_DECRIRE_IMAGE =
+const getPromptDecrireImage = (langue) =>
   "Tu es Aria, assistante vocale pour seniors et personnes malvoyantes. " +
   "L'utilisateur te montre une photo et a besoin que tu DECRIVES ce que tu vois.\n\n" +
   "TON ROLE :\n" +
@@ -235,16 +249,16 @@ const PROMPT_DECRIRE_IMAGE =
   "3. Si c'est un lieu, decris l'environnement, les couleurs, l'ambiance.\n" +
   "4. Si c'est un objet, decris sa forme, sa couleur, son etat.\n" +
   "5. Si c'est du texte (etiquette, panneau, ecran), LIS-LE a voix haute.\n\n" +
-  "Reponds TOUJOURS en francais, chaleureux et clair. Sois precis mais pas trop long (5-8 phrases).";
+  "Reponds TOUJOURS en " + langue + ", chaleureux et clair. Sois precis mais pas trop long (5-8 phrases).";
 
-export async function decrireImage(base64, addLog) {
+export async function decrireImage(base64, addLog, langue) {
   try {
     if (addLog) addLog("Aria regarde l'image...");
 
     const payload = {
       model: "claude-sonnet-4-6",
       max_tokens: 1024,
-      system: [{ type: "text", text: PROMPT_DECRIRE_IMAGE }],
+      system: [{ type: "text", text: getPromptDecrireImage(normaliseLangagePrompt(langue)) }],
       messages: [
         {
           role: "user",
