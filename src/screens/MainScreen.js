@@ -1,5 +1,5 @@
 // src/screens/MainScreen.js
-// Ecran principal Aria Senior. Gere l'etat React et orchestre les
+// Ecran principal Aria Facility. Gere l'etat React et orchestre les
 // services WebSocket/Audio/Micro (logique reseau dans src/services/).
 //
 // MICRO: utilise la reconnaissance vocale NATIVE du telephone via

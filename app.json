@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Aria Senior",
+    "name": "Aria Facility",
     "slug": "aria-senior2",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,7 +8,7 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.forgedis.ariasenior",
+      "bundleIdentifier": "com.forgedis.ariafacility",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Aria a besoin du microphone pour vous ecouter.",
         "NSLocationWhenInUseUsageDescription": "Aria utilise votre position pour la meteo locale.",
@@ -21,7 +21,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0A0A0F"
       },
-      "package": "com.forgedis.ariasenior",
+      "package": "com.forgedis.ariafacility",
       "permissions": [
         "RECORD_AUDIO",
         "ACCESS_FINE_LOCATION",
