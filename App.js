@@ -8,17 +8,26 @@ import { View, ActivityIndicator, StyleSheet } from "react-native";
 
 import MainScreen from "./src/screens/MainScreen";
 import OnboardingScreen from "./src/screens/OnboardingScreen";
+import PairingScreen from "./src/screens/PairingScreen";
 import { StorageService } from "./src/services/StorageService";
+import { setProxyToken } from "./src/services/DocumentService";
 
 export default function App() {
   const [chargement, setChargement] = useState(true);
   const [onboardingFait, setOnboardingFait] = useState(false);
+  const [appairageFait, setAppairageFait] = useState(false);
 
   useEffect(() => {
-    StorageService.isOnboardingDone().then((fait) => {
+    (async () => {
+      const fait = await StorageService.isOnboardingDone();
+      const token = await StorageService.getToken();
+      if (token) {
+        setProxyToken(token);
+      }
       setOnboardingFait(fait);
+      setAppairageFait(!!token);
       setChargement(false);
-    });
+    })();
   }, []);
 
   if (chargement) {
@@ -31,6 +40,10 @@ export default function App() {
 
   if (!onboardingFait) {
     return <OnboardingScreen onDone={() => setOnboardingFait(true)} />;
+  }
+
+  if (!appairageFait) {
+    return <PairingScreen onDone={() => setAppairageFait(true)} />;
   }
 
   return <MainScreen />;

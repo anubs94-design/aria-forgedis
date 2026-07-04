@@ -50,10 +50,11 @@ import { chargerRappels, creerRappel, supprimerRappel, formaterHeure } from "../
 import { parlerSansPc } from "../services/ConversationService";
 import { logActivite, partagerRapport, getProche, setProche, programmerRappelRapport } from "../services/VeilleFamilleService";
 
-const SERVER_HOST = "192.168.1.31";
+const SERVER_HOST = "192.168.1.31"; // essai wifi local, bascule auto sur le relais sinon (voir WebSocketService)
 const SERVER_PORT = 8765;
 const SERVER_URL = "wss://" + SERVER_HOST + ":" + SERVER_PORT;
-const AGENT_TOKEN = "f259bf284425082d68c23006e8d2be047ac5ddd29c5539ae93dc2c4c34ed1853";
+// Le token n'est plus fixe : charge depuis StorageService (voir useEffect plus bas),
+// recupere par PairingScreen.js via /client-token. Propre a chaque client.
 
 export default function MainScreen() {
   const [status, setStatus] = useState("disconnected");
@@ -83,6 +84,7 @@ export default function MainScreen() {
   const [langue, setLangue] = useState("fr-FR");
   const [ecouteActive, setEcouteActive] = useState(false);
   const [debugVisible, setDebugVisible] = useState(false);
+  const [agentToken, setAgentToken] = useState(null);
   const voixActiveRef = useRef(voixActive);
   const socketRef = useRef(null);
   const tapTimesRef = useRef([]);
@@ -99,6 +101,9 @@ export default function MainScreen() {
       if (profile && profile.vocal === false) {
         setVocalActif(false);
       }
+    });
+    StorageService.getToken().then((token) => {
+      if (token) setAgentToken(token);
     });
   }, []);
 
@@ -136,9 +141,13 @@ export default function MainScreen() {
 
   const connect = useCallback(() => {
     if (socketRef.current) return;
+    if (!agentToken) {
+      addLog("Compte non pret, patientez un instant puis reessayez.");
+      return;
+    }
     const socket = createConnection({
       serverUrlLocal: SERVER_URL,
-      agentToken: AGENT_TOKEN,
+      agentToken: agentToken,
       callbacks: {
         onLog: addLog,
         onStatusChange: setStatus,
@@ -155,7 +164,15 @@ export default function MainScreen() {
       },
     });
     socketRef.current = socket;
-  }, [addLog, handleTaskResult]);
+  }, [addLog, handleTaskResult, agentToken]);
+
+  // Connexion automatique des que le token du compte est charge : le client
+  // final n'a jamais besoin de connaitre la zone debug pour que ca marche.
+  useEffect(() => {
+    if (agentToken) {
+      connect();
+    }
+  }, [agentToken, connect]);
 
   const disconnect = useCallback(() => {
     disconnectSocket(socketRef.current);

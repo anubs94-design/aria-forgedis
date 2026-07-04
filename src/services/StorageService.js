@@ -6,6 +6,8 @@ const KEYS = {
   ONBOARDING_DONE: 'forgedis_onboarding_done',
   HISTORY: 'forgedis_history',
   SETTINGS: 'forgedis_settings',
+  AGENT_TOKEN: 'forgedis_agent_token',
+  ACCOUNT_EMAIL: 'forgedis_account_email',
 };
 
 export const StorageService = {
@@ -52,6 +54,18 @@ export const StorageService = {
   },
   async saveSettings(settings) {
     await AsyncStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));
+  },
+  async getToken() {
+    return await AsyncStorage.getItem(KEYS.AGENT_TOKEN);
+  },
+  async saveToken(token) {
+    await AsyncStorage.setItem(KEYS.AGENT_TOKEN, token);
+  },
+  async getAccountEmail() {
+    return await AsyncStorage.getItem(KEYS.ACCOUNT_EMAIL);
+  },
+  async saveAccountEmail(email) {
+    await AsyncStorage.setItem(KEYS.ACCOUNT_EMAIL, email);
   },
   async resetAll() {
     await AsyncStorage.multiRemove(Object.values(KEYS));

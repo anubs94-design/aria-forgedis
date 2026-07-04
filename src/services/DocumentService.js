@@ -68,7 +68,13 @@ export async function prendrePhotoDocument(addLog) {
 // === BRIQUE 2 : envoi de la photo au proxy vision pour analyse ===
 
 const PROXY_URL = "https://aria-forgelis.onrender.com/vision";
-export const PROXY_TOKEN = "aria_1bcbb653f5fd462c4ba2243f4bce9f48b6a657ba966ace5e5fe7429540cdd014";
+// Le token est propre a chaque client (recupere via /client-token a l'appairage,
+// voir PairingScreen.js). Plus de token partage en dur : setProxyToken() est
+// appele une fois au demarrage de l'app avec le token stocke localement.
+export let PROXY_TOKEN = null;
+export function setProxyToken(token) {
+  PROXY_TOKEN = token;
+}
 
 const PROMPT_ASSISTANT_DOCUMENT =
   "Tu es Aria, assistante vocale intelligente pour seniors et personnes en " +

@@ -32,6 +32,7 @@ export async function parlerSansPc(message, addLog) {
       body: JSON.stringify({
         message: message,
         system: SYSTEM_ARIA_CONVERSATION,
+        token: PROXY_TOKEN,
       }),
     });
 
