@@ -373,13 +373,8 @@ async def relais(websocket: WebSocket):
     token = websocket.query_params.get("token", "")
     role = websocket.query_params.get("role", "")
 
-    # Agent PC : doit avoir le PROXY_TOKEN
-    if role == "agent":
-        if not PROXY_TOKEN or token != PROXY_TOKEN:
-            await websocket.close(code=4001)
-            return
-    # Telephone : doit avoir un token client Supabase valide
-    elif role == "phone":
+    # Agent PC ou telephone : PROXY_TOKEN (dev) ou token client Supabase valide
+    if role in ("agent", "phone") and token != PROXY_TOKEN:
         if SUPABASE_URL and SUPABASE_SERVICE_KEY:
             import httpx as httpx_check
             async with httpx_check.AsyncClient(timeout=5.0) as c:
