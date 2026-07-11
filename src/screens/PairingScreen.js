@@ -56,6 +56,7 @@ export default function PairingScreen({ onDone }) {
 
       await StorageService.saveToken(data.token);
       await StorageService.saveAccountEmail(propre);
+      if (data.forfait) { await StorageService.saveForfait(data.forfait); }
       setProxyToken(data.token);
       setChargement(false);
       onDone();
