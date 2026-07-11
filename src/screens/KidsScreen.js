@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, TextInput } from 'react-native';
+import { parlerKids } from '../services/ConversationService';
+import * as ImagePicker from 'expo-image-picker';
 import StorageService from '../services/StorageService';
 
 const SUPABASE_URL = 'https://dvlrilklbspuckbplglv.supabase.co';
@@ -44,7 +46,12 @@ export default function KidsScreen() {
   const [defis, setDefis] = useState([]);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState('');
-  const [ecran, setEcran] = useState('selection'); // selection | accueil | socrate | passeport
+  const [ecran, setEcran] = useState('selection');
+  const [matiereActive, setMatiereActive] = useState('');
+  const [session, setSession] = useState([]);
+  const [inputText, setInputText] = useState('');
+  const [envoiEnCours, setEnvoiEnCours] = useState(false);
+  const [sessionRef, setSessionRef] = useState([]); // selection | accueil | socrate | passeport
 
   useEffect(() => { chargerDonnees(); }, []);
 
@@ -79,6 +86,42 @@ export default function KidsScreen() {
     setEcran('accueil');
   };
 
+  const ouvrirMatiere = async (matiere) => {
+    setMatiereActive(matiere);
+    const sess = await StorageService.getSession(profilActif.id + '_' + matiere);
+    setSession(sess);
+    setEcran('socrate');
+  };
+
+  const envoyerMessage = async (texte) => {
+    if (!texte || !texte.trim() || envoiEnCours) return;
+    const token = await StorageService.getToken();
+    const newSession = [...session, { role: 'user', content: texte }];
+    setSession(newSession);
+    setInputText('');
+    setEnvoiEnCours(true);
+    const rep = await parlerKids(texte, session, profilActif.niveau || 'cm2', matiereActive, token);
+    if (rep) {
+      const finalSession = [...newSession, { role: 'assistant', content: rep }];
+      setSession(finalSession);
+      await StorageService.saveSession(profilActif.id + '_' + matiereActive, finalSession);
+      const prog = await StorageService.getProgression(profilActif.id);
+      const newProg = Object.assign({}, prog, { points: (prog.points || 0) + 10, sessions_count: (prog.sessions_count || 0) + 1 });
+      await StorageService.saveProgression(profilActif.id, newProg);
+      setProgression(newProg);
+    }
+    setEnvoiEnCours(false);
+  };
+
+  const scannerDevoir = async () => {
+    const result = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.7 });
+    if (!result.canceled && result.assets[0]) {
+      setEnvoiEnCours(true);
+      await envoyerMessage('Voici mon devoir, aide-moi a le comprendre sans me donner la reponse ?');
+      setEnvoiEnCours(false);
+    }
+  };
+
   if (loading) return <View style={styles.container}><ActivityIndicator color="#FF7A59" size="large" /></View>;
 
   // ECRAN SELECTION PROFIL
@@ -109,6 +152,66 @@ export default function KidsScreen() {
 
   // ECRAN ACCUEIL ENFANT
   const matieres = profilActif ? (MATIERES_PAR_NIVEAU[profilActif.niveau] || MATIERES_PAR_NIVEAU['cm2']) : [];
+
+  // ECRAN SOCRATE
+  if (ecran === 'socrate') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.socrateHeader}>
+          <TouchableOpacity onPress={function() { setEcran('accueil'); setSession([]); }}>
+            <Text style={styles.retour}>? Retour</Text>
+          </TouchableOpacity>
+          <Text style={styles.socrateMatiere}>{matiereActive}</Text>
+          <TouchableOpacity style={styles.scanBtn} onPress={scannerDevoir}>
+            <Text style={styles.scanBtnText}>Scanner</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.socrateMessages} contentContainerStyle={{ paddingBottom: 20 }}>
+          {session.length === 0 && (
+            <View style={styles.socrateVide}>
+              <Text style={styles.socrateVideTitre}>Pret a apprendre !</Text>
+              <Text style={styles.socrateVideSub}>Pose ta question ou scanne ton devoir.</Text>
+              <Text style={styles.socrateVideSub}>Aria va t'aider a trouver la reponse par toi-meme.</Text>
+            </View>
+          )}
+          {session.map(function(msg, idx) {
+            var isUser = msg.role === 'user';
+            return (
+              <View key={idx} style={[styles.messageRow, isUser ? styles.messageRowUser : styles.messageRowAria]}>
+                {!isUser && <View style={styles.ariaAvatar}><Text style={styles.ariaAvatarText}>A</Text></View>}
+                <View style={[styles.messageBulle, isUser ? styles.messageBulleUser : styles.messageBulleAria]}>
+                  <Text style={[styles.messageTexte, isUser ? styles.messageTexteUser : styles.messageTexteAria]}>{msg.content}</Text>
+                </View>
+              </View>
+            );
+          })}
+          {envoiEnCours && (
+            <View style={styles.messageRowAria}>
+              <View style={styles.ariaAvatar}><Text style={styles.ariaAvatarText}>A</Text></View>
+              <View style={styles.messageBulleAria}>
+                <ActivityIndicator color="#FF7A59" size="small" />
+              </View>
+            </View>
+          )}
+        </ScrollView>
+
+        <View style={styles.socrateInput}>
+          <TextInput
+            style={styles.inputChat}
+            placeholder="Ecris ta reponse ou ta question..."
+            placeholderTextColor="#7A8095"
+            value={inputText}
+            onChangeText={setInputText}
+            multiline
+          />
+          <TouchableOpacity style={styles.sendBtn} onPress={function() { envoyerMessage(inputText); }} disabled={envoiEnCours}>
+            <Text style={styles.sendBtnText}>Envoyer</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
   const surpriseJour = SURPRISES.find(function(s) { return !progression || !(progression.surprises_faites || []).includes(s.id); });
   const points = progression ? (progression.points || 0) : 0;
   const passeport = progression ? (progression.passeport || []) : [];
@@ -147,7 +250,7 @@ export default function KidsScreen() {
       <Text style={styles.section}>Matieres</Text>
       <View style={styles.matieresGrid}>
         {matieres.map(function(m) { return (
-          <TouchableOpacity key={m} style={styles.matiereCard} onPress={function() { setEcran('socrate'); }}>
+          <TouchableOpacity key={m} style={styles.matiereCard} onPress={function() { ouvrirMatiere(m); }}>
             <Text style={styles.matiereNom}>{m}</Text>
           </TouchableOpacity>
         ); })}
@@ -205,4 +308,27 @@ const styles = StyleSheet.create({
   vieNom: { color: '#7ED321', fontSize: 13, fontWeight: '600' },
   passeportBtn: { backgroundColor: '#0F1626', borderRadius: 16, padding: 16, alignItems: 'center', marginTop: 16, borderWidth: 1, borderColor: '#F5A623' },
   passeportBtnText: { color: '#F5A623', fontWeight: '700', fontSize: 14 },
+  socrateHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 40, marginBottom: 12, paddingHorizontal: 4 },
+  socrateMatiere: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  scanBtn: { backgroundColor: '#FF7A5920', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: '#FF7A59' },
+  scanBtnText: { color: '#FF7A59', fontSize: 12, fontWeight: '700' },
+  socrateMessages: { flex: 1, paddingHorizontal: 4 },
+  socrateVide: { alignItems: 'center', marginTop: 60, paddingHorizontal: 20 },
+  socrateVideTitre: { fontSize: 20, fontWeight: '800', color: '#fff', marginBottom: 12 },
+  socrateVideSub: { fontSize: 14, color: '#7A8095', textAlign: 'center', marginBottom: 6 },
+  messageRow: { flexDirection: 'row', marginBottom: 12, alignItems: 'flex-end' },
+  messageRowUser: { justifyContent: 'flex-end' },
+  messageRowAria: { justifyContent: 'flex-start' },
+  ariaAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#FF7A5920', alignItems: 'center', justifyContent: 'center', marginRight: 8, borderWidth: 1, borderColor: '#FF7A59' },
+  ariaAvatarText: { color: '#FF7A59', fontWeight: '800', fontSize: 14 },
+  messageBulle: { maxWidth: '75%', borderRadius: 16, padding: 12 },
+  messageBulleUser: { backgroundColor: '#1E2535', borderBottomRightRadius: 4 },
+  messageBulleAria: { backgroundColor: '#FF7A5915', borderWidth: 1, borderColor: '#FF7A5940', borderBottomLeftRadius: 4 },
+  messageTexte: { fontSize: 14, lineHeight: 20 },
+  messageTexteUser: { color: '#A0A8BC' },
+  messageTexteAria: { color: '#fff' },
+  socrateInput: { flexDirection: 'row', alignItems: 'flex-end', paddingTop: 8, paddingBottom: 16, gap: 8 },
+  inputChat: { flex: 1, backgroundColor: '#0F1626', borderRadius: 12, padding: 12, color: '#fff', fontSize: 14, borderWidth: 1, borderColor: '#1E2535', maxHeight: 100 },
+  sendBtn: { backgroundColor: '#FF7A59', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12 },
+  sendBtnText: { color: '#fff', fontWeight: '800', fontSize: 13 },
 });

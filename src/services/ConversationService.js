@@ -50,3 +50,40 @@ export async function parlerSansPc(message, addLog) {
     return null;
   }
 }
+
+export async function parlerKids(message, session, niveau, matiere, token) {
+  try {
+    const systemKids = 'Tu es Aria, un professeur bienveillant et patient pour un enfant de niveau ' + niveau + '. ' +
+      'Tu enseignes la matiere suivante : ' + matiere + '. ' +
+      'REGLE ABSOLUE - Ne donne JAMAIS la reponse directement. ' +
+      'Utilise la methode Socrate - pose des questions pour guider l enfant vers la decouverte. ' +
+      'Adapte ton vocabulaire au niveau ' + niveau + '. ' +
+      'Encourage chaque bonne reponse avec enthousiasme. ' +
+      'Si l enfant bloque apres 3 tentatives, donne un indice mais pas la reponse. ' +
+      'Sois chaleureux, positif, et n utilise jamais de mots compliques sans les expliquer. ' +
+      'Reponds toujours en 3-5 phrases maximum.';
+
+    const messages = [];
+    for (var i = 0; i < session.length; i++) {
+      messages.push({ role: session[i].role, content: session[i].content });
+    }
+    messages.push({ role: 'user', content: message });
+
+    const response = await fetch(ASK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: message,
+        system: systemKids,
+        token: token,
+        historique: messages,
+      }),
+    });
+
+    const data = await response.json();
+    if (data.response) return data.response;
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
