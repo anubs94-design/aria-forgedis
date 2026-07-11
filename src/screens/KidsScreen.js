@@ -153,6 +153,63 @@ export default function KidsScreen() {
   // ECRAN ACCUEIL ENFANT
   const matieres = profilActif ? (MATIERES_PAR_NIVEAU[profilActif.niveau] || MATIERES_PAR_NIVEAU['cm2']) : [];
 
+  // ECRAN PASSEPORT
+  if (ecran === 'passeport') {
+    const TAMPONS = [
+      { id: 'budget', emoji: 'B', titre: 'Budget', desc: 'Gerer son argent' },
+      { id: 'impots', emoji: 'I', titre: 'Impots', desc: 'Comprendre les impots' },
+      { id: 'travail', emoji: 'T', titre: 'Travail', desc: 'Droits du travail' },
+      { id: 'logement', emoji: 'L', titre: 'Logement', desc: 'Bail et logement' },
+      { id: 'sante', emoji: 'S', titre: 'Sante', desc: 'Secu sociale' },
+      { id: 'entreprise', emoji: 'E', titre: 'Entreprise', desc: 'Creer son business' },
+      { id: 'citoyen', emoji: 'C', titre: 'Citoyen', desc: 'Voter et agir' },
+      { id: 'cuisine', emoji: 'Cu', titre: 'Cuisine', desc: 'Bien se nourrir' },
+      { id: 'code', emoji: 'Co', titre: 'Code', desc: 'Programmer' },
+      { id: 'musique', emoji: 'M', titre: 'Musique', desc: 'Arts et creation' },
+    ];
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
+        <View style={styles.socrateHeader}>
+          <TouchableOpacity onPress={function() { setEcran('accueil'); }}>
+            <Text style={styles.retour}>? Retour</Text>
+          </TouchableOpacity>
+          <Text style={styles.socrateMatiere}>Mon passeport de vie</Text>
+          <Text style={styles.pointsText}>{passeport.length}/10</Text>
+        </View>
+
+        <Text style={styles.passeportIntro}>Chaque competence de vie reelle que tu maitrises te donne un tampon. Complete ton passeport avant tes 18 ans !</Text>
+
+        <View style={styles.tamponsGrid}>
+          {TAMPONS.map(function(t) {
+            var obtenu = passeport.includes(t.id);
+            return (
+              <View key={t.id} style={[styles.tamponCard, obtenu ? styles.tamponObtenu : styles.tamponVide]}>
+                <View style={[styles.tamponCircle, obtenu ? styles.tamponCircleObtenu : styles.tamponCircleVide]}>
+                  <Text style={[styles.tamponEmoji, obtenu ? styles.tamponEmojiObtenu : styles.tamponEmojiVide]}>{t.emoji}</Text>
+                </View>
+                <Text style={[styles.tamponTitre, obtenu ? styles.tamponTitreObtenu : styles.tamponTitreVide]}>{t.titre}</Text>
+                <Text style={styles.tamponDesc}>{t.desc}</Text>
+                {obtenu && <Text style={styles.tamponCheck}>Obtenu</Text>}
+                {!obtenu && (
+                  <TouchableOpacity style={styles.tamponBtn} onPress={function() { ouvrirMatiere(t.titre + ' - ' + t.desc); }}>
+                    <Text style={styles.tamponBtnText}>Apprendre</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })}
+        </View>
+
+        <View style={styles.passeportProgress}>
+          <Text style={styles.passeportProgressLabel}>{passeport.length} tampons sur 10</Text>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: (passeport.length / 10 * 100) + '%' }]} />
+          </View>
+        </View>
+      </ScrollView>
+    );
+  }
+
   // ECRAN SOCRATE
   if (ecran === 'socrate') {
     return (
@@ -308,6 +365,28 @@ const styles = StyleSheet.create({
   vieNom: { color: '#7ED321', fontSize: 13, fontWeight: '600' },
   passeportBtn: { backgroundColor: '#0F1626', borderRadius: 16, padding: 16, alignItems: 'center', marginTop: 16, borderWidth: 1, borderColor: '#F5A623' },
   passeportBtnText: { color: '#F5A623', fontWeight: '700', fontSize: 14 },
+  passeportIntro: { color: '#7A8095', fontSize: 13, textAlign: 'center', marginBottom: 20, paddingHorizontal: 8 },
+  tamponsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12, marginBottom: 24 },
+  tamponCard: { width: 140, borderRadius: 16, padding: 14, alignItems: 'center', borderWidth: 1 },
+  tamponObtenu: { backgroundColor: '#F5A62315', borderColor: '#F5A623' },
+  tamponVide: { backgroundColor: '#0F1626', borderColor: '#1E2535' },
+  tamponCircle: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  tamponCircleObtenu: { backgroundColor: '#F5A62330' },
+  tamponCircleVide: { backgroundColor: '#1E2535' },
+  tamponEmoji: { fontSize: 16, fontWeight: '800' },
+  tamponEmojiObtenu: { color: '#F5A623' },
+  tamponEmojiVide: { color: '#7A8095' },
+  tamponTitre: { fontSize: 13, fontWeight: '700', marginBottom: 2 },
+  tamponTitreObtenu: { color: '#F5A623' },
+  tamponTitreVide: { color: '#fff' },
+  tamponDesc: { fontSize: 10, color: '#7A8095', textAlign: 'center', marginBottom: 6 },
+  tamponCheck: { fontSize: 11, color: '#F5A623', fontWeight: '700' },
+  tamponBtn: { backgroundColor: '#FF7A5920', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: '#FF7A59' },
+  tamponBtnText: { color: '#FF7A59', fontSize: 11, fontWeight: '700' },
+  passeportProgress: { marginTop: 8, paddingHorizontal: 8 },
+  passeportProgressLabel: { color: '#7A8095', fontSize: 12, marginBottom: 6, textAlign: 'center' },
+  progressBar: { height: 6, backgroundColor: '#1E2535', borderRadius: 3, overflow: 'hidden' },
+  progressFill: { height: 6, backgroundColor: '#F5A623', borderRadius: 3 },
   socrateHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 40, marginBottom: 12, paddingHorizontal: 4 },
   socrateMatiere: { fontSize: 15, fontWeight: '700', color: '#fff' },
   scanBtn: { backgroundColor: '#FF7A5920', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: '#FF7A59' },
