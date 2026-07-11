@@ -7,6 +7,8 @@ import React, { useState, useEffect } from "react";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
 
 import MainScreen from "./src/screens/MainScreen";
+import KidsScreen from "./src/screens/KidsScreen";
+import KidsParentScreen from "./src/screens/KidsParentScreen";
 import OnboardingScreen from "./src/screens/OnboardingScreen";
 import PairingScreen from "./src/screens/PairingScreen";
 import { StorageService } from "./src/services/StorageService";
@@ -16,6 +18,7 @@ export default function App() {
   const [chargement, setChargement] = useState(true);
   const [onboardingFait, setOnboardingFait] = useState(false);
   const [appairageFait, setAppairageFait] = useState(false);
+  const [forfait, setForfait] = useState("facility");
 
   useEffect(() => {
     (async () => {
@@ -23,6 +26,10 @@ export default function App() {
       const token = await StorageService.getToken();
       if (token) {
         setProxyToken(token);
+          try {
+            const f = await StorageService.getForfait();
+            setForfait(f || "facility");
+          } catch(e) { setForfait("facility"); }
       }
       setOnboardingFait(fait);
       setAppairageFait(!!token);
@@ -46,6 +53,8 @@ export default function App() {
     return <PairingScreen onDone={() => setAppairageFait(true)} />;
   }
 
+  if (forfait === "kids_enfant") return <KidsScreen />;
+  if (forfait === "kids_parent") return <KidsParentScreen />;
   return <MainScreen />;
 }
 

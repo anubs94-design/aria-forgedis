@@ -8,6 +8,7 @@ const KEYS = {
   SETTINGS: 'forgedis_settings',
   AGENT_TOKEN: 'forgedis_agent_token',
   ACCOUNT_EMAIL: 'forgedis_account_email',
+  FORFAIT: 'forgedis_forfait',
 };
 
 export const StorageService = {
@@ -66,6 +67,12 @@ export const StorageService = {
   },
   async saveAccountEmail(email) {
     await AsyncStorage.setItem(KEYS.ACCOUNT_EMAIL, email);
+  },
+  async getForfait() {
+    return await AsyncStorage.getItem(KEYS.FORFAIT);
+  },
+  async saveForfait(forfait) {
+    await AsyncStorage.setItem(KEYS.FORFAIT, forfait);
   },
   async resetAll() {
     await AsyncStorage.multiRemove(Object.values(KEYS));
