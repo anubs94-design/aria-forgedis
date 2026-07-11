@@ -81,6 +81,8 @@ async def verifier_forfait(token_recu, type_requete="eco"):
 
             client_data = data[0]
 
+                if client_data.get("is_admin", False):
+                    return True, "", client_data.get("forfait", "facility")
             if not client_data.get("actif", False):
                 return False, "Votre abonnement est inactif. Contactez le support.", "inactif"
 
