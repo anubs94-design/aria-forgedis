@@ -169,7 +169,7 @@ async def client_token(body: dict):
             client_data = data[0]
             if not client_data.get("actif", False):
                 return {"erreur": "Votre abonnement est inactif."}
-            return {"token": client_data["token"], "forfait": client_data["forfait"]}
+            return {"token": client_data["token"], "forfait": client_data["forfait"], "is_admin": client_data.get("is_admin", False)}
     except Exception as e:
         return {"erreur": str(e)}
 
