@@ -59,6 +59,7 @@ const SERVER_URL = "wss://" + SERVER_HOST + ":" + SERVER_PORT;
 export default function MainScreen() {
   const [status, setStatus] = useState("disconnected");
   const [logs, setLogs] = useState([]);
+  const [historiqueConv, setHistoriqueConv] = useState([]);
   const [taskText, setTaskText] = useState("");
   const [pendingContext, setPendingContext] = useState(null);
   const [fileChoices, setFileChoices] = useState(null);
@@ -133,6 +134,7 @@ export default function MainScreen() {
     } else if (r.statut === "succes") {
       setFileChoices(null);
       addLog("Tache terminee avec succes.");
+        if (pendingContext) setHistoriqueConv(prev => [...prev, {user: pendingContext, aria: r.message || "Tache terminee"}].slice(-5));
     } else {
       setFileChoices(null);
       addLog("Tache terminee [" + r.statut + "]: " + (r.message || "(pas de message)"));
@@ -673,6 +675,20 @@ export default function MainScreen() {
           </TouchableOpacity>
         </View>
 
+          {historiqueConv.length > 0 && (
+            <View style={{marginHorizontal: 16, marginBottom: 12}}>
+              {historiqueConv.slice(-3).map((echange, idx) => (
+                <View key={idx} style={{marginBottom: 8}}>
+                  <View style={{backgroundColor: "#1E2535", borderRadius: 12, padding: 10, marginBottom: 4, alignSelf: "flex-end", maxWidth: "80%"}}>
+                    <Text style={{color: "#A0A8BC", fontSize: 13}}>{echange.user}</Text>
+                  </View>
+                  <View style={{backgroundColor: "#FF7A5920", borderRadius: 12, padding: 10, alignSelf: "flex-start", maxWidth: "80%", borderWidth: 1, borderColor: "#FF7A5940"}}>
+                    <Text style={{color: "#FFFFFF", fontSize: 13}}>{echange.aria}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
         {/* ===== ZONE DEBUG : masquee par defaut (triple-tap sur "Aria") ===== */}
 
         {debugVisible && (
