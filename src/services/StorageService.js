@@ -74,6 +74,24 @@ export const StorageService = {
   async saveForfait(forfait) {
     await AsyncStorage.setItem(KEYS.FORFAIT, forfait);
   },
+  async getSession(profilId) {
+    const raw = await AsyncStorage.getItem('kids_session_' + profilId);
+    return raw ? JSON.parse(raw) : [];
+  },
+  async saveSession(profilId, messages) {
+    const trimmed = messages.slice(-20);
+    await AsyncStorage.setItem('kids_session_' + profilId, JSON.stringify(trimmed));
+  },
+  async clearSession(profilId) {
+    await AsyncStorage.removeItem('kids_session_' + profilId);
+  },
+  async getProgression(profilId) {
+    const raw = await AsyncStorage.getItem('kids_progression_' + profilId);
+    return raw ? JSON.parse(raw) : { points: 0, niveaux: [], matieres: [] };
+  },
+  async saveProgression(profilId, progression) {
+    await AsyncStorage.setItem('kids_progression_' + profilId, JSON.stringify(progression));
+  },
   async resetAll() {
     await AsyncStorage.multiRemove(Object.values(KEYS));
   },
