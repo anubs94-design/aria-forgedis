@@ -196,7 +196,10 @@ async def stripe_webhook(request: Request):
     if event_type == "checkout.session.completed":
         # Nouveau client a paye — creer son token
         email = data_obj.get("customer_email", "") or data_obj.get("customer_details", {}).get("email", "")
-        if not email:
+        forfait_stripe = data_obj.get("metadata", {}).get("forfait", "") or data_obj.get("subscription_details", {}).get("metadata", {}).get("forfait", "facility")
+    if not forfait_stripe:
+        forfait_stripe = "facility"
+    if not email:
             return {"status": "ignore", "raison": "pas d'email"}
 
         token = "aria_" + secrets_mod.token_hex(32)
@@ -225,7 +228,7 @@ async def stripe_webhook(request: Request):
                             "Content-Type": "application/json",
                             "Prefer": "return=minimal",
                         },
-                        json={"forfait": "facility", "actif": True},
+                        json={"forfait": forfait_stripe, "actif": True},
                     )
                     return {"status": "ok", "action": "client reactive"}
                 else:
@@ -241,7 +244,7 @@ async def stripe_webhook(request: Request):
                         json={
                             "email": email,
                             "token": token,
-                            "forfait": "facility",
+                "forfait": forfait_stripe,
                             "taches_ce_mois": 0,
                             "actif": True,
                         },
@@ -262,7 +265,7 @@ async def stripe_webhook(request: Request):
                         "Content-Type": "application/json",
                         "Prefer": "return=minimal",
                     },
-                    json={"actif": True, "forfait": "facility"},
+                    json={"actif": True, "forfait": forfait_stripe},
                 )
         return {"status": "ok", "action": "paiement confirme"}
 
