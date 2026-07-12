@@ -8,6 +8,7 @@ import { View, ActivityIndicator, StyleSheet } from "react-native";
 
 import MainScreen from "./src/screens/MainScreen";
 import KidsScreen from "./src/screens/KidsScreen";
+import PortailScreen from "./src/screens/PortailScreen";
 import KidsParentScreen from "./src/screens/KidsParentScreen";
 import OnboardingScreen from "./src/screens/OnboardingScreen";
 import PairingScreen from "./src/screens/PairingScreen";
@@ -16,6 +17,7 @@ import { setProxyToken } from "./src/services/DocumentService";
 
 export default function App() {
   const [chargement, setChargement] = useState(true);
+  const [choixPortail, setChoixPortail] = useState(null);
   const [onboardingFait, setOnboardingFait] = useState(false);
   const [appairageFait, setAppairageFait] = useState(false);
   const [forfait, setForfait] = useState("facility");
@@ -53,8 +55,8 @@ export default function App() {
     return <PairingScreen onDone={() => setAppairageFait(true)} />;
   }
 
-  if (forfait === "kids_enfant") return <KidsScreen />;
-  if (forfait === "kids_parent") return <KidsParentScreen />;
+  if (!choixPortail) return <PortailScreen onChoix={(c) => setChoixPortail(c)} />;
+  if (choixPortail === "kids" || forfait === "kids_solo" || forfait === "kids_famille") return <KidsScreen token={token} onRetour={() => setChoixPortail(null)} />;
   return <MainScreen />;
 }
 
