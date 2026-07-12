@@ -450,3 +450,54 @@ async def save_profil_kids(request: Request):
         return JSONResponse({"ok": True})
     else:
         return JSONResponse({"error": "Echec"}, status_code=500)
+
+
+# === DEVOIRS PHOTO SYNC ===
+@app.post("/upload-devoir")
+async def upload_devoir(request: Request):
+    body = await request.json()
+    token = body.get("token", "")
+    image_b64 = body.get("image", "")
+    filename = body.get("filename", "devoir.jpg")
+    if not token or not image_b64:
+        return JSONResponse({"error": "Token et image requis"}, status_code=400)
+    import base64, time
+    image_bytes = base64.b64decode(image_b64)
+    ts = str(int(time.time()))
+    path = f"{token[:16]}/{ts}_{filename}"
+    r = await client.post(
+        f"{SUPABASE_URL}/storage/v1/object/devoirs/{path}",
+        headers={
+            "apikey": SUPABASE_SERVICE_KEY,
+            "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+            "Content-Type": "image/jpeg",
+        },
+        content=image_bytes,
+    )
+    if r.status_code in (200, 201):
+        url = f"{SUPABASE_URL}/storage/v1/object/public/devoirs/{path}"
+        return JSONResponse({"ok": True, "url": url, "path": path})
+    else:
+        return JSONResponse({"error": "Upload echoue", "detail": r.text}, status_code=500)
+
+@app.get("/devoirs")
+async def list_devoirs(request: Request):
+    token = request.query_params.get("token", "")
+    if not token:
+        return JSONResponse({"error": "Token requis"}, status_code=400)
+    prefix = token[:16]
+    r = await client.post(
+        f"{SUPABASE_URL}/storage/v1/object/list/devoirs",
+        headers={
+            "apikey": SUPABASE_SERVICE_KEY,
+            "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+            "Content-Type": "application/json",
+        },
+        json={"prefix": prefix, "limit": 20, "sortBy": {"column": "created_at", "order": "desc"}},
+    )
+    if r.status_code == 200:
+        files = r.json()
+        urls = [{"name": f.get("name",""), "url": f"{SUPABASE_URL}/storage/v1/object/public/devoirs/{prefix}/{f.get('name','')}"} for f in files if f.get("name")]
+        return JSONResponse({"devoirs": urls})
+    else:
+        return JSONResponse({"devoirs": []})
