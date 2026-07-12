@@ -80,9 +80,9 @@ async def verifier_forfait(token_recu, type_requete="eco"):
                 return False, "Token inconnu.", "aucun"
 
             client_data = data[0]
-
             if client_data.get("is_admin", False):
                 return True, "", client_data.get("forfait", "facility")
+
             if not client_data.get("actif", False):
                 return False, "Votre abonnement est inactif. Contactez le support.", "inactif"
 
@@ -169,7 +169,7 @@ async def client_token(body: dict):
             client_data = data[0]
             if not client_data.get("actif", False):
                 return {"erreur": "Votre abonnement est inactif."}
-            return {"token": client_data["token"], "forfait": client_data["forfait"], "is_admin": client_data.get("is_admin", False)}
+            return {"token": client_data["token"], "forfait": client_data["forfait"]}
     except Exception as e:
         return {"erreur": str(e)}
 
@@ -198,10 +198,7 @@ async def stripe_webhook(request: Request):
     if event_type == "checkout.session.completed":
         # Nouveau client a paye — creer son token
         email = data_obj.get("customer_email", "") or data_obj.get("customer_details", {}).get("email", "")
-        forfait_stripe = data_obj.get("metadata", {}).get("forfait", "") or data_obj.get("subscription_details", {}).get("metadata", {}).get("forfait", "facility")
-    if not forfait_stripe:
-        forfait_stripe = "facility"
-    if not email:
+        if not email:
             return {"status": "ignore", "raison": "pas d'email"}
 
         token = "aria_" + secrets_mod.token_hex(32)
@@ -230,7 +227,7 @@ async def stripe_webhook(request: Request):
                             "Content-Type": "application/json",
                             "Prefer": "return=minimal",
                         },
-                        json={"forfait": forfait_stripe, "actif": True},
+                        json={"forfait": "facility", "actif": True},
                     )
                     return {"status": "ok", "action": "client reactive"}
                 else:
@@ -246,7 +243,7 @@ async def stripe_webhook(request: Request):
                         json={
                             "email": email,
                             "token": token,
-                "forfait": forfait_stripe,
+                            "forfait": "facility",
                             "taches_ce_mois": 0,
                             "actif": True,
                         },
@@ -267,7 +264,7 @@ async def stripe_webhook(request: Request):
                         "Content-Type": "application/json",
                         "Prefer": "return=minimal",
                     },
-                    json={"actif": True, "forfait": forfait_stripe},
+                    json={"actif": True, "forfait": "facility"},
                 )
         return {"status": "ok", "action": "paiement confirme"}
 
@@ -418,3 +415,38 @@ async def relais(websocket: WebSocket):
     finally:
         if token in relais_connexions and relais_connexions[token].get(role) is websocket:
             relais_connexions[token][role] = None
+
+
+# === PROFIL KIDS SYNC ===
+@app.get("/profil-kids")
+async def get_profil_kids(request: Request):
+    token = request.query_params.get("token", "")
+    if not token:
+        return JSONResponse({"error": "Token requis"}, status_code=400)
+    r = await client.get(
+        f"{SUPABASE_URL}/rest/v1/clients",
+        params={"token": f"eq.{token}", "select": "email,profil_kids"},
+        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
+    )
+    data = r.json()
+    if not data:
+        return JSONResponse({"error": "Token inconnu"}, status_code=404)
+    return JSONResponse({"profil": data[0].get("profil_kids")})
+
+@app.post("/profil-kids")
+async def save_profil_kids(request: Request):
+    body = await request.json()
+    token = body.get("token", "")
+    profil = body.get("profil")
+    if not token or profil is None:
+        return JSONResponse({"error": "Token et profil requis"}, status_code=400)
+    r = await client.patch(
+        f"{SUPABASE_URL}/rest/v1/clients",
+        params={"token": f"eq.{token}"},
+        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}", "Content-Type": "application/json", "Prefer": "return=minimal"},
+        json={"profil_kids": profil},
+    )
+    if r.status_code in (200, 204):
+        return JSONResponse({"ok": True})
+    else:
+        return JSONResponse({"error": "Echec"}, status_code=500)
