@@ -1,5 +1,5 @@
-﻿import React from 'react';
-import { Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
 
 export default function PortailScreen({ onChoix }) {
   return (

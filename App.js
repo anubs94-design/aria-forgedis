@@ -18,6 +18,7 @@ import { setProxyToken } from "./src/services/DocumentService";
 export default function App() {
   const [chargement, setChargement] = useState(true);
   const [choixPortail, setChoixPortail] = useState(null);
+  const [userToken, setUserToken] = useState("");
   const [onboardingFait, setOnboardingFait] = useState(false);
   const [appairageFait, setAppairageFait] = useState(false);
   const [forfait, setForfait] = useState("facility");
@@ -35,6 +36,7 @@ export default function App() {
       }
       setOnboardingFait(fait);
       setAppairageFait(!!token);
+      setUserToken(token || "");
       setChargement(false);
     })();
   }, []);
