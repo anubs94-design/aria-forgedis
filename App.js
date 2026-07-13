@@ -56,7 +56,7 @@ export default function App() {
   }
 
   if (!choixPortail) return <PortailScreen onChoix={(c) => setChoixPortail(c)} />;
-  if (choixPortail === "kids" || forfait === "kids_solo" || forfait === "kids_famille") return <KidsScreen token={token} onRetour={() => setChoixPortail(null)} />;
+  if (choixPortail === "kids" || forfait === "kids_solo" || forfait === "kids_famille") return <KidsScreen onRetour={() => setChoixPortail(null)} />;
   return <MainScreen />;
 }
 

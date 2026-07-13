@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import { Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
 
 export default function PortailScreen({ onChoix }) {
   return (
@@ -8,12 +8,12 @@ export default function PortailScreen({ onChoix }) {
       <Text style={s.titre}>Bienvenue</Text>
       <Text style={s.sous}>Choisissez votre espace</Text>
       <TouchableOpacity style={s.card} onPress={() => onChoix('facility')}>
-        <Text style={s.cardIcon}>{'???'}</Text>
+        <Text style={s.cardIcon}>{'\u{1F5A5}\u{FE0F}'}</Text>
         <Text style={s.cardTitre}>Aria Facility</Text>
         <Text style={s.cardDesc}>Pilotage PC par la voix</Text>
       </TouchableOpacity>
       <TouchableOpacity style={[s.card, s.cardKids]} onPress={() => onChoix('kids')}>
-        <Text style={s.cardIcon}>{'??'}</Text>
+        <Text style={s.cardIcon}>{'\u{1F4DA}'}</Text>
         <Text style={s.cardTitre}>Aria Kids</Text>
         <Text style={s.cardDesc}>Cours, exercices, jeux educatifs</Text>
       </TouchableOpacity>
