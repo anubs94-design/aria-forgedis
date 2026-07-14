@@ -47,7 +47,7 @@ async def ask(body: dict):
 # Separe de /ask expres : Facility (assistant senior) reste intouche et stable,
 # Kids a son propre reglage (plus de tokens, pas de contrainte "2-3 phrases courtes").
 SYSTEM_KIDS = """Tu es Aria, tutrice pedagogique bienveillante pour Aria Kids.
-Tu generes des lecons et des examens structures, adaptes a l''age et au niveau de l''eleve, toujours en francais.
+Tu generes des lecons et des examens structures, adaptes a l'age et au niveau de l'eleve, toujours en francais.
 Reponds UNIQUEMENT dans le format JSON demande par la consigne, sans texte avant ni apres, sans markdown."""
 
 @app.post("/ask-kids")
@@ -85,12 +85,12 @@ SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 # --- Verification forfait client via Supabase ---
 async def verifier_forfait(token_recu, type_requete="eco"):
     """Verifie le forfait du client. Retourne (autorise, message, forfait).
-    type_requete: ''eco'' (conversation Haiku) ou ''reflexion'' (vision Sonnet)
+    type_requete: 'eco' (conversation Haiku) ou 'reflexion' (vision Sonnet)
     """
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
         return True, "", "dev"  # Pas de Supabase configure = mode dev, tout passe
 
-    # Si c''est le token de dev de Victor, toujours autoriser
+    # Si c'est le token de dev de Victor, toujours autoriser
     if token_recu == PROXY_TOKEN:
         return True, "", "dev"
 
@@ -151,7 +151,7 @@ async def verifier_forfait(token_recu, type_requete="eco"):
             return True, "", forfait
 
     except Exception as e:
-        # En cas d''erreur Supabase, on laisse passer (pas de blocage client pour un bug serveur)
+        # En cas d'erreur Supabase, on laisse passer (pas de blocage client pour un bug serveur)
         return True, f"Erreur verification: {e}", "erreur"
 
 # --- STRIPE WEBHOOK ---
@@ -160,7 +160,7 @@ import secrets as secrets_mod
 
 @app.post("/client-token")
 async def client_token(body: dict):
-    """Le PC ou l''app envoie l''email du client, on renvoie son token."""
+    """Le PC ou l'app envoie l'email du client, on renvoie son token."""
     email = body.get("email", "").strip().lower()
     if not email:
         return {"erreur": "Email manquant."}
@@ -178,7 +178,7 @@ async def client_token(body: dict):
             )
             data = r.json()
             if not data:
-                # Aucun compte : creation automatique d''un compte gratuit
+                # Aucun compte : creation automatique d'un compte gratuit
                 # (offre Decouverte, sans carte, sans passer par Stripe)
                 nouveau_token = "aria_" + secrets_mod.token_hex(32)
                 r_create = await client.post(
@@ -211,6 +211,7 @@ async def stripe_webhook(request: Request):
     body = await request.body()
     sig = request.headers.get("stripe-signature", "")
 
+    # Verification signature (basique, sans lib stripe)
     if not STRIPE_WEBHOOK_SECRET:
         return {"erreur": "webhook non configure"}
 
@@ -224,14 +225,16 @@ async def stripe_webhook(request: Request):
     data_obj = event.get("data", {}).get("object", {})
 
     if event_type == "checkout.session.completed":
+        # Nouveau client a paye — creer son token
         email = data_obj.get("customer_email", "") or data_obj.get("customer_details", {}).get("email", "")
         if not email:
-            return {"status": "ignore", "raison": "pas d''email"}
+            return {"status": "ignore", "raison": "pas d'email"}
 
         token = "aria_" + secrets_mod.token_hex(32)
 
         if SUPABASE_URL and SUPABASE_SERVICE_KEY:
             async with httpx.AsyncClient(timeout=10.0) as client:
+                # Verifier si le client existe deja
                 r = await client.get(
                     f"{SUPABASE_URL}/rest/v1/clients",
                     params={"email": f"eq.{email}", "select": "token,forfait"},
@@ -243,6 +246,7 @@ async def stripe_webhook(request: Request):
                 existant = r.json()
 
                 if existant:
+                    # Client existe deja — reactiver et passer en facility
                     await client.patch(
                         f"{SUPABASE_URL}/rest/v1/clients",
                         params={"email": f"eq.{email}"},
@@ -256,6 +260,7 @@ async def stripe_webhook(request: Request):
                     )
                     return {"status": "ok", "action": "client reactive"}
                 else:
+                    # Nouveau client — creer
                     await client.post(
                         f"{SUPABASE_URL}/rest/v1/clients",
                         headers={
@@ -275,6 +280,7 @@ async def stripe_webhook(request: Request):
                     return {"status": "ok", "action": "client cree", "email": email}
 
     elif event_type == "invoice.payment_succeeded":
+        # Paiement mensuel reussi — garder actif
         email = data_obj.get("customer_email", "")
         if email and SUPABASE_URL and SUPABASE_SERVICE_KEY:
             async with httpx.AsyncClient(timeout=10.0) as client:
@@ -292,10 +298,11 @@ async def stripe_webhook(request: Request):
         return {"status": "ok", "action": "paiement confirme"}
 
     elif event_type == "customer.subscription.deleted":
+        # Annulation — desactiver le client (pas supprimer)
         email = data_obj.get("customer_email", "")
         if not email:
             customer_id = data_obj.get("customer", "")
-            email = customer_id
+            email = customer_id  # fallback, on utilisera le customer_id
         if email and SUPABASE_URL and SUPABASE_SERVICE_KEY:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 await client.patch(
@@ -317,6 +324,7 @@ async def stripe_webhook(request: Request):
 async def vision(body: dict):
     token_recu = body.get("token", "")
     if not PROXY_TOKEN or token_recu != PROXY_TOKEN:
+        # Verifier dans Supabase si c'est un token client
         autorise, msg, forfait = await verifier_forfait(token_recu, "reflexion")
         if not autorise:
             return {"erreur": msg}
@@ -515,7 +523,7 @@ async def list_devoirs(request: Request):
         )
     if r.status_code == 200:
         files = r.json()
-        urls = [{"name": f.get("name",""), "url": f"{SUPABASE_URL}/storage/v1/object/public/devoirs/{prefix}/{f.get(''name'','''')}"} for f in files if f.get("name")]
+        urls = [{"name": f.get("name",""), "url": f"{SUPABASE_URL}/storage/v1/object/public/devoirs/{prefix}/{f.get('name','')}"} for f in files if f.get("name")]
         return JSONResponse({"devoirs": urls})
     else:
         return JSONResponse({"devoirs": []})
