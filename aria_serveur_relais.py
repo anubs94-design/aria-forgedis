@@ -1,306 +1,521 @@
-"""
-═══════════════════════════════════════════════════════════════
- FORGELIS — Serveur relais Aria (mobile)
- aria_serveur_relais.py — v1.0
-═══════════════════════════════════════════════════════════════
-
-Pourquoi ce serveur existe :
-    Sur mobile, la clé API ne peut PAS être dans l'application
-    (n'importe qui pourrait la voler). Ce relais garde la clé
-    côté serveur et fait simplement passer les messages.
-
-Architecture SANS ÉTAT (cohérente zéro-données) :
-    - Aucune base de données
-    - Aucun stockage des messages
-    - Aucun compte utilisateur
-    - Le message arrive → part vers l'IA → la réponse repart → oubli total
-
-Déploiement gratuit (voir MOBILE_ANDROID.md) :
-    Render.com — plan gratuit, HTTPS automatique
-
-Lancement local pour test :
-    pip install fastapi uvicorn anthropic
-    set ARIA_CLAUDE_KEY=sk-ant-...
-    uvicorn aria_serveur_relais:app --reload
-"""
-
-import os
-from fastapi import FastAPI, HTTPException, Header
+﻿import os
+import httpx
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-from anthropic import Anthropic
-from aria_licence import verifier_licence
-from aria_notifications import notifier, ProfilSalarie, Canal, Forfait
 
-# ── Configuration ──
-MODELES = {
-    "lite":   "claude-haiku-4-5-20251001",
-    "smart":  "claude-sonnet-4-6",
-    "expert": "claude-opus-4-8",
-}
+app = FastAPI()
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-# Limite anti-abus : un message ne peut pas dépasser cette taille
-TAILLE_MAX_MESSAGE = 2000
-HISTORIQUE_MAX = 10
+CLAUDE_KEY = os.environ.get("ARIA_CLAUDE_KEY", "")
 
-app = FastAPI(title="Aria Relais", docs_url=None, redoc_url=None)
+SYSTEM_SENIOR = """Tu es Aria, assistante vocale intelligente de Forgedis pour les seniors de 60 ans et plus.
 
-# CORS : autoriser uniquement tes domaines en production
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # ⚠️ En production : ["https://forgelis.fr", "https://TON-SITE.netlify.app"]
-    allow_methods=["POST"],
-    allow_headers=["Content-Type"],
-)
-
-_client = None
-def client() -> Anthropic:
-    global _client
-    if _client is None:
-        cle = os.environ.get("ARIA_CLAUDE_KEY", "").strip()
-        if not cle:
-            raise HTTPException(503, "Clé API non configurée côté serveur")
-        _client = Anthropic(api_key=cle)
-    return _client
-
-
-def prompt_systeme(produit: str, profil: dict) -> str:
-    """Identique à aria_app.py — instructions selon produit et profil."""
-    if produit == "senior":
-        nom = profil.get("name", "")
-        return (
-            "Tu es Aria, un assistant vocal français conçu pour les seniors. "
-            f"Tu parles à {nom or 'l’utilisateur'}. "
-            "Règles absolues : phrases courtes et claires, vocabulaire simple, "
-            "jamais de jargon technique, toujours patient et rassurant, "
-            "une seule information à la fois. Tu vouvoies toujours. "
-            "Tu ne donnes JAMAIS de conseil médical, juridique ou financier — "
-            "tu rediriges vers un professionnel avec bienveillance. "
-            "Réponses de 1 à 3 phrases maximum sauf demande de détails."
-        )
-    nom = profil.get("name", "")
-    age = profil.get("age", 9)
-    classe = str(profil.get("classe", "ce2")).upper()
-    ptype = profil.get("ptype", "normal")
-    niveau = {
-        "avance": "L’enfant est en avance : propose des défis du niveau supérieur.",
-        "aide": "L’enfant a besoin d’aide : explique très simplement, encourage énormément.",
-    }.get(ptype, "L’enfant suit le programme normalement.")
-    return (
-        f"Tu es Aria, un assistant éducatif français pour enfants. "
-        f"Tu parles à {nom or 'un enfant'}, {age} ans, en classe de {classe}. {niveau} "
-        "Règles absolues : contenu TOUJOURS adapté aux enfants, jamais de violence "
-        "ni de contenu inapproprié. Ton enthousiaste, tutoiement, emojis avec modération. "
-        f"Adapte chaque explication au programme de {classe}. "
-        "Question sensible → en parler à un parent ou adulte de confiance. "
-        "Réponses courtes : 1 à 4 phrases."
-    )
-
-
-class Message(BaseModel):
-    role: str
-    content: str = Field(max_length=TAILLE_MAX_MESSAGE)
-
-
-class Demande(BaseModel):
-    message: str = Field(min_length=1, max_length=TAILLE_MAX_MESSAGE)
-    model: str = "lite"
-    product: str = "senior"
-    profile: dict = {}
-    history: list[Message] = []
-
-
-@app.post("/ask")
-async def ask(d: Demande, x_aria_key: str | None = Header(default=None),
-        x_aria_licence: str | None = Header(default=None)):
-    """Relais sans état : message → IA → réponse. Rien n'est conservé.
-    Si le client fournit SA clé (en-tête X-Aria-Key), elle est utilisée
-    → facturation directe sur SON compte, jamais loggée ni stockée."""
-    # Protection des coûts : par défaut le relais sert Aria Lite uniquement.
-    # Exception : le client utilise SA clé (BYOK) → il paie, il choisit.
-    # Pour autoriser Smart/Expert sur ta clé : variable d'env ARIA_RELAY_ALLOW_ALL=1
-    cle_client = bool(x_aria_key and x_aria_key.strip().startswith("sk-"))
-    tout_autorise = os.environ.get("ARIA_RELAY_ALLOW_ALL", "") == "1"
-    # Licence Pro valide → Smart/Expert débloqués sur mobile (secret jamais exposé au client)
-    lic = verifier_licence(x_aria_licence) if x_aria_licence else None
-    licence_ok = bool(lic and lic.get("valide"))
-    modele_demande = d.model if (cle_client or tout_autorise or licence_ok) else "lite"
-    modele = MODELES.get(modele_demande, MODELES["lite"])
-    produit = d.product if d.product in ("senior", "kids") else "senior"
-
-    historique = [
-        {"role": m.role, "content": m.content}
-        for m in d.history[-HISTORIQUE_MAX:]
-        if m.role in ("user", "assistant")
-    ]
-    # Le dernier message de l'historique est déjà le message courant côté client ;
-    # on s'assure qu'il est bien présent.
-    if not historique or historique[-1]["content"] != d.message:
-        historique.append({"role": "user", "content": d.message})
-
-    try:
-        c = Anthropic(api_key=x_aria_key.strip()) if (x_aria_key and x_aria_key.strip().startswith("sk-")) else client()
-        r = c.messages.create(
-            model=modele,
-            max_tokens=500,
-            system=prompt_systeme(produit, d.profile),
-            messages=historique,
-        )
-        texte = "".join(b.text for b in r.content if hasattr(b, "text"))
-        return {"reply": texte}
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(502, "Service IA momentanément indisponible")
-
-
-
-
-class NotifDemande(BaseModel):
-    """Demande de notification depuis l'interface Industrial."""
-    salarie_id: str = Field(min_length=1, max_length=100)
-    salarie_nom: str = Field(min_length=1, max_length=100)
-    salarie_email: str | None = None
-    salarie_tel: str | None = None
-    salarie_onesignal: str | None = None
-    forfait: str = "tpe"
-    titre: str = Field(min_length=1, max_length=100)
-    message: str = Field(min_length=1, max_length=500)
-    canal: str = "auto"
-    urgent: bool = False
-
-
-@app.post("/notifier")
-async def notifier_salarie(d: NotifDemande):
-    """Envoie une notification à un salarié — même s'il n'est pas connecté.
-    Sans état : aucune donnée stockée, notification envoyée puis oubliée."""
-    from aria_notifications import Canal as C, Forfait as F
-    salarie = ProfilSalarie(
-        id=d.salarie_id,
-        nom=d.salarie_nom,
-        email=d.salarie_email,
-        telephone=d.salarie_tel,
-        onesignal_id=d.salarie_onesignal,
-        forfait=F(d.forfait) if d.forfait in [f.value for f in F] else F.TPE,
-    )
-    try:
-        canal = C(d.canal) if d.canal in [c.value for c in C] else C.AUTO
-        result = await notifier.notifier(
-            salarie, d.titre, d.message, canal,
-            urgent=d.urgent)
-        return {
-            "ok": result.push_ok or result.email_ok or result.sms_ok,
-            "push": result.push_ok,
-            "email": result.email_ok,
-            "sms": result.sms_ok,
-        }
-    except Exception as e:
-        raise HTTPException(502, f"Erreur notification : {str(e)[:100]}")
-
-
-@app.post("/notifier-equipe")
-async def notifier_equipe(salaries: list[NotifDemande],
-                          titre: str, message: str, canal: str = "auto"):
-    """Notifie toute une équipe en parallèle."""
-    from aria_notifications import Canal as C, Forfait as F
-    from aria_notifications import ProfilSalarie as PS
-    team = [PS(id=d.salarie_id, nom=d.salarie_nom, email=d.salarie_email,
-               telephone=d.salarie_tel, onesignal_id=d.salarie_onesignal,
-               forfait=F(d.forfait) if d.forfait in [f.value for f in F] else F.TPE)
-            for d in salaries]
-    c = C(canal) if canal in [x.value for x in C] else C.AUTO
-    resultats = await notifier.notifier_equipe(team, titre, message, c)
-    return {"ok": True, "envoyes": len(resultats)}
-
-
-
-async def email_bienvenue(email_client: str, prenom: str, produit: str, plan: str):
-    """Envoie l'email de bienvenue après activation de licence.
-    Utilise SendGrid si configuré, sinon log silencieux."""
-    sg_key = os.environ.get("SENDGRID_API_KEY","")
-    sg_from = os.environ.get("SENDGRID_FROM","contact@forgelis.fr")
-    if not sg_key:
-        print(f"[Bienvenue] Email non envoyé (SendGrid non configuré) → {email_client}")
-        return False
-
-    produits_noms = {"senior":"Aria Senior","kids":"Aria Kids","tous":"Aria Senior + Kids","industrial":"Aria Industrial"}
-    nom_produit = produits_noms.get(produit, "Aria")
-    plans_noms = {"pro":"Pro","solo":"Solo","tpe":"TPE","pme":"PME"}
-    nom_plan = plans_noms.get(plan, plan.capitalize())
-
-    html = f"""
-<div style="font-family:Arial,sans-serif;max-width:540px;margin:0 auto;padding:0">
-  <div style="background:#0B0F1E;padding:20px 24px;border-radius:12px 12px 0 0">
-    <span style="font-size:1.2rem;font-weight:800;color:#38BDF8">FORGELIS</span>
-    <span style="color:#64748B;font-size:.85rem;margin-left:8px">— La technologie, enfin pour tous</span>
-  </div>
-  <div style="background:#F8FAFC;padding:28px 24px;border-radius:0 0 12px 12px">
-    <h2 style="color:#1E293B;margin:0 0 8px">Bienvenue {prenom} 🎉</h2>
-    <p style="color:#475569;font-size:.92rem;line-height:1.7">
-      Votre licence <b>{nom_produit} {nom_plan}</b> est maintenant active.<br>
-      Voici comment commencer en 3 étapes :
-    </p>
-    <div style="background:#EFF6FF;border-left:4px solid #2563EB;border-radius:8px;padding:14px 18px;margin:16px 0">
-      <div style="color:#1E293B;font-size:.88rem;line-height:2">
-        <div>1️⃣ Ouvrez <a href="https://forgelis.fr" style="color:#2563EB;font-weight:600">forgelis.fr</a></div>
-        <div>2️⃣ Cliquez sur <b>"🔑 Activer ma licence Pro"</b></div>
-        <div>3️⃣ Collez votre clé de licence :</div>
-      </div>
-      <div style="background:#1E293B;color:#38BDF8;font-family:monospace;font-size:.85rem;padding:10px 14px;border-radius:8px;margin-top:10px;word-break:break-all">
-        [CLEF_GENEREE]
-      </div>
-    </div>
-    <p style="color:#64748B;font-size:.78rem;line-height:1.6">
-      🔒 Toutes vos données restent sur votre appareil — Forgelis n'en stocke aucune.<br>
-      📞 Une question ? Répondez à cet email ou écrivez à <a href="mailto:contact@forgelis.fr" style="color:#2563EB">contact@forgelis.fr</a>
-    </p>
-    <div style="border-top:1px solid #E2E8F0;margin-top:20px;padding-top:14px">
-      <p style="color:#94A3B8;font-size:.72rem;margin:0">
-        Forgelis — Ferreira Diogo Victor · SIRET 106 013 899 00013<br>
-        2 rue des Écoles, 45600 Guilly · <a href="https://forgelis.fr" style="color:#94A3B8">forgelis.fr</a>
-      </p>
-    </div>
-  </div>
-</div>"""
-
-    import aiohttp
-    try:
-        async with aiohttp.ClientSession() as session:
-            payload = {
-                "personalizations": [{"to":[{"email":email_client,"name":prenom}]}],
-                "from": {"email":sg_from,"name":"Forgelis"},
-                "subject": f"🎉 Votre {nom_produit} {nom_plan} est activé !",
-                "content": [
-                    {"type":"text/plain","value":f"Bienvenue {prenom} ! Votre licence {nom_produit} {nom_plan} est active. Connectez-vous sur forgelis.fr"},
-                    {"type":"text/html","value":html}
-                ],
-            }
-            async with session.post("https://api.sendgrid.com/v3/mail/send",
-                headers={"Authorization":f"Bearer {sg_key}","Content-Type":"application/json"},
-                json=payload, timeout=aiohttp.ClientTimeout(total=8)) as r:
-                return r.status in (200,202)
-    except Exception as e:
-        print(f"[Bienvenue] Erreur email: {e}")
-        return False
-
-
-class LicenceActivation(BaseModel):
-    email: str
-    prenom: str
-    produit: str = "senior"
-    plan: str = "pro"
-    cle_licence: str
-
-
-@app.post("/bienvenue")
-async def envoyer_bienvenue(d: LicenceActivation):
-    """Déclenché par le client après paiement Stripe (webhook).
-    Envoie l'email de bienvenue avec la clé de licence."""
-    ok = await email_bienvenue(d.email, d.prenom, d.produit, d.plan)
-    return {"ok": ok, "message": "Email envoyé" if ok else "SendGrid non configuré — email en attente"}
-
+COMPORTEMENT :
+- Reponds TOUJOURS en francais, maximum 2-3 phrases courtes
+- Tu as acces a toutes les fonctions : rappels, emails, questions, calculs, meteo, actualites
+- Pour les RAPPELS : reponds "Rappel enregistre ! Je vous previens a [heure] pour [sujet]."
+- Pour les EMAILS : aide a rediger directement
+- Pour les QUESTIONS : reponds simplement et clairement
+- JAMAIS "je ne peux pas", "dans la version complete", "je comprends"
+- Utilise le prenom de l utilisateur quand tu le connais
+- Sois chaleureux, patient, encourageant"""
 
 @app.get("/sante")
 def sante():
-    """Vérification que le relais est vivant (pour Render)."""
+    return {"status": "ok"}
+
+@app.post("/ask")
+async def ask(body: dict):
+    msg = body.get("message", "")
+    token_recu = body.get("token", "")
+    system = body.get("system", SYSTEM_SENIOR)
+    if token_recu:
+        autorise, msg_err, forfait = await verifier_forfait(token_recu, "eco")
+        if not autorise:
+            return {"response": msg_err}
+    if not CLAUDE_KEY:
+        return {"response": "Cle API manquante"}
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        r = await client.post("https://api.anthropic.com/v1/messages",
+            headers={"x-api-key": CLAUDE_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+            json={"model": "claude-haiku-4-5-20251001", "max_tokens": 300, "system": system, "messages": [{"role": "user", "content": msg}]})
+        data = r.json()
+        return {"response": data["content"][0]["text"]}
+
+# --- Endpoint dedie a Aria Kids (lecons et examens) ---
+# Separe de /ask expres : Facility (assistant senior) reste intouche et stable,
+# Kids a son propre reglage (plus de tokens, pas de contrainte "2-3 phrases courtes").
+SYSTEM_KIDS = """Tu es Aria, tutrice pedagogique bienveillante pour Aria Kids.
+Tu generes des lecons et des examens structures, adaptes a l''age et au niveau de l''eleve, toujours en francais.
+Reponds UNIQUEMENT dans le format JSON demande par la consigne, sans texte avant ni apres, sans markdown."""
+
+@app.post("/ask-kids")
+async def ask_kids(body: dict):
+    msg = body.get("message", "")
+    token_recu = body.get("token", "")
+    max_tokens_demande = body.get("max_tokens", 1200)
+    try:
+        max_tokens_demande = int(max_tokens_demande)
+    except (TypeError, ValueError):
+        max_tokens_demande = 1200
+    max_tokens_demande = max(300, min(max_tokens_demande, 2500))
+    if token_recu:
+        autorise, msg_err, forfait = await verifier_forfait(token_recu, "eco")
+        if not autorise:
+            return {"response": msg_err}
+    if not CLAUDE_KEY:
+        return {"response": "Cle API manquante"}
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        r = await client.post("https://api.anthropic.com/v1/messages",
+            headers={"x-api-key": CLAUDE_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+            json={"model": "claude-haiku-4-5-20251001", "max_tokens": max_tokens_demande, "system": SYSTEM_KIDS, "messages": [{"role": "user", "content": msg}]})
+        data = r.json()
+        return {"response": data["content"][0]["text"]}
+
+@app.post("/bienvenue")
+async def bienvenue(body: dict):
     return {"ok": True}
+
+PROXY_TOKEN = os.environ.get("ARIA_PROXY_TOKEN", "")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+
+# --- Verification forfait client via Supabase ---
+async def verifier_forfait(token_recu, type_requete="eco"):
+    """Verifie le forfait du client. Retourne (autorise, message, forfait).
+    type_requete: ''eco'' (conversation Haiku) ou ''reflexion'' (vision Sonnet)
+    """
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return True, "", "dev"  # Pas de Supabase configure = mode dev, tout passe
+
+    # Si c''est le token de dev de Victor, toujours autoriser
+    if token_recu == PROXY_TOKEN:
+        return True, "", "dev"
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            # Chercher le client par token
+            r = await client.get(
+                f"{SUPABASE_URL}/rest/v1/clients",
+                params={"token": f"eq.{token_recu}", "select": "*"},
+                headers={
+                    "apikey": SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                },
+            )
+            data = r.json()
+
+            if not data:
+                return False, "Token inconnu.", "aucun"
+
+            client_data = data[0]
+            if client_data.get("is_admin", False):
+                return True, "", client_data.get("forfait", "facility")
+
+            if not client_data.get("actif", False):
+                return False, "Votre abonnement est inactif. Contactez le support.", "inactif"
+
+            forfait = client_data.get("forfait", "gratuit")
+            taches = client_data.get("taches_ce_mois", 0)
+            mois = client_data.get("mois_en_cours", "")
+
+            # Reset compteur si nouveau mois
+            import datetime
+            mois_actuel = datetime.datetime.now().strftime("%Y-%m")
+            if mois != mois_actuel:
+                taches = 0
+                mois = mois_actuel
+
+            # Verifier les plafonds
+            if forfait == "gratuit":
+                if type_requete == "reflexion":
+                    return False, "Le pilotage PC est reserve a Aria Facility (12,99 euros/mois). Passez a Facility pour debloquer toutes les fonctions.", "gratuit"
+                if taches >= 30:
+                    return False, "Vous avez utilise vos 30 eco-taches du mois. Passez a Aria Facility pour continuer.", "gratuit"
+
+            # Incrementer le compteur
+            await client.patch(
+                f"{SUPABASE_URL}/rest/v1/clients",
+                params={"token": f"eq.{token_recu}"},
+                headers={
+                    "apikey": SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                    "Content-Type": "application/json",
+                    "Prefer": "return=minimal",
+                },
+                json={"taches_ce_mois": taches + 1, "mois_en_cours": mois},
+            )
+
+            return True, "", forfait
+
+    except Exception as e:
+        # En cas d''erreur Supabase, on laisse passer (pas de blocage client pour un bug serveur)
+        return True, f"Erreur verification: {e}", "erreur"
+
+# --- STRIPE WEBHOOK ---
+from fastapi import Request
+import secrets as secrets_mod
+
+@app.post("/client-token")
+async def client_token(body: dict):
+    """Le PC ou l''app envoie l''email du client, on renvoie son token."""
+    email = body.get("email", "").strip().lower()
+    if not email:
+        return {"erreur": "Email manquant."}
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return {"erreur": "Service indisponible."}
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(
+                f"{SUPABASE_URL}/rest/v1/clients",
+                params={"email": f"eq.{email}", "select": "token,forfait,actif"},
+                headers={
+                    "apikey": SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                },
+            )
+            data = r.json()
+            if not data:
+                # Aucun compte : creation automatique d''un compte gratuit
+                # (offre Decouverte, sans carte, sans passer par Stripe)
+                nouveau_token = "aria_" + secrets_mod.token_hex(32)
+                r_create = await client.post(
+                    f"{SUPABASE_URL}/rest/v1/clients",
+                    headers={
+                        "apikey": SUPABASE_SERVICE_KEY,
+                        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                        "Content-Type": "application/json",
+                        "Prefer": "return=representation",
+                    },
+                    json={"email": email, "token": nouveau_token, "forfait": "gratuit", "actif": True},
+                )
+                if r_create.status_code not in (200, 201):
+                    return {"erreur": "Impossible de creer le compte."}
+                nouveau = r_create.json()
+                if not nouveau:
+                    return {"erreur": "Impossible de creer le compte."}
+                return {"token": nouveau[0]["token"], "forfait": nouveau[0]["forfait"], "nouveau_compte": True}
+            client_data = data[0]
+            if not client_data.get("actif", False):
+                return {"erreur": "Votre abonnement est inactif."}
+            return {"token": client_data["token"], "forfait": client_data["forfait"]}
+    except Exception as e:
+        return {"erreur": str(e)}
+
+@app.post("/stripe-webhook")
+async def stripe_webhook(request: Request):
+    """Recoit les evenements Stripe (paiement, annulation).
+    Cree le token client dans Supabase si nouveau, ou desactive si annulation."""
+    body = await request.body()
+    sig = request.headers.get("stripe-signature", "")
+
+    if not STRIPE_WEBHOOK_SECRET:
+        return {"erreur": "webhook non configure"}
+
+    try:
+        import json as json_mod
+        event = json_mod.loads(body)
+    except Exception:
+        return {"erreur": "body invalide"}
+
+    event_type = event.get("type", "")
+    data_obj = event.get("data", {}).get("object", {})
+
+    if event_type == "checkout.session.completed":
+        email = data_obj.get("customer_email", "") or data_obj.get("customer_details", {}).get("email", "")
+        if not email:
+            return {"status": "ignore", "raison": "pas d''email"}
+
+        token = "aria_" + secrets_mod.token_hex(32)
+
+        if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                r = await client.get(
+                    f"{SUPABASE_URL}/rest/v1/clients",
+                    params={"email": f"eq.{email}", "select": "token,forfait"},
+                    headers={
+                        "apikey": SUPABASE_SERVICE_KEY,
+                        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                    },
+                )
+                existant = r.json()
+
+                if existant:
+                    await client.patch(
+                        f"{SUPABASE_URL}/rest/v1/clients",
+                        params={"email": f"eq.{email}"},
+                        headers={
+                            "apikey": SUPABASE_SERVICE_KEY,
+                            "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                            "Content-Type": "application/json",
+                            "Prefer": "return=minimal",
+                        },
+                        json={"forfait": "facility", "actif": True},
+                    )
+                    return {"status": "ok", "action": "client reactive"}
+                else:
+                    await client.post(
+                        f"{SUPABASE_URL}/rest/v1/clients",
+                        headers={
+                            "apikey": SUPABASE_SERVICE_KEY,
+                            "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                            "Content-Type": "application/json",
+                            "Prefer": "return=minimal",
+                        },
+                        json={
+                            "email": email,
+                            "token": token,
+                            "forfait": "facility",
+                            "taches_ce_mois": 0,
+                            "actif": True,
+                        },
+                    )
+                    return {"status": "ok", "action": "client cree", "email": email}
+
+    elif event_type == "invoice.payment_succeeded":
+        email = data_obj.get("customer_email", "")
+        if email and SUPABASE_URL and SUPABASE_SERVICE_KEY:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                await client.patch(
+                    f"{SUPABASE_URL}/rest/v1/clients",
+                    params={"email": f"eq.{email}"},
+                    headers={
+                        "apikey": SUPABASE_SERVICE_KEY,
+                        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                        "Content-Type": "application/json",
+                        "Prefer": "return=minimal",
+                    },
+                    json={"actif": True, "forfait": "facility"},
+                )
+        return {"status": "ok", "action": "paiement confirme"}
+
+    elif event_type == "customer.subscription.deleted":
+        email = data_obj.get("customer_email", "")
+        if not email:
+            customer_id = data_obj.get("customer", "")
+            email = customer_id
+        if email and SUPABASE_URL and SUPABASE_SERVICE_KEY:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                await client.patch(
+                    f"{SUPABASE_URL}/rest/v1/clients",
+                    params={"email": f"eq.{email}"},
+                    headers={
+                        "apikey": SUPABASE_SERVICE_KEY,
+                        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                        "Content-Type": "application/json",
+                        "Prefer": "return=minimal",
+                    },
+                    json={"actif": False},
+                )
+        return {"status": "ok", "action": "client desactive"}
+
+    return {"status": "ignore", "type": event_type}
+
+@app.post("/vision")
+async def vision(body: dict):
+    token_recu = body.get("token", "")
+    if not PROXY_TOKEN or token_recu != PROXY_TOKEN:
+        autorise, msg, forfait = await verifier_forfait(token_recu, "reflexion")
+        if not autorise:
+            return {"erreur": msg}
+    if not CLAUDE_KEY:
+        return {"erreur": "cle_manquante"}
+    payload = body.get("payload", {})
+    if not payload:
+        return {"erreur": "payload_vide"}
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        r = await client.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": CLAUDE_KEY,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            json=payload,
+        )
+    return r.json()
+
+GOOGLE_SPEECH_KEY = os.environ.get("ARIA_GOOGLE_SPEECH_KEY", "")
+
+@app.post("/transcribe")
+async def transcribe(body: dict):
+    token_recu = body.get("token", "")
+    if not PROXY_TOKEN or token_recu != PROXY_TOKEN:
+        return {"erreur": "token_invalide"}
+    if not GOOGLE_SPEECH_KEY:
+        return {"erreur": "cle_google_manquante"}
+
+    audio_b64 = body.get("audio", "")
+    langue = body.get("langue", "fr-FR")
+    if not audio_b64:
+        return {"erreur": "audio_vide"}
+
+    payload = {
+        "config": {
+            "languageCode": langue,
+        },
+        "audio": {
+            "content": audio_b64,
+        },
+    }
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        r = await client.post(
+            "https://speech.googleapis.com/v1/speech:recognize?key=" + GOOGLE_SPEECH_KEY,
+            json=payload,
+        )
+
+    data = r.json()
+
+    if "error" in data:
+        return {"erreur": data["error"].get("message", "erreur_google")}
+
+    resultats = data.get("results", [])
+    if not resultats:
+        return {"texte": ""}
+
+    texte = resultats[0]["alternatives"][0]["transcript"]
+    return {"texte": texte}
+
+
+# ===================================================================
+# RELAIS WEBSOCKET (Aria disponible partout, pas que sur le wifi local)
+# ===================================================================
+relais_connexions = {}
+
+@app.websocket("/relais")
+async def relais(websocket: WebSocket):
+    token = websocket.query_params.get("token", "")
+    role = websocket.query_params.get("role", "")
+
+    if role in ("agent", "phone") and token != PROXY_TOKEN:
+        if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+            import httpx as httpx_check
+            async with httpx_check.AsyncClient(timeout=5.0) as c:
+                r = await c.get(
+                    f"{SUPABASE_URL}/rest/v1/clients",
+                    params={"token": f"eq.{token}", "select": "actif"},
+                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
+                )
+                data = r.json()
+                if not data or not data[0].get("actif", False):
+                    await websocket.close(code=4001)
+                    return
+    if role not in ("agent", "phone"):
+        await websocket.close(code=4002)
+        return
+
+    await websocket.accept()
+
+    if token not in relais_connexions:
+        relais_connexions[token] = {"agent": None, "phone": None}
+    relais_connexions[token][role] = websocket
+
+    autre_role = "phone" if role == "agent" else "agent"
+
+    try:
+        while True:
+            message = await websocket.receive_text()
+            peer = relais_connexions.get(token, {}).get(autre_role)
+            if peer is not None:
+                try:
+                    await peer.send_text(message)
+                except Exception:
+                    pass
+    except WebSocketDisconnect:
+        pass
+    finally:
+        if token in relais_connexions and relais_connexions[token].get(role) is websocket:
+            relais_connexions[token][role] = None
+
+
+# === PROFIL KIDS SYNC ===
+@app.get("/profil-kids")
+async def get_profil_kids(request: Request):
+    token = request.query_params.get("token", "")
+    if not token:
+        return JSONResponse({"error": "Token requis"}, status_code=400)
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        r = await client.get(
+            f"{SUPABASE_URL}/rest/v1/clients",
+            params={"token": f"eq.{token}", "select": "email,profil_kids"},
+            headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
+        )
+        data = r.json()
+    if not data:
+        return JSONResponse({"error": "Token inconnu"}, status_code=404)
+    return JSONResponse({"profil": data[0].get("profil_kids")})
+
+@app.post("/profil-kids")
+async def save_profil_kids(request: Request):
+    body = await request.json()
+    token = body.get("token", "")
+    profil = body.get("profil")
+    if not token or profil is None:
+        return JSONResponse({"error": "Token et profil requis"}, status_code=400)
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        r = await client.patch(
+            f"{SUPABASE_URL}/rest/v1/clients",
+            params={"token": f"eq.{token}"},
+            headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}", "Content-Type": "application/json", "Prefer": "return=minimal"},
+            json={"profil_kids": profil},
+        )
+    if r.status_code in (200, 204):
+        return JSONResponse({"ok": True})
+    else:
+        return JSONResponse({"error": "Echec"}, status_code=500)
+
+
+# === DEVOIRS PHOTO SYNC ===
+@app.post("/upload-devoir")
+async def upload_devoir(request: Request):
+    body = await request.json()
+    token = body.get("token", "")
+    image_b64 = body.get("image", "")
+    filename = body.get("filename", "devoir.jpg")
+    if not token or not image_b64:
+        return JSONResponse({"error": "Token et image requis"}, status_code=400)
+    import base64, time
+    image_bytes = base64.b64decode(image_b64)
+    ts = str(int(time.time()))
+    path = f"{token[:16]}/{ts}_{filename}"
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        r = await client.post(
+            f"{SUPABASE_URL}/storage/v1/object/devoirs/{path}",
+            headers={
+                "apikey": SUPABASE_SERVICE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                "Content-Type": "image/jpeg",
+            },
+            content=image_bytes,
+        )
+    if r.status_code in (200, 201):
+        url = f"{SUPABASE_URL}/storage/v1/object/public/devoirs/{path}"
+        return JSONResponse({"ok": True, "url": url, "path": path})
+    else:
+        return JSONResponse({"error": "Upload echoue", "detail": r.text}, status_code=500)
+
+@app.get("/devoirs")
+async def list_devoirs(request: Request):
+    token = request.query_params.get("token", "")
+    if not token:
+        return JSONResponse({"error": "Token requis"}, status_code=400)
+    prefix = token[:16]
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        r = await client.post(
+            f"{SUPABASE_URL}/storage/v1/object/list/devoirs",
+            headers={
+                "apikey": SUPABASE_SERVICE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={"prefix": prefix, "limit": 20, "sortBy": {"column": "created_at", "order": "desc"}},
+        )
+    if r.status_code == 200:
+        files = r.json()
+        urls = [{"name": f.get("name",""), "url": f"{SUPABASE_URL}/storage/v1/object/public/devoirs/{prefix}/{f.get(''name'','''')}"} for f in files if f.get("name")]
+        return JSONResponse({"devoirs": urls})
+    else:
+        return JSONResponse({"devoirs": []})
