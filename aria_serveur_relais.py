@@ -29,7 +29,7 @@ from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from anthropic import Anthropic
-from aria_licence import verifier_licence
+# from aria_licence import verifier_licence
 from aria_notifications import notifier, ProfilSalarie, Canal, Forfait
 
 # ── Configuration ──
