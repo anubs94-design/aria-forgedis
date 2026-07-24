@@ -57,8 +57,12 @@ export default function App() {
     return <PairingScreen onDone={() => setAppairageFait(true)} />;
   }
 
+  if (forfait === "facility" && !loginFait) {
+    return <LoginScreen onDone={(f) => { setForfait(f); setLoginFait(true); }} />;
+  }
   if (!choixPortail) return <PortailScreen onChoix={(c) => setChoixPortail(c)} />;
   if (choixPortail === "kids" || forfait === "kids_solo" || forfait === "kids_famille") return <KidsScreen onRetour={() => setChoixPortail(null)} />;
+  if (choixPortail === "industrial") return <IndustrialScreen onRetour={() => setChoixPortail(null)} />;
   return <MainScreen />;
 }
 
