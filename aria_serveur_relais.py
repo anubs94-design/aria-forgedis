@@ -373,7 +373,23 @@ async def relais(websocket: WebSocket):
     token = websocket.query_params.get("token", "")
     role = websocket.query_params.get("role", "")
 
-    if not PROXY_TOKEN or token != PROXY_TOKEN:
+    # Validation token via Supabase
+    import httpx
+    SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+    SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    token_valide = False
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(
+                SUPABASE_URL + "/rest/v1/clients",
+                headers={"apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY},
+                params={"token": "eq." + token, "actif": "eq.true", "select": "token"}
+            )
+            data = r.json()
+            token_valide = isinstance(data, list) and len(data) > 0
+    except Exception:
+        token_valide = False
+    if not token_valide:
         await websocket.close(code=4001)
         return
     if role not in ("agent", "phone"):
