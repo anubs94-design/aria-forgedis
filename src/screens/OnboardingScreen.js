@@ -83,7 +83,7 @@ export default function OnboardingScreen({ onDone }) {
   if (saving) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#34C759" />
+        <ActivityIndicator size="large" color="#FF7A59" />
         <Text style={styles.savingText}>Preparation d Aria...</Text>
       </View>
     );
@@ -178,26 +178,26 @@ export default function OnboardingScreen({ onDone }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0A0A0F",
+    backgroundColor: "#070B18",
     paddingTop: 70,
     paddingHorizontal: 24,
   },
   center: {
     flex: 1,
-    backgroundColor: "#0A0A0F",
+    backgroundColor: "#070B18",
     justifyContent: "center",
     alignItems: "center",
   },
   title: {
-    color: "#ffffff",
-    fontSize: 24,
+    color: "#F0F3FB",
+    fontSize: 28,
     fontWeight: "bold",
     marginBottom: 10,
     textAlign: "center",
   },
   subtitle: {
-    color: "#cccccc",
-    fontSize: 15,
+    color: "#A6B0CC",
+    fontSize: 17,
     marginBottom: 20,
     textAlign: "center",
   },
@@ -205,25 +205,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionButton: {
-    backgroundColor: "#1a1a1f",
+    backgroundColor: "#0F1830",
     borderRadius: 10,
     paddingVertical: 16,
     paddingHorizontal: 20,
     marginBottom: 10,
   },
   optionSpecial: {
-    backgroundColor: "#1f1a2a",
+    backgroundColor: "#111934",
     borderLeftWidth: 3,
-    borderLeftColor: "#FF9500",
+    borderLeftColor: "#FF7A59",
   },
   optionLabel: {
-    color: "#ffffff",
-    fontSize: 17,
+    color: "#F0F3FB",
+    fontSize: 20,
     fontWeight: "bold",
   },
   optionTag: {
-    color: "#999999",
-    fontSize: 12,
+    color: "#6D7799",
+    fontSize: 14,
     marginTop: 3,
   },
   backButton: {
@@ -231,12 +231,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   backButtonText: {
-    color: "#888888",
-    fontSize: 14,
+    color: "#6D7799",
+    fontSize: 16,
   },
   savingText: {
-    color: "#cccccc",
-    fontSize: 14,
+    color: "#A6B0CC",
+    fontSize: 16,
     marginTop: 16,
     textAlign: "center",
   },
