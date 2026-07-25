@@ -389,6 +389,27 @@ async def stripe_webhook(request: Request):
 
     return {"status": "ignore", "type": event_type}
 
+@app.post("/devis-industrial")
+async def devis_industrial(body: dict):
+    """Recoit une demande de devis pour 50+ salaries et notifie FORGEDIS."""
+    nom        = body.get("nom", "")
+    email      = body.get("email", "")
+    nb_employes = body.get("nb_employes", 0)
+    message    = body.get("message", "")
+    if not email:
+        return {"erreur": "email requis"}
+    html = f"""
+    <div style="font-family:Inter,sans-serif;padding:20px;">
+      <h2>Demande de devis Industrial 50+ salaries</h2>
+      <p><strong>Nom :</strong> {nom}</p>
+      <p><strong>Email :</strong> {email}</p>
+      <p><strong>Nombre de salaries :</strong> {nb_employes}</p>
+      <p><strong>Message :</strong> {message}</p>
+      <p style="color:#E8873A;font-weight:bold;">Action requise : repondre sous 24h avec un devis personnalise.</p>
+    </div>"""
+    await envoyer_email(EMAIL_ADMIN, f"Demande devis Industrial 50+ : {nom} ({email})", html)
+    return {"ok": True}
+
 @app.post("/sauvegarder")
 async def sauvegarder_donnees(body: dict):
     """Sauvegarde les donnees d'un salarie Industrial dans Supabase (option cloud)."""
