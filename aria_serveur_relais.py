@@ -51,6 +51,33 @@ STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 
+# Email via Resend API
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+EMAIL_FROM = "Aria FORGEDIS <contact@forgedis.fr>"
+EMAIL_ADMIN = "contact@forgedis.fr"
+
+# Stripe Product IDs
+STRIPE_PRODUCT_INDUSTRIAL = os.environ.get("STRIPE_PRODUCT_INDUSTRIAL", "")
+STRIPE_PRODUCT_KIDS_SOLO = os.environ.get("STRIPE_PRODUCT_KIDS_SOLO", "prod_UrdvcsgXqxJbK2")
+STRIPE_PRODUCT_KIDS_FAMILLE = os.environ.get("STRIPE_PRODUCT_KIDS_FAMILLE", "prod_UrdxZxTDPHxJrJ")
+
+async def envoyer_email(to: str, subject: str, html: str):
+    """Envoie un email via Resend API."""
+    if not RESEND_API_KEY:
+        print(f"[EMAIL] Resend non configure. Destinataire: {to}, Sujet: {subject}")
+        return False
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(
+                "https://api.resend.com/emails",
+                headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+                json={"from": EMAIL_FROM, "to": [to], "subject": subject, "html": html}
+            )
+            return r.status_code in (200, 201)
+    except Exception as e:
+        print(f"[EMAIL] Erreur envoi: {e}")
+        return False
+
 # --- Verification forfait client via Supabase ---
 async def verifier_forfait(token_recu, type_requete="eco"):
     """Verifie le forfait du client. Retourne (autorise, message, forfait).
@@ -194,59 +221,121 @@ async def stripe_webhook(request: Request):
     data_obj = event.get("data", {}).get("object", {})
 
     if event_type == "checkout.session.completed":
-        # Nouveau client a paye ? creer son token
         email = data_obj.get("customer_email", "") or data_obj.get("customer_details", {}).get("email", "")
         if not email:
             return {"status": "ignore", "raison": "pas d'email"}
 
+        # Detecter le produit via metadata ou line_items
+        metadata = data_obj.get("metadata", {})
+        produit = metadata.get("produit", "")
+        nom_entreprise = metadata.get("nom_entreprise", "")
+        nb_employes = metadata.get("nb_employes", "0")
+        montant = data_obj.get("amount_total", 0)
+
+        # Determiner le forfait selon le produit
+        if produit == "industrial" or "industrial" in str(data_obj.get("description", "")).lower():
+            forfait = "industrial"
+        elif produit == "kids_famille":
+            forfait = "kids_famille"
+        elif produit == "kids_solo":
+            forfait = "kids_solo"
+        else:
+            forfait = "facility"
+
         token = "aria_" + secrets_mod.token_hex(32)
+        import datetime
+        date_fin_essai = (datetime.datetime.now() + datetime.timedelta(days=14)).isoformat()
 
         if SUPABASE_URL and SUPABASE_SERVICE_KEY:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                # Verifier si le client existe deja
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                # Verifier si client existe
                 r = await client.get(
                     f"{SUPABASE_URL}/rest/v1/clients",
-                    params={"email": f"eq.{email}", "select": "token,forfait"},
-                    headers={
-                        "apikey": SUPABASE_SERVICE_KEY,
-                        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                    },
+                    params={"email": f"eq.{email}", "select": "token,forfait,actif"},
+                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
                 )
                 existant = r.json()
 
                 if existant:
-                    # Client existe deja ? reactiver et passer en facility
                     await client.patch(
                         f"{SUPABASE_URL}/rest/v1/clients",
                         params={"email": f"eq.{email}"},
-                        headers={
-                            "apikey": SUPABASE_SERVICE_KEY,
-                            "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                            "Content-Type": "application/json",
-                            "Prefer": "return=minimal",
-                        },
-                        json={"forfait": "facility", "actif": True},
+                        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}", "Content-Type": "application/json", "Prefer": "return=minimal"},
+                        json={"forfait": forfait, "actif": True},
                     )
-                    return {"status": "ok", "action": "client reactive"}
+                    action = "client reactive"
                 else:
-                    # Nouveau client ? creer
                     await client.post(
                         f"{SUPABASE_URL}/rest/v1/clients",
-                        headers={
-                            "apikey": SUPABASE_SERVICE_KEY,
-                            "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                            "Content-Type": "application/json",
-                            "Prefer": "return=minimal",
-                        },
+                        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}", "Content-Type": "application/json", "Prefer": "return=minimal"},
+                        json={"email": email, "token": token, "forfait": forfait, "taches_ce_mois": 0, "actif": True, "date_fin_essai": date_fin_essai},
+                    )
+                    action = "client cree"
+
+                # Onboarding Industrial : creer l'entreprise
+                if forfait == "industrial":
+                    await client.post(
+                        f"{SUPABASE_URL}/rest/v1/entreprises",
+                        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}", "Content-Type": "application/json", "Prefer": "return=minimal"},
                         json={
-                            "email": email,
-                            "token": token,
-                            "forfait": "facility",
-                            "taches_ce_mois": 0,
-                            "actif": True,
+                            "email_contact": email,
+                            "nom_entreprise": nom_entreprise or email.split("@")[0],
+                            "nombre_employes": int(nb_employes) if nb_employes.isdigit() else 0,
+                            "montant_mensuel": montant / 100 if montant else 0,
+                            "statut_paiement": "essai",
+                            "postes_actifs": ["dirigeant"],
+                            "option_cloud": False,
+                            "date_renouvellement": date_fin_essai,
                         },
                     )
-                    return {"status": "ok", "action": "client cree", "email": email}
+
+                    # Email au client Industrial
+                    lien_connexion = "https://forgedis.fr/connexion-industrial.html"
+                    html_client = f"""
+                    <div style="font-family:Inter,sans-serif;background:#070B18;color:#F0F3FB;padding:40px;max-width:600px;margin:0 auto;border-radius:16px;">
+                      <h1 style="color:#E8873A;font-size:24px;">Bienvenue sur Aria Industrial !</h1>
+                      <p>Bonjour,</p>
+                      <p>Votre espace entreprise FORGEDIS est pret. Voici comment acceder a votre tableau de bord :</p>
+                      <div style="background:#111934;border-radius:12px;padding:20px;margin:20px 0;">
+                        <p><strong>Email :</strong> {email}</p>
+                        <p><strong>Lien de connexion :</strong> <a href="{lien_connexion}" style="color:#E8873A;">{lien_connexion}</a></p>
+                        <p style="color:#A6B0CC;font-size:13px;">Votre mot de passe vous sera communique par votre administrateur FORGEDIS.</p>
+                      </div>
+                      <p>Votre essai gratuit de 14 jours a commence. Profitez-en pour decouvrir tous les postes disponibles.</p>
+                      <p style="color:#6D7799;font-size:12px;margin-top:30px;font-style:italic;">L'IA francaise qui n'oublie personne. — FORGEDIS</p>
+                    </div>"""
+                    await envoyer_email(email, "Bienvenue sur Aria Industrial — votre espace est pret", html_client)
+
+                    # Email a Victor
+                    html_admin = f"""
+                    <div style="font-family:Inter,sans-serif;padding:20px;">
+                      <h2>Nouvelle souscription Industrial</h2>
+                      <p><strong>Email :</strong> {email}</p>
+                      <p><strong>Entreprise :</strong> {nom_entreprise}</p>
+                      <p><strong>Employes :</strong> {nb_employes}</p>
+                      <p><strong>Montant :</strong> {montant/100 if montant else 0} EUR/mois</p>
+                      <p><strong>Action requise :</strong> Definir le mot de passe dirigeant depuis admin.html</p>
+                    </div>"""
+                    await envoyer_email(EMAIL_ADMIN, f"Nouveau client Industrial : {email}", html_admin)
+
+                elif forfait in ("facility", "kids_solo", "kids_famille"):
+                    # Email client Facility/Kids
+                    produit_label = {"facility": "Aria Facility", "kids_solo": "Aria Kids Solo", "kids_famille": "Aria Kids Famille"}.get(forfait, "Aria")
+                    lien = "https://forgedis.fr/connexion.html"
+                    html_client = f"""
+                    <div style="font-family:Inter,sans-serif;background:#070B18;color:#F0F3FB;padding:40px;max-width:600px;margin:0 auto;border-radius:16px;">
+                      <h1 style="color:#FF7A59;font-size:24px;">Bienvenue sur {produit_label} !</h1>
+                      <p>Votre abonnement est actif. Connectez-vous avec votre email :</p>
+                      <div style="background:#111934;border-radius:12px;padding:20px;margin:20px 0;">
+                        <p><strong>Email :</strong> {email}</p>
+                        <p><a href="{lien}" style="color:#FF7A59;font-size:16px;">Acces a mon espace →</a></p>
+                      </div>
+                      <p style="color:#6D7799;font-size:12px;margin-top:30px;font-style:italic;">L'IA francaise qui n'oublie personne. — FORGEDIS</p>
+                    </div>"""
+                    await envoyer_email(email, f"Bienvenue sur {produit_label} — votre acces est actif", html_client)
+                    await envoyer_email(EMAIL_ADMIN, f"Nouveau client {forfait}: {email}", f"<p>Nouveau client: {email} — forfait: {forfait}</p>")
+
+                return {"status": "ok", "action": action, "email": email, "forfait": forfait}
 
     elif event_type == "invoice.payment_succeeded":
         # Paiement mensuel reussi ? garder actif
@@ -289,6 +378,27 @@ async def stripe_webhook(request: Request):
         return {"status": "ok", "action": "client desactive"}
 
     return {"status": "ignore", "type": event_type}
+
+@app.post("/sauvegarder")
+async def sauvegarder_donnees(body: dict):
+    """Sauvegarde les donnees d'un salarie Industrial dans Supabase (option cloud)."""
+    email_entreprise = body.get("email_entreprise", "")
+    nom_salarie = body.get("nom_salarie", "")
+    donnees = body.get("donnees", {})
+    if not email_entreprise or not nom_salarie:
+        return {"erreur": "email_entreprise et nom_salarie requis"}
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return {"erreur": "service indisponible"}
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(
+                f"{SUPABASE_URL}/rest/v1/rpc/sauvegarder_donnees_salarie",
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}", "Content-Type": "application/json"},
+                json={"p_email_entreprise": email_entreprise, "p_nom_salarie": nom_salarie, "p_donnees": donnees}
+            )
+            return r.json()
+    except Exception as e:
+        return {"erreur": str(e)}
 
 @app.post("/vision")
 async def vision(body: dict):
