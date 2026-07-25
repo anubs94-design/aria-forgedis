@@ -51,8 +51,11 @@ STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 
-# Email via Resend API
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+# Email via SMTP OVH
+SMTP_LOGIN = os.environ.get("SMTP_LOGIN", "contact@forgedis.fr")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+SMTP_SERVER = "ssl0.ovh.net"
+SMTP_PORT = 465
 EMAIL_FROM = "Aria FORGEDIS <contact@forgedis.fr>"
 EMAIL_ADMIN = "contact@forgedis.fr"
 
@@ -62,20 +65,27 @@ STRIPE_PRODUCT_KIDS_SOLO = os.environ.get("STRIPE_PRODUCT_KIDS_SOLO", "prod_Urdv
 STRIPE_PRODUCT_KIDS_FAMILLE = os.environ.get("STRIPE_PRODUCT_KIDS_FAMILLE", "prod_UrdxZxTDPHxJrJ")
 
 async def envoyer_email(to: str, subject: str, html: str):
-    """Envoie un email via Resend API."""
-    if not RESEND_API_KEY:
-        print(f"[EMAIL] Resend non configure. Destinataire: {to}, Sujet: {subject}")
+    """Envoie un email via SMTP OVH."""
+    if not SMTP_PASSWORD:
+        print(f"[EMAIL] SMTP non configure. To: {to}")
         return False
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            r = await client.post(
-                "https://api.resend.com/emails",
-                headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
-                json={"from": EMAIL_FROM, "to": [to], "subject": subject, "html": html}
-            )
-            return r.status_code in (200, 201)
+        import smtplib, ssl
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = EMAIL_FROM
+        msg["To"] = to
+        msg.attach(MIMEText(html, "html", "utf-8"))
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, context=context) as server:
+            server.login(SMTP_LOGIN, SMTP_PASSWORD)
+            server.sendmail(SMTP_LOGIN, [to], msg.as_bytes())
+        print(f"[EMAIL] Envoye a {to}")
+        return True
     except Exception as e:
-        print(f"[EMAIL] Erreur envoi: {e}")
+        print(f"[EMAIL] Erreur SMTP: {e}")
         return False
 
 # --- Verification forfait client via Supabase ---
