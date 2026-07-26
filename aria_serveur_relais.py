@@ -477,6 +477,89 @@ async def ask_industrial(body: dict):
         print(f"[ASK-INDUSTRIAL] Erreur: {e}")
         return {"response": "Service indisponible. Reessayez."}
 
+INDUSTRIAL_PRICES = {
+    "base":       "price_1Txb8dI54RQfwJiYhVgtBFWP",
+    "sal_t1":     "price_1Txb8kI54RQfwJiYZrHbuF4p",
+    "sal_t2":     "price_1Txb8tI54RQfwJiYoPExEr7M",
+    "sal_t3":     "price_1Txb91I54RQfwJiYkdgk1zZg",
+    "sal_t4":     "price_1Txb9AI54RQfwJiYZwFEzbnU",
+    "site":       "price_1Txb9II54RQfwJiY87wN2go3",
+    "cloud":      "price_1Txb9QI54RQfwJiYjTzdob0k",
+    "sur_mesure": "price_1Txb9YI54RQfwJiYyv4JmYJL",
+}
+
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
+
+@app.post("/checkout-industrial")
+async def checkout_industrial(body: dict):
+    """Cree une session Stripe Checkout pour Aria Industrial.
+    Compose automatiquement les line_items selon le nombre de salaries,
+    sites additionnels, option cloud et postes sur mesure."""
+    email        = body.get("email", "").strip().lower()
+    nb_sal       = int(body.get("nb_salaries", 1))
+    nb_sites     = int(body.get("nb_sites_additionnels", 0))
+    cloud        = bool(body.get("cloud", False))
+    nb_custom    = int(body.get("nb_postes_sur_mesure", 0))
+    nom_entreprise = body.get("nom_entreprise", "")
+    success_url  = body.get("success_url", "https://forgedis.fr/industrial.html?success=1")
+    cancel_url   = body.get("cancel_url", "https://forgedis.fr/industrial.html?cancel=1")
+
+    if not email:
+        return {"erreur": "email requis"}
+    if not STRIPE_SECRET_KEY:
+        return {"erreur": "Stripe non configure"}
+    if nb_sal < 1 or nb_sal > 49:
+        return {"erreur": "Nombre de salaries invalide (1-49). Pour 50+, utilisez /devis-industrial."}
+
+    # Determiner la tranche salaries
+    if nb_sal <= 5:
+        price_sal = INDUSTRIAL_PRICES["sal_t1"]
+    elif nb_sal <= 15:
+        price_sal = INDUSTRIAL_PRICES["sal_t2"]
+    else:
+        price_sal = INDUSTRIAL_PRICES["sal_t3"]
+
+    # Composer les line_items
+    line_items = [
+        {"price": INDUSTRIAL_PRICES["base"], "quantity": 1},
+        {"price": price_sal, "quantity": nb_sal},
+    ]
+    if nb_sites > 0:
+        line_items.append({"price": INDUSTRIAL_PRICES["site"], "quantity": nb_sites})
+    if cloud:
+        line_items.append({"price": INDUSTRIAL_PRICES["cloud"], "quantity": 1})
+    if nb_custom > 0:
+        line_items.append({"price": INDUSTRIAL_PRICES["sur_mesure"], "quantity": nb_custom})
+
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            r = await client.post(
+                "https://api.stripe.com/v1/checkout/sessions",
+                headers={"Authorization": f"Bearer {STRIPE_SECRET_KEY}"},
+                data={
+                    "mode": "subscription",
+                    "customer_email": email,
+                    "subscription_data[trial_period_days]": "14",
+                    "subscription_data[metadata][produit]": "industrial",
+                    "subscription_data[metadata][nom_entreprise]": nom_entreprise,
+                    "subscription_data[metadata][nb_employes]": str(nb_sal),
+                    "subscription_data[metadata][nb_sites]": str(nb_sites),
+                    "subscription_data[metadata][cloud]": "oui" if cloud else "non",
+                    "success_url": success_url,
+                    "cancel_url": cancel_url,
+                    **{f"line_items[{i}][price]": item["price"] for i, item in enumerate(line_items)},
+                    **{f"line_items[{i}][quantity]": str(item["quantity"]) for i, item in enumerate(line_items)},
+                }
+            )
+            data = r.json()
+            if "url" not in data:
+                print(f"[CHECKOUT-INDUSTRIAL] Erreur Stripe: {data}")
+                return {"erreur": "Impossible de creer la session de paiement."}
+            return {"url": data["url"], "session_id": data.get("id", "")}
+    except Exception as e:
+        print(f"[CHECKOUT-INDUSTRIAL] Exception: {e}")
+        return {"erreur": "Service indisponible."}
+
 @app.post("/devis-industrial")
 async def devis_industrial(body: dict):
     """Recoit une demande de devis pour 50+ salaries et notifie FORGEDIS."""
