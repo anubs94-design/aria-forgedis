@@ -433,6 +433,50 @@ async def stripe_webhook(request: Request):
 
     return {"status": "ignore", "type": event_type}
 
+SYSTEM_INDUSTRIAL = """Tu es Aria, assistante IA integree dans les postes de travail Aria Industrial (FORGEDIS).
+Tu aides les salaries et dirigeants de PME sur :
+- Droit du travail (Code du travail, CCN, obligations legales)
+- Gestion RH (contrats, absences, heures supplementaires)
+- Comptabilite et fiscalite PME
+- Achats et gestion fournisseurs
+- Logistique et operations
+- Consulting strategique pour dirigeants
+REGLES :
+- Reponds en francais, de facon concise et actionnable (5-8 phrases max)
+- Cite toujours les textes legaux quand tu reponds sur le droit (ex: art. L3121-18 CT)
+- Si tu n'es pas certain, dis-le clairement et recommande un professionnel
+- Jamais de reponse vague : donne des chiffres, des delais, des references precises
+- Triple verification mentale avant tout calcul financier"""
+
+@app.post("/ask-industrial")
+async def ask_industrial(body: dict):
+    msg = body.get("message", "")
+    token_recu = body.get("token", "")
+    max_tokens = min(int(body.get("max_tokens", 500)), 800)
+    system_custom = body.get("system", SYSTEM_INDUSTRIAL)
+    if not msg:
+        return {"response": "Message vide."}
+    if not CLAUDE_KEY:
+        return {"response": "Cle API manquante."}
+    if token_recu and token_recu != PROXY_TOKEN and SUPABASE_URL and SUPABASE_SERVICE_KEY:
+        autorise, msg_err, forfait = await verifier_forfait(token_recu, "eco")
+        if not autorise:
+            return {"response": msg_err}
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            r = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={"x-api-key": CLAUDE_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+                json={"model": "claude-haiku-4-5-20251001", "max_tokens": max_tokens, "system": system_custom, "messages": [{"role": "user", "content": msg}]},
+            )
+            data = r.json()
+            if "content" not in data:
+                return {"response": "Service temporairement indisponible."}
+            return {"response": data["content"][0]["text"]}
+    except Exception as e:
+        print(f"[ASK-INDUSTRIAL] Erreur: {e}")
+        return {"response": "Service indisponible. Reessayez."}
+
 @app.post("/devis-industrial")
 async def devis_industrial(body: dict):
     """Recoit une demande de devis pour 50+ salaries et notifie FORGEDIS."""
