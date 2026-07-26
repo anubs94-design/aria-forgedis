@@ -1,9 +1,53 @@
 import os
 import httpx
+import asyncio
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+# ── Scheduler reset compteurs mensuels ──
+async def reset_compteurs_mensuels():
+    """Remet taches_ce_mois a 0 pour tous les clients le 1er de chaque mois."""
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            await client.patch(
+                f"{SUPABASE_URL}/rest/v1/clients",
+                params={"taches_ce_mois": "gt.0"},
+                headers={
+                    "apikey": SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                    "Content-Type": "application/json",
+                    "Prefer": "return=minimal"
+                },
+                json={"taches_ce_mois": 0}
+            )
+        print("[SCHEDULER] Compteurs mensuels remis a 0")
+    except Exception as e:
+        print(f"[SCHEDULER] Erreur reset: {e}")
+
+async def scheduler_loop():
+    """Boucle qui verifie chaque heure si on est le 1er du mois a minuit."""
+    import datetime
+    while True:
+        now = datetime.datetime.now()
+        # Le 1er de chaque mois entre 00h00 et 00h59
+        if now.day == 1 and now.hour == 0:
+            await reset_compteurs_mensuels()
+            await asyncio.sleep(3600)  # Attendre 1h pour ne pas relancer
+        else:
+            await asyncio.sleep(1800)  # Vérifier toutes les 30 minutes
+
+@asynccontextmanager
+async def lifespan(app):
+    # Démarrer le scheduler au lancement du serveur
+    task = asyncio.create_task(scheduler_loop())
+    print("[STARTUP] Scheduler reset mensuel demarre")
+    yield
+    task.cancel()
+
+app = FastAPI(lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 CLAUDE_KEY = os.environ.get("ARIA_CLAUDE_KEY", "")
