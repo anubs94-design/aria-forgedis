@@ -374,7 +374,7 @@ async def stripe_webhook(request: Request):
 
                 elif forfait in ("facility", "kids_solo", "kids_famille"):
                     # Email client Facility/Kids
-                    produit_label = {"facility": "Aria Facility", "kids_solo": "Aria Kids Solo", "kids_famille": "Aria Kids Famille"}.get(forfait, "Aria")
+                    produit_label = {"facility": "Aria Facility", "kids_solo": "Aria Kids Solo", "kids_famille": "Aria Kids Famille", "industrial": "Aria Industrial"}.get(forfait, "Aria")
                     lien = "https://forgedis.fr/connexion.html"
                     html_client = f"""
                     <div style="font-family:Inter,sans-serif;background:#070B18;color:#F0F3FB;padding:40px;max-width:600px;margin:0 auto;border-radius:16px;">
@@ -572,69 +572,6 @@ INDUSTRIAL_PRICES = {
 }
 
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
-
-@app.post("/checkout-industrial")
-async def checkout_industrial(body: dict):
-    email          = body.get("email", "").strip().lower()
-    nb_sal         = int(body.get("nb_salaries", 1))
-    nb_sites       = int(body.get("nb_sites_additionnels", 0))
-    cloud          = bool(body.get("cloud", False))
-    nb_custom      = int(body.get("nb_postes_sur_mesure", 0))
-    nom_entreprise = body.get("nom_entreprise", "")
-    success_url    = body.get("success_url", "https://forgedis.fr/industrial.html?success=1")
-    cancel_url     = body.get("cancel_url", "https://forgedis.fr/industrial.html?cancel=1")
-    if not email:
-        return {"erreur": "email requis"}
-    if not STRIPE_SECRET_KEY:
-        return {"erreur": "Stripe non configure"}
-    if nb_sal < 1 or nb_sal > 49:
-        return {"erreur": "Nombre de salaries invalide (1-49)."}
-    if nb_sal <= 5:
-        price_sal = INDUSTRIAL_PRICES["sal_t1"]
-    elif nb_sal <= 15:
-        price_sal = INDUSTRIAL_PRICES["sal_t2"]
-    else:
-        price_sal = INDUSTRIAL_PRICES["sal_t3"]
-    line_items = [
-        {"price": INDUSTRIAL_PRICES["base"], "quantity": 1},
-        {"price": price_sal, "quantity": nb_sal},
-    ]
-    if nb_sites > 0:
-        line_items.append({"price": INDUSTRIAL_PRICES["site"], "quantity": nb_sites})
-    if cloud:
-        line_items.append({"price": INDUSTRIAL_PRICES["cloud"], "quantity": 1})
-    if nb_custom > 0:
-        line_items.append({"price": INDUSTRIAL_PRICES["sur_mesure"], "quantity": nb_custom})
-    try:
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            data_post = {
-                "mode": "subscription",
-                "customer_email": email,
-                "subscription_data[trial_period_days]": "14",
-                "subscription_data[metadata][produit]": "industrial",
-                "subscription_data[metadata][nom_entreprise]": nom_entreprise,
-                "subscription_data[metadata][nb_employes]": str(nb_sal),
-                "subscription_data[metadata][nb_sites]": str(nb_sites),
-                "subscription_data[metadata][cloud]": "oui" if cloud else "non",
-                "success_url": success_url,
-                "cancel_url": cancel_url,
-            }
-            for i, item in enumerate(line_items):
-                data_post[f"line_items[{i}][price]"] = item["price"]
-                data_post[f"line_items[{i}][quantity]"] = str(item["quantity"])
-            r = await client.post(
-                "https://api.stripe.com/v1/checkout/sessions",
-                headers={"Authorization": f"Bearer {STRIPE_SECRET_KEY}"},
-                data=data_post
-            )
-            data = r.json()
-            if "url" not in data:
-                print(f"[CHECKOUT-INDUSTRIAL] Erreur Stripe: {data}")
-                return {"erreur": "Impossible de creer la session de paiement."}
-            return {"url": data["url"], "session_id": data.get("id", "")}
-    except Exception as e:
-        print(f"[CHECKOUT-INDUSTRIAL] Exception: {e}")
-        return {"erreur": "Service indisponible."}
 
 @app.post("/devis-industrial")
 async def devis_industrial(body: dict):
