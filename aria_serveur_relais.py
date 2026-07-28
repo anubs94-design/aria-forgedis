@@ -698,22 +698,28 @@ async def relais(websocket: WebSocket):
     token = websocket.query_params.get("token", "")
     role = websocket.query_params.get("role", "")
 
-    # Validation token via Supabase
+    # Validation token
     import httpx
     SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
     SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
-    token_valide = False
-    try:
-        async with httpx.AsyncClient() as client:
-            r = await client.get(
-                SUPABASE_URL + "/rest/v1/clients",
-                headers={"apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY},
-                params={"token": "eq." + token, "actif": "eq.true", "select": "token"}
-            )
-            data = r.json()
-            token_valide = isinstance(data, list) and len(data) > 0
-    except Exception:
+    _PROXY_TOKEN = os.environ.get("ARIA_PROXY_TOKEN", "")
+
+    # Le PROXY_TOKEN de dev est toujours valide (pas dans Supabase)
+    if _PROXY_TOKEN and token == _PROXY_TOKEN:
+        token_valide = True
+    else:
         token_valide = False
+        try:
+            async with httpx.AsyncClient() as client:
+                r = await client.get(
+                    SUPABASE_URL + "/rest/v1/clients",
+                    headers={"apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY},
+                    params={"token": "eq." + token, "actif": "eq.true", "select": "token"}
+                )
+                data = r.json()
+                token_valide = isinstance(data, list) and len(data) > 0
+        except Exception:
+            token_valide = False
     if not token_valide:
         await websocket.close(code=4001)
         return
