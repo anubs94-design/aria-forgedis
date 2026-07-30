@@ -248,7 +248,23 @@ async def client_token(body: dict):
             client_data = data[0]
             if not client_data.get("actif", False):
                 return {"erreur": "Votre abonnement est inactif."}
-            return {"token": client_data["token"], "forfait": client_data["forfait"]}
+            # Recuperer le poste du salarie dans la table salaries
+            poste = "dirigeant"
+            try:
+                r_sal = await client.get(
+                    f"{SUPABASE_URL}/rest/v1/salaries",
+                    params={"email": f"eq.{email}", "select": "poste"},
+                    headers={
+                        "apikey": SUPABASE_SERVICE_KEY,
+                        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                    },
+                )
+                sal_data = r_sal.json()
+                if sal_data and sal_data[0].get("poste"):
+                    poste = sal_data[0]["poste"]
+            except Exception:
+                pass
+            return {"token": client_data["token"], "forfait": client_data["forfait"], "poste": poste}
     except Exception as e:
         return {"erreur": str(e)}
 
@@ -405,7 +421,7 @@ async def stripe_webhook(request: Request):
                         "Content-Type": "application/json",
                         "Prefer": "return=minimal",
                     },
-                    json={"actif": True, "forfait": "facility"},
+                    json={"actif": True},
                 )
         return {"status": "ok", "action": "paiement confirme"}
 
@@ -447,6 +463,48 @@ REGLES :
 - Si tu n'es pas certain, dis-le clairement et recommande un professionnel
 - Jamais de reponse vague : donne des chiffres, des delais, des references precises
 - Triple verification mentale avant tout calcul financier"""
+
+
+@app.post("/ask-kids")
+async def ask_kids(body: dict):
+    message    = body.get("message", "")
+    token      = body.get("token", "")
+    max_tokens = int(body.get("max_tokens", 1200))
+    model_req  = body.get("model", "")
+
+    if not message:
+        return {"erreur": "Message vide."}
+
+    forfait = await verifier_forfait(token)
+    if forfait is None:
+        return {"erreur": "Token invalide ou forfait inactif."}
+    if forfait not in ("kids_solo", "kids_famille", "facility", "forgedis", "tous", "industrial"):
+        return {"erreur": "Forfait insuffisant pour Aria Kids."}
+
+    model_a_utiliser = "claude-sonnet-4-6" if model_req == "sonnet" else "claude-haiku-4-5-20251001"
+
+    SYSTEM_KIDS = (
+        "Tu es Aria, assistante pedagogique de FORGEDIS. "
+        "Tu generes des lecons, quiz et examens alignes sur le programme de l'Education Nationale francaise (CP a BTS). "
+        "Tu reponds UNIQUEMENT en JSON valide quand on te le demande. "
+        "Tes explications sont claires, bienveillantes et adaptees au niveau de l'eleve. "
+        "Tu ne parles jamais de politique, religion ou sujets sensibles."
+    )
+
+    try:
+        import anthropic as _anthropic
+        client_ai = _anthropic.Anthropic(api_key=ARIA_CLAUDE_KEY)
+        resp = client_ai.messages.create(
+            model=model_a_utiliser,
+            max_tokens=min(max_tokens, 4096),
+            system=SYSTEM_KIDS,
+            messages=[{"role": "user", "content": message}],
+        )
+        texte = resp.content[0].text if resp.content else ""
+        return {"reponse": texte}
+    except Exception as e:
+        print(f"[ASK-KIDS] Erreur: {e}")
+        return {"erreur": "Service IA temporairement indisponible."}
 
 @app.post("/ask-industrial")
 async def ask_industrial(body: dict):
