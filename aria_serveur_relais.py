@@ -268,37 +268,6 @@ async def client_token(body: dict):
     except Exception as e:
         return {"erreur": str(e)}
 
-@app.post("/client-token-kids")
-async def client_token_kids(body: dict):
-    """Connexion Kids : verifie l'email dans clients, retourne token + forfait kids."""
-    email = body.get("email", "").strip().lower()
-    if not email:
-        return {"erreur": "Email manquant."}
-    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
-        return {"erreur": "Service indisponible."}
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            r = await client.get(
-                f"{SUPABASE_URL}/rest/v1/clients",
-                params={"email": f"eq.{email}", "select": "token,forfait,actif"},
-                headers={
-                    "apikey": SUPABASE_SERVICE_KEY,
-                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                },
-            )
-            data = r.json()
-            if not data:
-                return {"erreur": "Aucun compte Kids trouve pour cet email."}
-            client_data = data[0]
-            if not client_data.get("actif", False):
-                return {"erreur": "Votre abonnement Kids est inactif."}
-            forfait = client_data.get("forfait", "")
-            if forfait not in ("kids_solo", "kids_famille", "gratuit"):
-                return {"erreur": "Cet email n'est pas associe a un forfait Aria Kids."}
-            return {"token": client_data["token"], "forfait": forfait}
-    except Exception as e:
-        return {"erreur": str(e)}
-
 @app.post("/stripe-webhook")
 async def stripe_webhook(request: Request):
     """Recoit les evenements Stripe (paiement, annulation).
@@ -536,57 +505,6 @@ async def ask_kids(body: dict):
     except Exception as e:
         print(f"[ASK-KIDS] Erreur: {e}")
         return {"erreur": "Service IA temporairement indisponible."}
-
-
-@app.post("/profil-kids")
-async def sauvegarder_profil_kids(body: dict):
-    """Sauvegarde les profils enfants Kids dans la colonne kids_profils de la table clients."""
-    token = body.get("token", "")
-    profil = body.get("profil")
-    if not token:
-        return {"erreur": "Token requis"}
-    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
-        return {"erreur": "Service indisponible"}
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            r = await client.patch(
-                f"{SUPABASE_URL}/rest/v1/clients",
-                params={"token": f"eq.{token}"},
-                headers={
-                    "apikey": SUPABASE_SERVICE_KEY,
-                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                    "Content-Type": "application/json",
-                    "Prefer": "return=minimal",
-                },
-                json={"kids_profils": profil}
-            )
-            return {"status": "ok"}
-    except Exception as e:
-        return {"erreur": str(e)}
-
-@app.get("/profil-kids")
-async def charger_profil_kids(token: str = ""):
-    """Charge les profils enfants Kids depuis Supabase."""
-    if not token:
-        return {"erreur": "Token requis"}
-    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
-        return {"erreur": "Service indisponible"}
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            r = await client.get(
-                f"{SUPABASE_URL}/rest/v1/clients",
-                params={"token": f"eq.{token}", "select": "kids_profils"},
-                headers={
-                    "apikey": SUPABASE_SERVICE_KEY,
-                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                },
-            )
-            data = r.json()
-            if data and isinstance(data, list) and len(data) > 0:
-                return {"profil": data[0].get("kids_profils")}
-            return {"profil": None}
-    except Exception as e:
-        return {"erreur": str(e)}
 
 @app.post("/ask-industrial")
 async def ask_industrial(body: dict):
