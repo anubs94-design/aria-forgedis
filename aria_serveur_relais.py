@@ -475,10 +475,10 @@ async def ask_kids(body: dict):
     if not message:
         return {"erreur": "Message vide."}
 
-    forfait = await verifier_forfait(token)
-    if forfait is None:
-        return {"erreur": "Token invalide ou forfait inactif."}
-    if forfait not in ("kids_solo", "kids_famille", "facility", "forgedis", "tous", "industrial"):
+    autorise, msg_err, forfait = await verifier_forfait(token)
+    if not autorise:
+        return {"erreur": msg_err or "Token invalide ou forfait inactif."}
+    if forfait not in ("kids_solo", "kids_famille", "facility", "forgedis", "tous", "industrial", "dev", "erreur"):
         return {"erreur": "Forfait insuffisant pour Aria Kids."}
 
     model_a_utiliser = "claude-sonnet-4-6" if model_req == "sonnet" else "claude-haiku-4-5-20251001"
