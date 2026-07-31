@@ -506,6 +506,73 @@ async def ask_kids(body: dict):
         print(f"[ASK-KIDS] Erreur: {e}")
         return {"erreur": "Service IA temporairement indisponible."}
 
+
+@app.post("/client-token-kids")
+async def client_token_kids(body: dict):
+    email = body.get("email", "").strip().lower()
+    if not email:
+        return {"erreur": "Email manquant."}
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return {"erreur": "Configuration serveur manquante."}
+    import httpx as _httpx
+    async with _httpx.AsyncClient(timeout=10.0) as hx:
+        r = await hx.get(
+            f"{SUPABASE_URL}/rest/v1/clients",
+            headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
+            params={"email": f"eq.{email}", "select": "token,forfait,actif,kids_profils"}
+        )
+        rows = r.json()
+    if not rows:
+        return {"erreur": "Compte introuvable."}
+    row = rows[0]
+    if not row.get("actif"):
+        return {"erreur": "Abonnement inactif."}
+    if row.get("forfait") not in ("kids_solo", "kids_famille", "facility", "forgedis", "tous"):
+        return {"erreur": "Forfait insuffisant pour Aria Kids."}
+    return {"token": row["token"], "forfait": row["forfait"], "kids_profils": row.get("kids_profils") or []}
+
+@app.get("/profil-kids")
+async def get_profil_kids(token: str = ""):
+    if not token:
+        return {"erreur": "Token manquant."}
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return {"erreur": "Configuration serveur manquante."}
+    import httpx as _httpx
+    async with _httpx.AsyncClient(timeout=10.0) as hx:
+        r = await hx.get(
+            f"{SUPABASE_URL}/rest/v1/clients",
+            headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
+            params={"token": f"eq.{token}", "select": "kids_profils"}
+        )
+        rows = r.json()
+    if not rows:
+        return {"kids_profils": []}
+    return {"kids_profils": rows[0].get("kids_profils") or []}
+
+@app.post("/profil-kids")
+async def post_profil_kids(body: dict):
+    token = body.get("token", "")
+    profils = body.get("profils", [])
+    if not token:
+        return {"erreur": "Token manquant."}
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return {"erreur": "Configuration serveur manquante."}
+    import httpx as _httpx
+    async with _httpx.AsyncClient(timeout=10.0) as hx:
+        import json as _json
+        r = await hx.patch(
+            f"{SUPABASE_URL}/rest/v1/clients",
+            headers={
+                "apikey": SUPABASE_SERVICE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                "Content-Type": "application/json",
+                "Prefer": "return=minimal"
+            },
+            params={"token": f"eq.{token}"},
+            content=_json.dumps({"kids_profils": profils}).encode()
+        )
+    return {"ok": True}
+
 @app.post("/ask-industrial")
 async def ask_industrial(body: dict):
     msg = body.get("message", "")
