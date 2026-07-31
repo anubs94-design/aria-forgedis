@@ -493,7 +493,7 @@ async def ask_kids(body: dict):
 
     try:
         import anthropic as _anthropic
-        client_ai = _anthropic.Anthropic(api_key=ARIA_CLAUDE_KEY)
+        client_ai = _anthropic.Anthropic(api_key=CLAUDE_KEY)
         resp = client_ai.messages.create(
             model=model_a_utiliser,
             max_tokens=min(max_tokens, 4096),
