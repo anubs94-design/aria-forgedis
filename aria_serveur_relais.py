@@ -537,6 +537,57 @@ async def ask_kids(body: dict):
         print(f"[ASK-KIDS] Erreur: {e}")
         return {"erreur": "Service IA temporairement indisponible."}
 
+
+@app.post("/profil-kids")
+async def sauvegarder_profil_kids(body: dict):
+    """Sauvegarde les profils enfants Kids dans la colonne kids_profils de la table clients."""
+    token = body.get("token", "")
+    profil = body.get("profil")
+    if not token:
+        return {"erreur": "Token requis"}
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return {"erreur": "Service indisponible"}
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.patch(
+                f"{SUPABASE_URL}/rest/v1/clients",
+                params={"token": f"eq.{token}"},
+                headers={
+                    "apikey": SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                    "Content-Type": "application/json",
+                    "Prefer": "return=minimal",
+                },
+                json={"kids_profils": profil}
+            )
+            return {"status": "ok"}
+    except Exception as e:
+        return {"erreur": str(e)}
+
+@app.get("/profil-kids")
+async def charger_profil_kids(token: str = ""):
+    """Charge les profils enfants Kids depuis Supabase."""
+    if not token:
+        return {"erreur": "Token requis"}
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return {"erreur": "Service indisponible"}
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(
+                f"{SUPABASE_URL}/rest/v1/clients",
+                params={"token": f"eq.{token}", "select": "kids_profils"},
+                headers={
+                    "apikey": SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                },
+            )
+            data = r.json()
+            if data and isinstance(data, list) and len(data) > 0:
+                return {"profil": data[0].get("kids_profils")}
+            return {"profil": None}
+    except Exception as e:
+        return {"erreur": str(e)}
+
 @app.post("/ask-industrial")
 async def ask_industrial(body: dict):
     msg = body.get("message", "")
