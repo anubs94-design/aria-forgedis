@@ -818,6 +818,178 @@ async def transcribe(body: dict):
 
 relais_connexions = {}
 
+
+
+# ══════════════════════════════════════════════════════════════
+# ENDPOINTS ARIA KIDS (ajoutes 01/08/2026)
+# ══════════════════════════════════════════════════════════════
+
+KIDS_PRICES = {
+    "solo":    os.environ.get("STRIPE_PRICE_KIDS_SOLO",    ""),
+    "famille": os.environ.get("STRIPE_PRICE_KIDS_FAMILLE", ""),
+}
+
+@app.post("/checkout-kids")
+async def checkout_kids(body: dict):
+    """Session Stripe Checkout pour Aria Kids Solo (9,99) ou Famille (14,99)."""
+    email   = body.get("email", "").strip().lower()
+    forfait = body.get("forfait", "kids_solo")
+    redirect_base = body.get("redirect", "https://forgedis.fr/app-kids.html")
+    if not email:
+        return {"erreur": "email requis"}
+    if not STRIPE_SECRET_KEY:
+        return {"erreur": "Stripe non configure"}
+    plan = "famille" if forfait == "kids_famille" else "solo"
+    price_id = KIDS_PRICES.get(plan, "")
+    if not price_id:
+        return {"erreur": f"STRIPE_PRICE_KIDS_{plan.upper()} manquant dans les env vars Render."}
+    sep = "&" if "?" in redirect_base else "?"
+    success_url = redirect_base + sep + "success=1&forfait=" + forfait
+    cancel_url  = redirect_base + sep + "cancel=1"
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            r = await client.post(
+                "https://api.stripe.com/v1/checkout/sessions",
+                headers={"Authorization": f"Bearer {STRIPE_SECRET_KEY}"},
+                data={
+                    "mode": "subscription",
+                    "customer_email": email,
+                    "subscription_data[trial_period_days]": "14",
+                    "subscription_data[metadata][produit]": forfait,
+                    "line_items[0][price]": price_id,
+                    "line_items[0][quantity]": "1",
+                    "success_url": success_url,
+                    "cancel_url": cancel_url,
+                }
+            )
+            data = r.json()
+            if "url" not in data:
+                print(f"[CHECKOUT-KIDS] Erreur Stripe: {data}")
+                return {"erreur": "Impossible de creer la session de paiement."}
+            return {"checkout_url": data["url"], "session_id": data.get("id", "")}
+    except Exception as e:
+        print(f"[CHECKOUT-KIDS] Exception: {e}")
+        return {"erreur": "Service indisponible."}
+
+
+@app.post("/inscription-kids")
+async def inscription_kids(body: dict):
+    """
+    Inscription Kids : verifie si client existant puis lance checkout.
+    Envoie un email de bienvenue avec lien de paiement.
+    """
+    email   = body.get("email", "").strip().lower()
+    forfait = body.get("forfait", "kids_solo")
+    redirect = body.get("redirect", "https://forgedis.fr/app-kids.html")
+    if not email:
+        return {"erreur": "email requis"}
+    # Verifier si client deja connu
+    existants = []
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(
+                f"{SUPABASE_URL}/rest/v1/clients",
+                params={"email": f"eq.{email}", "select": "email,actif"},
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+            )
+            existants = r.json() if isinstance(r.json(), list) else []
+    except Exception as e:
+        print(f"[INSCRIPTION-KIDS] Supabase lookup: {e}")
+    # Dans tous les cas, creer/renvoyer une session checkout
+    co = await checkout_kids({"email": email, "forfait": forfait, "redirect": redirect})
+    if "erreur" in co:
+        return co
+    statut = "existant" if existants else "nouveau"
+    # Email de bienvenue
+    forfait_label = "Famille (14,99 euros/mois)" if forfait == "kids_famille" else "Solo (9,99 euros/mois)"
+    await envoyer_email(
+        to=email,
+        subject="Bienvenue sur Aria Kids !",
+        html=(
+            f"<div style='font-family:sans-serif;max-width:480px;margin:0 auto'>"
+            f"<h2 style='color:#FF7A59'>Aria Kids — votre essai commence !</h2>"
+            f"<p>Forfait choisi : <strong>{forfait_label}</strong></p>"
+            f"<p>Cliquez ci-dessous pour finaliser votre abonnement (14 jours gratuits) :</p>"
+            f"<a href='{co['checkout_url']}' style='display:inline-block;background:#FF7A59;color:#fff;"
+            f"padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700'>Activer mon abonnement</a>"
+            f"<p style='font-size:12px;color:#888;margin-top:20px'>Questions : contact@forgedis.fr</p>"
+            f"</div>"
+        )
+    )
+    return {"statut": statut, "checkout_url": co["checkout_url"]}
+
+
+@app.get("/devoirs")
+async def get_devoirs(token: str = ""):
+    """
+    Recupere les devoirs envoyes depuis l app mobile (URLs images).
+    Stockes dans Supabase colonne kids_devoirs (JSON array).
+    Retourne liste vide si colonne absente ou client non trouve.
+    """
+    if not token:
+        return {"devoirs": []}
+    if token == PROXY_TOKEN:
+        return {"devoirs": []}  # dev : pas de devoirs en base
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(
+                f"{SUPABASE_URL}/rest/v1/clients",
+                params={"token": f"eq.{token}", "select": "kids_devoirs,actif"},
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+            )
+            data = r.json()
+            if not data or not data[0].get("actif"):
+                return {"devoirs": []}
+            devoirs = data[0].get("kids_devoirs") or []
+            return {"devoirs": devoirs if isinstance(devoirs, list) else []}
+    except Exception as e:
+        print(f"[DEVOIRS] Erreur: {e}")
+        return {"devoirs": []}
+
+
+@app.post("/kids/generer-question")
+async def kids_generer_question(body: dict):
+    """
+    Genere dynamiquement une question glisser-deposer via Claude Haiku.
+    Fallback cote client si indisponible (banque locale dans app-kids.html).
+    """
+    token   = body.get("token", "")
+    matiere = body.get("matiere", "general")
+    niveau  = body.get("niveau", "college")
+    nb_el   = min(int(body.get("nb_elements", 6)), 10)
+
+    autorise, msg_err, forfait = await verifier_forfait(token)
+    if not autorise:
+        return {"erreur": msg_err or "Token invalide."}
+    if forfait not in ("kids_solo", "kids_famille", "facility", "forgedis", "tous", "industrial", "dev", "erreur"):
+        return {"erreur": "Forfait insuffisant."}
+
+    prompt = (
+        f"Genere une question de type glisser-deposer pour un eleve de {niveau} en {matiere}. "
+        f"Cree exactement {nb_el} elements a classer dans 2 a 4 zones. "
+        "Reponds UNIQUEMENT en JSON valide sans texte avant ni apres : "
+        '{"zones":["Zone A","Zone B"],"elements":[{"mot":"exemple","zone":"Zone A"}],'
+        '"explication":"Pourquoi ce classement en 1 phrase bienveillante."}'
+    )
+    try:
+        import anthropic as _anthropic
+        client_ai = _anthropic.Anthropic(api_key=CLAUDE_KEY)
+        resp = client_ai.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=600,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        texte = resp.content[0].text if resp.content else ""
+        start = texte.find("{"); end = texte.rfind("}")
+        if start != -1 and end != -1:
+            import json as _json
+            parsed = _json.loads(texte[start:end+1])
+            return {"question": parsed}
+        return {"erreur": "Reponse IA invalide."}
+    except Exception as e:
+        print(f"[GENERER-QUESTION] Erreur: {e}")
+        return {"erreur": "Service IA indisponible."}
+
 @app.websocket("/relais")
 async def relais(websocket: WebSocket):
     token = websocket.query_params.get("token", "")
