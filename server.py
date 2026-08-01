@@ -1372,223 +1372,301 @@ async def jumelage_statut(body: dict):
 
 
 # ══════════════════════════════════════════════════════════════
-# RAPPELS MEDICAMENTS + NOTIFICATIONS PUSH (FCM via Expo)
+# ARIA INDUSTRIAL MOBILE — Auth + Pointage + Logistique + SAV
 # ══════════════════════════════════════════════════════════════
 
-EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
-
-async def _envoyer_notif_push(token_fcm: str, titre: str, corps: str, data: dict = None):
-    """Envoie une notification push via Expo Push API."""
-    if not token_fcm or not token_fcm.startswith("ExponentPushToken"):
-        return False
+async def _verifier_salarie(email_entreprise: str, mot_de_passe: str):
+    """Verifie les credentials d un salarie Industrial."""
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             r = await client.post(
-                EXPO_PUSH_URL,
-                headers={"Content-Type": "application/json", "Accept": "application/json"},
-                json={
-                    "to": token_fcm,
-                    "title": titre,
-                    "body": corps,
-                    "sound": "default",
-                    "data": data or {},
-                    "priority": "high",
-                }
+                f"{SUPABASE_URL}/rest/v1/rpc/verifier_salarie",
+                headers={
+                    "apikey": SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={"p_email_entreprise": email_entreprise, "p_mot_de_passe": mot_de_passe}
+            )
+            return r.json()
+    except Exception as e:
+        print(f"[AUTH SALARIE] Erreur: {e}")
+        return None
+
+async def _sb_insert(table: str, data: dict):
+    """Insert dans Supabase et retourne la ligne inseree."""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(
+                f"{SUPABASE_URL}/rest/v1/{table}",
+                headers={
+                    "apikey": SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                    "Content-Type": "application/json",
+                    "Prefer": "return=representation"
+                },
+                json=data
             )
             result = r.json()
-            return result.get("data", {}).get("status") == "ok"
+            return result[0] if isinstance(result, list) and result else result
     except Exception as e:
-        print(f"[PUSH] Erreur: {e}")
-        return False
+        print(f"[SB INSERT {table}] Erreur: {e}")
+        return None
 
-async def _get_client_by_email(email: str):
-    """Recupere un client par email depuis Supabase."""
+async def _sb_query(table: str, params: dict):
+    """GET depuis Supabase."""
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             r = await client.get(
-                f"{SUPABASE_URL}/rest/v1/clients",
-                params={"email": f"eq.{email}", "select": "*", "limit": "1"},
+                f"{SUPABASE_URL}/rest/v1/{table}",
+                params=params,
                 headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
             )
-            data = r.json()
-            return data[0] if isinstance(data, list) and data else None
+            return r.json()
     except:
-        return None
+        return []
 
-async def _patch_client_email(email: str, updates: dict):
-    """Met a jour un client par email."""
+async def _sb_update(table: str, filtre: str, data: dict):
+    """PATCH dans Supabase."""
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             await client.patch(
-                f"{SUPABASE_URL}/rest/v1/clients?email=eq.{email}",
+                f"{SUPABASE_URL}/rest/v1/{table}?{filtre}",
                 headers={
                     "apikey": SUPABASE_SERVICE_KEY,
                     "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
                     "Content-Type": "application/json",
                     "Prefer": "return=minimal"
                 },
-                json=updates
+                json=data
             )
         return True
     except:
         return False
 
 
-@app.post("/enregistrer-token-fcm")
-async def enregistrer_token_fcm(body: dict):
+@app.post("/industrial/auth")
+async def industrial_auth(body: dict):
     """
-    Enregistre le token FCM Expo d un client pour les notifications push.
-    Appele au demarrage de l app Facility et Kids.
+    Authentification salarie Industrial pour l app mobile.
+    Retourne le profil complet du salarie + infos entreprise.
     """
-    email      = body.get("email", "").strip().lower()
-    token_fcm  = body.get("token_fcm", "").strip()
-    plateforme = body.get("plateforme", "android")
-    produit    = body.get("produit", "facility")
-
-    if not email or not token_fcm:
-        return {"ok": False, "erreur": "email et token_fcm requis"}
-
-    if produit == "kids":
-        updates = {"kids_token_fcm": token_fcm}
-    else:
-        updates = {"token_fcm": token_fcm, "plateforme": plateforme}
-
-    ok = await _patch_client_email(email, updates)
-    return {"ok": ok}
-
-
-@app.get("/rappels/liste")
-async def rappels_liste(email: str = ""):
-    """Retourne les rappels medicaments actifs d un client."""
-    if not email:
-        return {"rappels": []}
-    client = await _get_client_by_email(email.lower())
-    if not client:
-        return {"rappels": []}
-    rappels = client.get("rappels") or []
-    return {"rappels": rappels if isinstance(rappels, list) else []}
-
-
-@app.post("/rappels/ajouter")
-async def rappels_ajouter(body: dict):
-    """Ajoute un rappel medicament + envoie confirmation push."""
     email = body.get("email", "").strip().lower()
-    nom   = body.get("nom", "").strip()
-    heure = body.get("heure", "08:00")
-    jours = body.get("jours", ["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"])
+    mdp   = body.get("mot_de_passe", "")
 
-    if not email or not nom:
-        return {"ok": False, "erreur": "email et nom requis"}
+    if not email or not mdp:
+        return {"ok": False, "erreur": "Email et mot de passe requis"}
 
-    client = await _get_client_by_email(email)
-    if not client or not client.get("actif"):
-        return {"ok": False, "erreur": "Client non trouve ou inactif"}
+    result = await _verifier_salarie(email, mdp)
+    if not result or result.get("erreur") or result.get("error"):
+        return {"ok": False, "erreur": "Email ou mot de passe incorrect"}
 
-    import secrets as _sec
-    rappel = {
-        "id": _sec.token_hex(8),
-        "nom": nom,
-        "heure": heure,
-        "jours": jours,
-        "actif": True,
-        "cree_le": datetime.utcnow().isoformat(),
+    if result.get("actif") is False:
+        return {"ok": False, "erreur": "Votre acces a ete desactive. Contactez votre administrateur."}
+
+    return {
+        "ok": True,
+        "salarie": {
+            "id":             result.get("id"),
+            "nom":            result.get("nom"),
+            "poste":          result.get("poste"),
+            "role":           result.get("role"),
+            "equipe_id":      result.get("equipe_id"),
+            "responsable_id": result.get("responsable_id"),
+            "entreprise_id":  result.get("entreprise_id"),
+            "langue":         result.get("langue", "fr"),
+        }
     }
 
-    rappels = client.get("rappels") or []
-    if not isinstance(rappels, list):
-        rappels = []
-    rappels.append(rappel)
-    await _patch_client_email(email, {"rappels": rappels})
 
-    token_fcm = client.get("token_fcm", "")
-    if token_fcm:
-        await _envoyer_notif_push(
-            token_fcm,
-            "Rappel cree",
-            f"Aria vous rappellera de prendre {nom} a {heure}.",
-            {"type": "rappel_cree", "rappel_id": rappel["id"]}
-        )
+@app.post("/industrial/pointer")
+async def industrial_pointer(body: dict):
+    """
+    Pointage terrain — enregistre arrivee/depart/pause avec GPS.
+    Appele automatiquement a la connexion (type=arrivee).
+    """
+    salarie_id    = body.get("salarie_id", "")
+    entreprise_id = body.get("entreprise_id", "")
+    nom_salarie   = body.get("nom_salarie", "")
+    poste         = body.get("poste", "")
+    type_pointage = body.get("type", "arrivee")
+    latitude      = body.get("latitude")
+    longitude     = body.get("longitude")
+    adresse       = body.get("adresse", "")
+    equipe_id     = body.get("equipe_id")
+    responsable_id = body.get("responsable_id")
+    note          = body.get("note", "")
 
-    return {"ok": True, "rappel": rappel}
+    if not salarie_id or not entreprise_id:
+        return {"ok": False, "erreur": "salarie_id et entreprise_id requis"}
 
+    if type_pointage not in ("arrivee", "depart", "pause_debut", "pause_fin"):
+        type_pointage = "arrivee"
 
-@app.delete("/rappels/supprimer")
-async def rappels_supprimer(body: dict):
-    """Supprime un rappel medicament."""
-    email = body.get("email", "").strip().lower()
-    rid   = body.get("id", "")
-    if not email or not rid:
-        return {"ok": False, "erreur": "email et id requis"}
-    client = await _get_client_by_email(email)
-    if not client:
-        return {"ok": False}
-    rappels = client.get("rappels") or []
-    rappels = [r for r in rappels if r.get("id") != rid]
-    await _patch_client_email(email, {"rappels": rappels})
-    return {"ok": True, "rappels": rappels}
-
-
-@app.post("/rappels/confirmer")
-async def rappels_confirmer(body: dict):
-    """Confirme la prise d un medicament — enregistre dans l historique."""
-    email     = body.get("email", "").strip().lower()
-    rappel_id = body.get("rappel_id", "")
-    confirme  = body.get("confirme", True)
-    if not email:
-        return {"ok": False}
-    client = await _get_client_by_email(email)
-    if not client:
-        return {"ok": False}
-    historique = client.get("rappels_historique") or []
-    if not isinstance(historique, list):
-        historique = []
-    historique.append({
-        "rappel_id": rappel_id,
-        "confirme": confirme,
-        "horodatage": datetime.utcnow().isoformat(),
+    pointage = await _sb_insert("pointages", {
+        "salarie_id":     salarie_id,
+        "entreprise_id":  entreprise_id,
+        "equipe_id":      equipe_id,
+        "responsable_id": responsable_id,
+        "nom_salarie":    nom_salarie,
+        "poste":          poste,
+        "type":           type_pointage,
+        "latitude":       latitude,
+        "longitude":      longitude,
+        "adresse":        adresse,
+        "note":           note,
     })
-    if len(historique) > 270:
-        historique = historique[-270:]
-    await _patch_client_email(email, {"rappels_historique": historique})
-    return {"ok": True}
+
+    return {"ok": True, "pointage": pointage}
 
 
-@app.post("/notif-kids")
-async def notif_kids(body: dict):
+@app.get("/industrial/pointages")
+async def industrial_pointages(entreprise_id: str = "", equipe_id: str = "", date: str = ""):
     """
-    Envoie une notification push au parent Kids en temps reel.
-    Appele quand l enfant pose une question ou fait une recherche.
+    Liste les pointages du jour pour un responsable/dirigeant.
+    Filtre par entreprise, optionnellement par equipe et date.
     """
-    token        = body.get("token", "")
-    email_parent = body.get("email_parent", "").strip().lower()
-    prenom       = body.get("prenom_enfant", "Votre enfant")
-    message      = body.get("message", "")
+    if not entreprise_id:
+        return {"pointages": []}
 
-    if not message:
-        return {"ok": False, "erreur": "message requis"}
+    params = {
+        "entreprise_id": f"eq.{entreprise_id}",
+        "select": "id,nom_salarie,poste,type,horodatage,latitude,longitude,adresse,note,equipe_id",
+        "order": "horodatage.desc",
+        "limit": "200"
+    }
+    if equipe_id:
+        params["equipe_id"] = f"eq.{equipe_id}"
+    if date:
+        params["horodatage"] = f"gte.{date}T00:00:00Z"
 
-    autorise, msg_err, forfait = await verifier_forfait(token)
-    if not autorise:
-        return {"ok": False, "erreur": msg_err}
-    if forfait not in ("kids_solo", "kids_famille", "forgedis", "tous", "dev", "erreur"):
-        return {"ok": False, "erreur": "Forfait insuffisant"}
+    pointages = await _sb_query("pointages", params)
+    return {"pointages": pointages if isinstance(pointages, list) else []}
 
-    client = await _get_client_by_email(email_parent)
-    if not client:
-        return {"ok": False, "erreur": "Parent non trouve"}
 
-    kids_token_fcm = client.get("kids_token_fcm", "")
-    if not kids_token_fcm:
-        return {"ok": True, "notif": False, "erreur": "Token FCM parent non enregistre"}
+@app.post("/industrial/livraison")
+async def industrial_livraison(body: dict):
+    """
+    Enregistre une livraison terrain avec preuve photo et signature.
+    Appele par le livreur apres chaque depot.
+    """
+    salarie_id    = body.get("salarie_id", "")
+    entreprise_id = body.get("entreprise_id", "")
+    reference     = body.get("reference", "")
+    client_nom    = body.get("client_nom", "")
+    client_adresse = body.get("client_adresse", "")
+    statut        = body.get("statut", "livree")
+    photo_preuve  = body.get("photo_preuve", "")
+    signature     = body.get("signature_base64", "")
+    code_barres   = body.get("code_barres", "")
+    latitude      = body.get("latitude")
+    longitude     = body.get("longitude")
+    note          = body.get("note", "")
 
-    msg_court = message[:120] + "..." if len(message) > 120 else message
-    ok = await _envoyer_notif_push(
-        kids_token_fcm,
-        f"{prenom} apprend en ce moment",
-        msg_court,
-        {"type": "kids_activite", "prenom": prenom, "message": message}
-    )
-    return {"ok": ok, "notif": ok}
+    if not salarie_id or not entreprise_id:
+        return {"ok": False, "erreur": "salarie_id et entreprise_id requis"}
+
+    livraison = await _sb_insert("livraisons", {
+        "salarie_id":           salarie_id,
+        "entreprise_id":        entreprise_id,
+        "reference":            reference,
+        "client_nom":           client_nom,
+        "client_adresse":       client_adresse,
+        "statut":               statut,
+        "photo_preuve":         photo_preuve,
+        "signature_base64":     signature,
+        "code_barres":          code_barres,
+        "latitude_livraison":   latitude,
+        "longitude_livraison":  longitude,
+        "horodatage_livraison": datetime.utcnow().isoformat(),
+        "note":                 note,
+    })
+
+    return {"ok": True, "livraison": livraison}
+
+
+@app.get("/industrial/livraisons")
+async def industrial_livraisons(salarie_id: str = "", entreprise_id: str = ""):
+    """Retourne les livraisons du jour pour un salarie."""
+    if not salarie_id:
+        return {"livraisons": []}
+
+    from datetime import date as _date
+    aujourd_hui = _date.today().isoformat()
+
+    params = {
+        "salarie_id":  f"eq.{salarie_id}",
+        "created_at":  f"gte.{aujourd_hui}T00:00:00Z",
+        "select":      "*",
+        "order":       "created_at.desc",
+        "limit":       "100"
+    }
+    if entreprise_id:
+        params["entreprise_id"] = f"eq.{entreprise_id}"
+
+    livraisons = await _sb_query("livraisons", params)
+    return {"livraisons": livraisons if isinstance(livraisons, list) else []}
+
+
+@app.post("/industrial/intervention")
+async def industrial_intervention(body: dict):
+    """
+    Cree ou met a jour une fiche intervention SAV terrain.
+    """
+    salarie_id    = body.get("salarie_id", "")
+    entreprise_id = body.get("entreprise_id", "")
+    intervention_id = body.get("intervention_id")
+
+    if not salarie_id or not entreprise_id:
+        return {"ok": False, "erreur": "salarie_id et entreprise_id requis"}
+
+    data = {
+        "salarie_id":     salarie_id,
+        "entreprise_id":  entreprise_id,
+        "client_nom":     body.get("client_nom", ""),
+        "client_adresse": body.get("client_adresse", ""),
+        "type_panne":     body.get("type_panne", ""),
+        "description":    body.get("description", ""),
+        "photos":         body.get("photos", []),
+        "checklist":      body.get("checklist", []),
+        "signature_base64": body.get("signature_base64", ""),
+        "statut":         body.get("statut", "en_cours"),
+        "latitude":       body.get("latitude"),
+        "longitude":      body.get("longitude"),
+    }
+
+    if intervention_id:
+        # Mise a jour
+        await _sb_update("interventions", f"id=eq.{intervention_id}", data)
+        if body.get("statut") == "termine":
+            await _sb_update("interventions", f"id=eq.{intervention_id}",
+                             {"fin_intervention": datetime.utcnow().isoformat()})
+        return {"ok": True, "intervention_id": intervention_id}
+    else:
+        # Creation
+        result = await _sb_insert("interventions", data)
+        return {"ok": True, "intervention": result}
+
+
+@app.get("/industrial/interventions")
+async def industrial_interventions(salarie_id: str = "", entreprise_id: str = ""):
+    """Retourne les interventions du jour pour un technicien SAV."""
+    if not salarie_id:
+        return {"interventions": []}
+
+    from datetime import date as _date
+    aujourd_hui = _date.today().isoformat()
+
+    params = {
+        "salarie_id": f"eq.{salarie_id}",
+        "created_at": f"gte.{aujourd_hui}T00:00:00Z",
+        "select":     "id,client_nom,client_adresse,type_panne,statut,debut_intervention,fin_intervention,photos,checklist",
+        "order":      "created_at.desc",
+        "limit":      "50"
+    }
+
+    interventions = await _sb_query("interventions", params)
+    return {"interventions": interventions if isinstance(interventions, list) else []}
 
 @app.websocket("/relais")
 async def relais(websocket: WebSocket):
