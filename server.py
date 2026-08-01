@@ -990,6 +990,385 @@ async def kids_generer_question(body: dict):
         print(f"[GENERER-QUESTION] Erreur: {e}")
         return {"erreur": "Service IA indisponible."}
 
+
+
+# ══════════════════════════════════════════════════════════════
+# ENDPOINTS JUMELAGE (01/08/2026) — 4 niveaux de securite
+# ══════════════════════════════════════════════════════════════
+
+AUTORITES_PAR_PAYS = {
+    "France":   "PHAROS (https://www.internet-signalement.gouv.fr)",
+    "Maroc":    "DGSN (https://www.dgsn.ma)",
+    "Algerie":  "DGSN Algerie (https://www.dgsn.dz)",
+    "USA":      "NCMEC (https://www.missingkids.org/gethelpnow/cybertipline)",
+    "UK":       "CEOP (https://www.ceop.police.uk/Safety-Centre)",
+    "Belgique": "Child Focus (https://www.childfocus.be)",
+    "Canada":   "Cyberaide (https://www.cybertip.ca)",
+}
+
+async def _sb_get(path: str, params: dict = None):
+    async with httpx.AsyncClient(timeout=10.0) as c:
+        r = await c.get(
+            f"{SUPABASE_URL}/rest/v1/{path}",
+            params=params or {},
+            headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+        )
+        return r.json()
+
+async def _sb_post(table: str, data: dict):
+    async with httpx.AsyncClient(timeout=10.0) as c:
+        r = await c.post(
+            f"{SUPABASE_URL}/rest/v1/{table}",
+            headers={
+                "apikey": SUPABASE_SERVICE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                "Content-Type": "application/json",
+                "Prefer": "return=representation"
+            },
+            json=data
+        )
+        return r.json()
+
+async def _sb_patch(table: str, filtre: str, data: dict):
+    async with httpx.AsyncClient(timeout=10.0) as c:
+        r = await c.patch(
+            f"{SUPABASE_URL}/rest/v1/{table}?{filtre}",
+            headers={
+                "apikey": SUPABASE_SERVICE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                "Content-Type": "application/json",
+                "Prefer": "return=minimal"
+            },
+            json=data
+        )
+        return r.status_code
+
+async def _sb_delete(table: str, filtre: str):
+    async with httpx.AsyncClient(timeout=10.0) as c:
+        r = await c.delete(
+            f"{SUPABASE_URL}/rest/v1/{table}?{filtre}",
+            headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+        )
+        return r.status_code
+
+
+@app.post("/jumelage/attente")
+async def jumelage_attente(body: dict):
+    """Salle d attente. Tente matching immediat. Si match -> codes email aux parents."""
+    token           = body.get("token", "")
+    email_parent    = body.get("email_parent", "").strip().lower()
+    prenom          = body.get("prenom", "").strip()
+    niveau          = body.get("niveau", "")
+    langue_cherchee = body.get("langue_cherchee", "").strip()
+    langue_native   = body.get("langue_native", "").strip()
+    pays            = body.get("pays", "")
+
+    if not all([token, email_parent, prenom, langue_cherchee, langue_native]):
+        return {"erreur": "Champs manquants."}
+
+    autorise, msg_err, forfait = await verifier_forfait(token)
+    if not autorise:
+        return {"erreur": msg_err or "Token invalide."}
+
+    import random as _rnd
+    # Nettoyer entrees precedentes de ce token
+    await _sb_delete("jumelage_attente", f"token=eq.{token}")
+
+    # Chercher match : quelqu un qui cherche ma langue native et dont la langue native = ma langue cherchee
+    candidats = await _sb_get("jumelage_attente", {
+        "langue_cherchee": f"eq.{langue_native}",
+        "langue_native":   f"eq.{langue_cherchee}",
+        "token":           f"neq.{token}",
+        "select":          "*",
+        "limit":           "5"
+    })
+
+    if isinstance(candidats, list) and candidats:
+        p = candidats[0]
+        code_a = str(_rnd.randint(100000, 999999))
+        code_b = str(_rnd.randint(100000, 999999))
+
+        room = await _sb_post("jumelage_rooms", {
+            "token_a": token, "email_parent_a": email_parent,
+            "prenom_a": prenom, "langue_native_a": langue_native,
+            "pays_a": pays, "code_a": code_a, "code_a_valide": False,
+            "token_b": p["token"], "email_parent_b": p["email_parent"],
+            "prenom_b": p["prenom_enfant"], "langue_native_b": p["langue_native"],
+            "pays_b": p["pays"], "code_b": code_b, "code_b_valide": False,
+            "langue_echange": f"{langue_native} / {langue_cherchee}",
+            "statut": "en_attente_codes",
+        })
+        room_id = room[0]["id"] if isinstance(room, list) and room else None
+        if not room_id:
+            return {"erreur": "Erreur creation room."}
+
+        await _sb_delete("jumelage_attente", f"id=eq.{p['id']}")
+
+        def _html_email(prenom_e, prenom_c, pays_c, code, langue):
+            return (
+                f"<div style='font-family:sans-serif;max-width:500px;margin:0 auto'>"
+                f"<h2 style='color:#7C6FFF'>Correspondant trouve !</h2>"
+                f"<p><strong>{prenom_e}</strong> a ete mis en contact avec "
+                f"<strong>{prenom_c}</strong> ({pays_c}) pour pratiquer le <strong>{langue}</strong>.</p>"
+                f"<p>Donnez ce code a {prenom_e} pour debloquer le chat :</p>"
+                f"<div style='font-size:36px;font-weight:900;color:#7C6FFF;letter-spacing:8px;"
+                f"background:#f0eeff;padding:16px 24px;border-radius:12px;text-align:center;"
+                f"margin:20px 0'>{code}</div>"
+                f"<p style='font-size:12px;color:#888'>Aria surveille chaque message. "
+                f"Vous serez alerte en cas de contenu inapproprie.<br>contact@forgedis.fr</p></div>"
+            )
+
+        await envoyer_email(
+            email_parent,
+            f"Aria Kids — {prenom} a trouve un correspondant !",
+            _html_email(prenom, p["prenom_enfant"], p["pays"], code_a, langue_cherchee)
+        )
+        await envoyer_email(
+            p["email_parent"],
+            f"Aria Kids — {p['prenom_enfant']} a trouve un correspondant !",
+            _html_email(p["prenom_enfant"], prenom, pays, code_b, p["langue_cherchee"])
+        )
+
+        return {
+            "statut": "match",
+            "room_id": room_id,
+            "prenom_correspondant": p["prenom_enfant"],
+            "pays_correspondant": p["pays"]
+        }
+
+    # Pas de match -> inscrire en attente
+    await _sb_post("jumelage_attente", {
+        "token": token, "email_parent": email_parent,
+        "prenom_enfant": prenom, "niveau_enfant": niveau,
+        "langue_cherchee": langue_cherchee, "langue_native": langue_native, "pays": pays,
+    })
+    return {"statut": "attente"}
+
+
+@app.post("/jumelage/code-valider")
+async def jumelage_code_valider(body: dict):
+    """Valide le code 6 chiffres recu par email. Ouvre le chat si les deux codes sont valides."""
+    token = body.get("token", "")
+    code  = body.get("code", "").strip()
+    if not token or not code:
+        return {"erreur": "Champs manquants."}
+
+    rooms_a = await _sb_get("jumelage_rooms", {"token_a": f"eq.{token}", "statut": f"neq.ferme", "select": "*"})
+    rooms_b = await _sb_get("jumelage_rooms", {"token_b": f"eq.{token}", "statut": f"neq.ferme", "select": "*"})
+
+    room = role = None
+    if isinstance(rooms_a, list) and rooms_a:
+        room = rooms_a[0]; role = "a"
+    elif isinstance(rooms_b, list) and rooms_b:
+        room = rooms_b[0]; role = "b"
+
+    if not room:
+        return {"erreur": "Aucune room trouvee."}
+    if code != room.get(f"code_{role}", ""):
+        return {"erreur": "Code incorrect."}
+
+    await _sb_patch("jumelage_rooms", f"id=eq.{room['id']}", {f"code_{role}_valide": True})
+
+    autre = "b" if role == "a" else "a"
+    autre_valide = room.get(f"code_{autre}_valide", False)
+    if autre_valide:
+        await _sb_patch("jumelage_rooms", f"id=eq.{room['id']}", {"statut": "actif"})
+
+    return {
+        "statut": "ok",
+        "room_id": room["id"],
+        "prenom_correspondant": room.get(f"prenom_{autre}", ""),
+        "pays_correspondant":   room.get(f"pays_{autre}", ""),
+        "langue_echange":       room.get("langue_echange", ""),
+        "chat_actif":           autre_valide,
+    }
+
+
+@app.post("/jumelage/message")
+async def jumelage_message(body: dict):
+    """
+    Envoie un message avec filtrage 4 niveaux :
+    N1 Haiku : insultes / vulgarites
+    N2 regex  : donnees perso (tel, email, adresse, reseaux)
+    N3 Sonnet : analyse contexte si N1 ou N2 declenche
+    N4        : alerte Supabase + email parents + email FORGEDIS
+    """
+    token   = body.get("token", "")
+    room_id = body.get("room_id", "")
+    message = body.get("message", "").strip()
+    prenom  = body.get("prenom", "")
+
+    if not all([token, room_id, message]):
+        return {"erreur": "Champs manquants."}
+    if len(message) > 1000:
+        return {"erreur": "Message trop long."}
+
+    rooms_a = await _sb_get("jumelage_rooms", {"id": f"eq.{room_id}", "token_a": f"eq.{token}", "statut": "eq.actif", "select": "*"})
+    rooms_b = await _sb_get("jumelage_rooms", {"id": f"eq.{room_id}", "token_b": f"eq.{token}", "statut": "eq.actif", "select": "*"})
+    room = role = None
+    if isinstance(rooms_a, list) and rooms_a:
+        room = rooms_a[0]; role = "a"
+    elif isinstance(rooms_b, list) and rooms_b:
+        room = rooms_b[0]; role = "b"
+    if not room:
+        return {"erreur": "Room invalide ou chat non actif."}
+
+    import anthropic as _ai, json as _json, re as _re
+    client_ai = _ai.Anthropic(api_key=CLAUDE_KEY)
+
+    niveau_alerte  = 0
+    raison_blocage = ""
+
+    # ── N1 : Haiku ──
+    try:
+        r1 = client_ai.messages.create(
+            model="claude-haiku-4-5-20251001", max_tokens=100,
+            messages=[{"role": "user", "content":
+                f"Modere ce message d enfant : \"{message}\"\n"
+                "JSON uniquement : {\"ok\":true/false,\"raison\":\"\"}\n"
+                "ok=false si insulte, vulgarite, violence, haine. Sois bienveillant."}]
+        )
+        txt = r1.content[0].text.strip()
+        p1  = _json.loads(txt[txt.find("{"):txt.rfind("}")+1])
+        if not p1.get("ok", True):
+            niveau_alerte  = 1
+            raison_blocage = p1.get("raison", "Contenu inapproprie")
+    except Exception:
+        pass
+
+    # ── N2 : regex donnees perso ──
+    if niveau_alerte == 0:
+        patterns = [
+            r"\b\d{10}\b",
+            r"\b\d{2}[\s.\-]\d{2}[\s.\-]\d{2}[\s.\-]\d{2}[\s.\-]\d{2}\b",
+            r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}",
+            r"\b\d{1,4}[\s,]+(?:rue|avenue|bd|boulevard|impasse|chemin|route)\b",
+            r"\bsnap\b|\binsta\b|\btiktok\b|\bdiscord\b|\bwhatsapp\b|\btelegram\b",
+        ]
+        for pat in patterns:
+            if _re.search(pat, message, _re.IGNORECASE):
+                niveau_alerte  = 2
+                raison_blocage = "Donnee personnelle detectee"
+                break
+
+    # ── N3 : Sonnet si alerte ──
+    if niveau_alerte > 0:
+        try:
+            r3 = client_ai.messages.create(
+                model="claude-sonnet-4-6", max_tokens=300,
+                messages=[{"role": "user", "content":
+                    f"Expert protection enfance. Message : \"{message}\"\n"
+                    f"Alerte N{niveau_alerte} : {raison_blocage}\n"
+                    "JSON : {\"danger_reel\":true/false,\"niveau_final\":1-4,\"explication\":\"...\",\"action\":\"bloquer/alerter_parents/signaler_autorites\"}"}]
+            )
+            txt3 = r3.content[0].text.strip()
+            p3   = _json.loads(txt3[txt3.find("{"):txt3.rfind("}")+1])
+        except Exception:
+            p3 = {"danger_reel": True, "niveau_final": niveau_alerte, "explication": raison_blocage, "action": "bloquer"}
+
+        niveau_alerte  = p3.get("niveau_final", niveau_alerte)
+        explication    = p3.get("explication", raison_blocage)
+        autre          = "b" if role == "a" else "a"
+
+        # ── N4 : alerte si danger confirme ──
+        if p3.get("danger_reel") or niveau_alerte >= 3:
+            pays_e   = room.get(f"pays_{role}", "France")
+            autorite = AUTORITES_PAR_PAYS.get(pays_e, "Autorites locales")
+            await _sb_post("alertes_jumelage", {
+                "enfant_a_prenom": room.get(f"prenom_{role}", ""),
+                "enfant_a_pays":   pays_e,
+                "enfant_b_prenom": room.get(f"prenom_{autre}", ""),
+                "enfant_b_pays":   room.get(f"pays_{autre}", ""),
+                "parent_a_email":  room.get(f"email_parent_{role}", ""),
+                "parent_b_email":  room.get(f"email_parent_{autre}", ""),
+                "type_alerte":     raison_blocage,
+                "categorie":       niveau_alerte,
+                "message_declencheur": message,
+                "claude_analyse":  True,
+                "claude_verdict":  explication,
+                "statut":          "NOUVEAU",
+                "email_forgedis_envoye": False,
+            })
+            for pe in [room.get("email_parent_a"), room.get("email_parent_b")]:
+                if pe:
+                    await envoyer_email(pe, "Aria Kids — Alerte securite jumelage",
+                        f"<div style='font-family:sans-serif;max-width:500px'>"
+                        f"<h2 style='color:#E24B4A'>Message retenu par Aria</h2>"
+                        f"<p>Niveau alerte : <strong>{niveau_alerte}/4</strong></p>"
+                        f"<p>Raison : {explication}</p>"
+                        f"<p>Le message n a pas ete transmis.</p>"
+                        f"<p>Signalement si necessaire : <a href='#'>{autorite}</a></p>"
+                        f"<p style='font-size:12px;color:#888'>contact@forgedis.fr</p></div>"
+                    )
+            await envoyer_email(EMAIL_ADMIN, f"[ALERTE N{niveau_alerte}] Jumelage",
+                f"<p>Room:{room_id} | Auteur:{prenom} ({room.get(f'pays_{role}')})"
+                f"<br>Message:{message}<br>Raison:{explication}</p>")
+
+        await _sb_post("jumelage_messages", {
+            "room_id": room_id, "token_auteur": token, "prenom_auteur": prenom,
+            "message_original": message, "message_affiche": None,
+            "statut": "bloque", "niveau_alerte": niveau_alerte, "raison_blocage": raison_blocage,
+        })
+        await _sb_patch("jumelage_rooms", f"id=eq.{room_id}", {"derniere_activite": "now()"})
+        return {"statut": "bloque", "message_enfant": "Aria a retenu ce message. Essaie autrement !", "niveau": niveau_alerte}
+
+    # ── Message OK ──
+    await _sb_post("jumelage_messages", {
+        "room_id": room_id, "token_auteur": token, "prenom_auteur": prenom,
+        "message_original": message, "message_affiche": message,
+        "statut": "ok", "niveau_alerte": 0,
+    })
+    await _sb_patch("jumelage_rooms", f"id=eq.{room_id}", {"derniere_activite": "now()"})
+    return {"statut": "ok", "message_affiche": message}
+
+
+@app.get("/jumelage/messages")
+async def jumelage_get_messages(room_id: str = "", token: str = "", since: str = ""):
+    """Polling messages OK depuis un timestamp. Verifie appartenance a la room."""
+    if not room_id or not token:
+        return {"messages": []}
+    ra = await _sb_get("jumelage_rooms", {"id": f"eq.{room_id}", "token_a": f"eq.{token}", "select": "id"})
+    rb = await _sb_get("jumelage_rooms", {"id": f"eq.{room_id}", "token_b": f"eq.{token}", "select": "id"})
+    if not (isinstance(ra, list) and ra) and not (isinstance(rb, list) and rb):
+        return {"messages": []}
+    params = {"room_id": f"eq.{room_id}", "statut": "eq.ok",
+              "select": "prenom_auteur,message_affiche,created_at,token_auteur",
+              "order": "created_at.asc", "limit": "50"}
+    if since:
+        params["created_at"] = f"gt.{since}"
+    msgs = await _sb_get("jumelage_messages", params)
+    return {"messages": msgs if isinstance(msgs, list) else []}
+
+
+@app.post("/jumelage/statut")
+async def jumelage_statut(body: dict):
+    """Statut room du token (aucun / attente / en_attente_codes / actif / ferme)."""
+    token = body.get("token", "")
+    if not token:
+        return {"statut": "inconnu"}
+    ra = await _sb_get("jumelage_rooms", {"token_a": f"eq.{token}", "statut": "neq.ferme", "select": "*", "order": "created_at.desc", "limit": "1"})
+    rb = await _sb_get("jumelage_rooms", {"token_b": f"eq.{token}", "statut": "neq.ferme", "select": "*", "order": "created_at.desc", "limit": "1"})
+    room = role = None
+    if isinstance(ra, list) and ra:
+        room = ra[0]; role = "a"
+    elif isinstance(rb, list) and rb:
+        room = rb[0]; role = "b"
+    if not room:
+        att = await _sb_get("jumelage_attente", {"token": f"eq.{token}", "select": "langue_cherchee,created_at"})
+        if isinstance(att, list) and att:
+            return {"statut": "attente", "langue_cherchee": att[0].get("langue_cherchee", "")}
+        return {"statut": "aucun"}
+    autre = "b" if role == "a" else "a"
+    return {
+        "statut":                room.get("statut", "inconnu"),
+        "room_id":               room.get("id", ""),
+        "prenom_correspondant":  room.get(f"prenom_{autre}", ""),
+        "pays_correspondant":    room.get(f"pays_{autre}", ""),
+        "langue_echange":        room.get("langue_echange", ""),
+        "code_valide":           room.get(f"code_{role}_valide", False),
+        "chat_actif":            room.get("statut") == "actif",
+    }
+
 @app.websocket("/relais")
 async def relais(websocket: WebSocket):
     token = websocket.query_params.get("token", "")
