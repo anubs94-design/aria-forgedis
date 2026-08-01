@@ -1369,6 +1369,227 @@ async def jumelage_statut(body: dict):
         "chat_actif":            room.get("statut") == "actif",
     }
 
+
+
+# ══════════════════════════════════════════════════════════════
+# RAPPELS MEDICAMENTS + NOTIFICATIONS PUSH (FCM via Expo)
+# ══════════════════════════════════════════════════════════════
+
+EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
+
+async def _envoyer_notif_push(token_fcm: str, titre: str, corps: str, data: dict = None):
+    """Envoie une notification push via Expo Push API."""
+    if not token_fcm or not token_fcm.startswith("ExponentPushToken"):
+        return False
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(
+                EXPO_PUSH_URL,
+                headers={"Content-Type": "application/json", "Accept": "application/json"},
+                json={
+                    "to": token_fcm,
+                    "title": titre,
+                    "body": corps,
+                    "sound": "default",
+                    "data": data or {},
+                    "priority": "high",
+                }
+            )
+            result = r.json()
+            return result.get("data", {}).get("status") == "ok"
+    except Exception as e:
+        print(f"[PUSH] Erreur: {e}")
+        return False
+
+async def _get_client_by_email(email: str):
+    """Recupere un client par email depuis Supabase."""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(
+                f"{SUPABASE_URL}/rest/v1/clients",
+                params={"email": f"eq.{email}", "select": "*", "limit": "1"},
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+            )
+            data = r.json()
+            return data[0] if isinstance(data, list) and data else None
+    except:
+        return None
+
+async def _patch_client_email(email: str, updates: dict):
+    """Met a jour un client par email."""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            await client.patch(
+                f"{SUPABASE_URL}/rest/v1/clients?email=eq.{email}",
+                headers={
+                    "apikey": SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                    "Content-Type": "application/json",
+                    "Prefer": "return=minimal"
+                },
+                json=updates
+            )
+        return True
+    except:
+        return False
+
+
+@app.post("/enregistrer-token-fcm")
+async def enregistrer_token_fcm(body: dict):
+    """
+    Enregistre le token FCM Expo d un client pour les notifications push.
+    Appele au demarrage de l app Facility et Kids.
+    """
+    email      = body.get("email", "").strip().lower()
+    token_fcm  = body.get("token_fcm", "").strip()
+    plateforme = body.get("plateforme", "android")
+    produit    = body.get("produit", "facility")
+
+    if not email or not token_fcm:
+        return {"ok": False, "erreur": "email et token_fcm requis"}
+
+    if produit == "kids":
+        updates = {"kids_token_fcm": token_fcm}
+    else:
+        updates = {"token_fcm": token_fcm, "plateforme": plateforme}
+
+    ok = await _patch_client_email(email, updates)
+    return {"ok": ok}
+
+
+@app.get("/rappels/liste")
+async def rappels_liste(email: str = ""):
+    """Retourne les rappels medicaments actifs d un client."""
+    if not email:
+        return {"rappels": []}
+    client = await _get_client_by_email(email.lower())
+    if not client:
+        return {"rappels": []}
+    rappels = client.get("rappels") or []
+    return {"rappels": rappels if isinstance(rappels, list) else []}
+
+
+@app.post("/rappels/ajouter")
+async def rappels_ajouter(body: dict):
+    """Ajoute un rappel medicament + envoie confirmation push."""
+    email = body.get("email", "").strip().lower()
+    nom   = body.get("nom", "").strip()
+    heure = body.get("heure", "08:00")
+    jours = body.get("jours", ["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"])
+
+    if not email or not nom:
+        return {"ok": False, "erreur": "email et nom requis"}
+
+    client = await _get_client_by_email(email)
+    if not client or not client.get("actif"):
+        return {"ok": False, "erreur": "Client non trouve ou inactif"}
+
+    import secrets as _sec
+    rappel = {
+        "id": _sec.token_hex(8),
+        "nom": nom,
+        "heure": heure,
+        "jours": jours,
+        "actif": True,
+        "cree_le": datetime.utcnow().isoformat(),
+    }
+
+    rappels = client.get("rappels") or []
+    if not isinstance(rappels, list):
+        rappels = []
+    rappels.append(rappel)
+    await _patch_client_email(email, {"rappels": rappels})
+
+    token_fcm = client.get("token_fcm", "")
+    if token_fcm:
+        await _envoyer_notif_push(
+            token_fcm,
+            "Rappel cree",
+            f"Aria vous rappellera de prendre {nom} a {heure}.",
+            {"type": "rappel_cree", "rappel_id": rappel["id"]}
+        )
+
+    return {"ok": True, "rappel": rappel}
+
+
+@app.delete("/rappels/supprimer")
+async def rappels_supprimer(body: dict):
+    """Supprime un rappel medicament."""
+    email = body.get("email", "").strip().lower()
+    rid   = body.get("id", "")
+    if not email or not rid:
+        return {"ok": False, "erreur": "email et id requis"}
+    client = await _get_client_by_email(email)
+    if not client:
+        return {"ok": False}
+    rappels = client.get("rappels") or []
+    rappels = [r for r in rappels if r.get("id") != rid]
+    await _patch_client_email(email, {"rappels": rappels})
+    return {"ok": True, "rappels": rappels}
+
+
+@app.post("/rappels/confirmer")
+async def rappels_confirmer(body: dict):
+    """Confirme la prise d un medicament — enregistre dans l historique."""
+    email     = body.get("email", "").strip().lower()
+    rappel_id = body.get("rappel_id", "")
+    confirme  = body.get("confirme", True)
+    if not email:
+        return {"ok": False}
+    client = await _get_client_by_email(email)
+    if not client:
+        return {"ok": False}
+    historique = client.get("rappels_historique") or []
+    if not isinstance(historique, list):
+        historique = []
+    historique.append({
+        "rappel_id": rappel_id,
+        "confirme": confirme,
+        "horodatage": datetime.utcnow().isoformat(),
+    })
+    if len(historique) > 270:
+        historique = historique[-270:]
+    await _patch_client_email(email, {"rappels_historique": historique})
+    return {"ok": True}
+
+
+@app.post("/notif-kids")
+async def notif_kids(body: dict):
+    """
+    Envoie une notification push au parent Kids en temps reel.
+    Appele quand l enfant pose une question ou fait une recherche.
+    """
+    token        = body.get("token", "")
+    email_parent = body.get("email_parent", "").strip().lower()
+    prenom       = body.get("prenom_enfant", "Votre enfant")
+    message      = body.get("message", "")
+
+    if not message:
+        return {"ok": False, "erreur": "message requis"}
+
+    autorise, msg_err, forfait = await verifier_forfait(token)
+    if not autorise:
+        return {"ok": False, "erreur": msg_err}
+    if forfait not in ("kids_solo", "kids_famille", "forgedis", "tous", "dev", "erreur"):
+        return {"ok": False, "erreur": "Forfait insuffisant"}
+
+    client = await _get_client_by_email(email_parent)
+    if not client:
+        return {"ok": False, "erreur": "Parent non trouve"}
+
+    kids_token_fcm = client.get("kids_token_fcm", "")
+    if not kids_token_fcm:
+        return {"ok": True, "notif": False, "erreur": "Token FCM parent non enregistre"}
+
+    msg_court = message[:120] + "..." if len(message) > 120 else message
+    ok = await _envoyer_notif_push(
+        kids_token_fcm,
+        f"{prenom} apprend en ce moment",
+        msg_court,
+        {"type": "kids_activite", "prenom": prenom, "message": message}
+    )
+    return {"ok": ok, "notif": ok}
+
 @app.websocket("/relais")
 async def relais(websocket: WebSocket):
     token = websocket.query_params.get("token", "")
