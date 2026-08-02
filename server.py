@@ -1668,6 +1668,265 @@ async def industrial_interventions(salarie_id: str = "", entreprise_id: str = ""
     interventions = await _sb_query("interventions", params)
     return {"interventions": interventions if isinstance(interventions, list) else []}
 
+
+
+# ══════════════════════════════════════════════════════════════
+# GESTION SALARIES — Dirigeant crée/gère les salariés
+# ══════════════════════════════════════════════════════════════
+
+async def _verifier_salarie_token(token: str, entreprise_id: str):
+    """Verifie un token de session salarié (= salarie_id UUID)."""
+    if not token or not entreprise_id:
+        return None
+    try:
+        data = await _sb_query("salaries", {
+            "id":            f"eq.{token}",
+            "entreprise_id": f"eq.{entreprise_id}",
+            "actif":         "eq.true",
+            "select":        "id,nom,poste,role,equipe_id,responsable_id,entreprise_id",
+            "limit":         "1"
+        })
+        return data[0] if isinstance(data, list) and data else None
+    except:
+        return None
+
+
+@app.post("/industrial/salarie/creer")
+async def industrial_salarie_creer(body: dict):
+    """Le dirigeant cree un salarie avec mot de passe unique (bcrypt)."""
+    token          = body.get("token", "")
+    entreprise_id  = body.get("entreprise_id", "")
+    nom            = body.get("nom", "").strip()
+    email          = body.get("email", "").strip().lower()
+    mot_de_passe   = body.get("mot_de_passe", "").strip()
+    poste          = body.get("poste", "")
+    role           = body.get("role", "salarie")
+    langue         = body.get("langue", "fr")
+    equipe_id      = body.get("equipe_id")
+    responsable_id = body.get("responsable_id")
+
+    if not all([entreprise_id, nom, email, mot_de_passe, poste]):
+        return {"ok": False, "erreur": "Champs manquants"}
+
+    salarie_auth = await _verifier_salarie_token(token, entreprise_id)
+    if not salarie_auth or salarie_auth.get("role") not in ("dirigeant", "president", "responsable"):
+        return {"ok": False, "erreur": "Acces refuse"}
+
+    result = await _sb_insert("salaries", {
+        "entreprise_id":    entreprise_id,
+        "nom":              nom,
+        "email_entreprise": email,
+        "poste":            poste,
+        "role":             role,
+        "langue":           langue,
+        "equipe_id":        equipe_id,
+        "responsable_id":   responsable_id,
+        "actif":            True,
+        "mot_de_passe_hash": "TEMP",
+    })
+
+    if not result or isinstance(result, list) and not result:
+        return {"ok": False, "erreur": "Erreur creation (email deja utilise ?)"}
+
+    salarie_id = result.get("id") if isinstance(result, dict) else None
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(
+                f"{SUPABASE_URL}/rest/v1/rpc/set_mdp_salarie",
+                headers={
+                    "apikey": SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={"p_email_entreprise": email, "p_mot_de_passe": mot_de_passe, "p_nom": nom}
+            )
+            mdp_result = r.json()
+    except Exception as e:
+        mdp_result = {"erreur": str(e)}
+
+    if mdp_result.get("erreur"):
+        return {"ok": False, "erreur": f"Salarie cree mais mdp non defini: {mdp_result['erreur']}"}
+
+    return {"ok": True, "salarie_id": salarie_id, "nom": nom, "email": email}
+
+
+@app.post("/industrial/salarie/modifier")
+async def industrial_salarie_modifier(body: dict):
+    """Modifie les infos d un salarie."""
+    token         = body.get("token", "")
+    entreprise_id = body.get("entreprise_id", "")
+    salarie_id    = body.get("salarie_id", "")
+
+    salarie_auth = await _verifier_salarie_token(token, entreprise_id)
+    if not salarie_auth or salarie_auth.get("role") not in ("dirigeant", "president", "responsable"):
+        return {"ok": False, "erreur": "Acces refuse"}
+
+    updates = {k: body[k] for k in ["nom","poste","role","langue","actif","equipe_id","responsable_id"] if k in body}
+    if not updates:
+        return {"ok": False, "erreur": "Rien a modifier"}
+
+    await _sb_update("salaries", f"id=eq.{salarie_id}&entreprise_id=eq.{entreprise_id}", updates)
+    return {"ok": True}
+
+
+@app.post("/industrial/salarie/mdp")
+async def industrial_salarie_mdp(body: dict):
+    """Le dirigeant change le mot de passe d un salarie."""
+    token         = body.get("token", "")
+    entreprise_id = body.get("entreprise_id", "")
+    email         = body.get("email", "").strip().lower()
+    nom           = body.get("nom", "").strip()
+    nouveau_mdp   = body.get("mot_de_passe", "").strip()
+
+    if not all([token, entreprise_id, email, nom, nouveau_mdp]):
+        return {"ok": False, "erreur": "Champs manquants"}
+
+    salarie_auth = await _verifier_salarie_token(token, entreprise_id)
+    if not salarie_auth or salarie_auth.get("role") not in ("dirigeant", "president"):
+        return {"ok": False, "erreur": "Acces refuse - dirigeant uniquement"}
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(
+                f"{SUPABASE_URL}/rest/v1/rpc/set_mdp_salarie",
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}", "Content-Type": "application/json"},
+                json={"p_email_entreprise": email, "p_mot_de_passe": nouveau_mdp, "p_nom": nom}
+            )
+            result = r.json()
+    except Exception as e:
+        return {"ok": False, "erreur": str(e)}
+
+    return {"ok": True} if not result.get("erreur") else {"ok": False, "erreur": result["erreur"]}
+
+
+@app.delete("/industrial/salarie/supprimer")
+async def industrial_salarie_supprimer(body: dict):
+    """Desactive un salarie (soft delete)."""
+    token         = body.get("token", "")
+    entreprise_id = body.get("entreprise_id", "")
+    salarie_id    = body.get("salarie_id", "")
+
+    salarie_auth = await _verifier_salarie_token(token, entreprise_id)
+    if not salarie_auth or salarie_auth.get("role") not in ("dirigeant", "president"):
+        return {"ok": False, "erreur": "Acces refuse"}
+
+    await _sb_update("salaries", f"id=eq.{salarie_id}&entreprise_id=eq.{entreprise_id}", {"actif": False})
+    return {"ok": True}
+
+
+@app.get("/industrial/salaries")
+async def industrial_salaries_liste(token: str = "", entreprise_id: str = ""):
+    """Liste les salaries. Responsable ne voit que son equipe."""
+    if not token or not entreprise_id:
+        return {"salaries": []}
+
+    demandeur = await _verifier_salarie_token(token, entreprise_id)
+    if not demandeur:
+        return {"salaries": []}
+
+    params = {
+        "entreprise_id": f"eq.{entreprise_id}",
+        "actif":         "eq.true",
+        "select":        "id,nom,poste,role,email_entreprise,equipe_id,responsable_id,langue,created_at",
+        "order":         "nom.asc",
+        "limit":         "200"
+    }
+    if demandeur.get("role") == "responsable" and demandeur.get("equipe_id"):
+        params["equipe_id"] = f"eq.{demandeur['equipe_id']}"
+
+    salaries = await _sb_query("salaries", params)
+    return {"salaries": salaries if isinstance(salaries, list) else []}
+
+
+
+# ══════════════════════════════════════════════════════════════
+# TÂCHES, FICHES RH, ABSENCES
+# ══════════════════════════════════════════════════════════════
+
+@app.post("/industrial/tache/creer")
+async def tache_creer(body: dict):
+    token = body.get("token",""); entreprise_id = body.get("entreprise_id","")
+    if not await _verifier_salarie_token(token, entreprise_id): return {"ok":False,"erreur":"Non autorise"}
+    result = await _sb_insert("taches_poste",{"entreprise_id":entreprise_id,"createur_id":token,"assignee_id":body.get("assignee_id"),"poste_cible":body.get("poste_cible"),"titre":body.get("titre","").strip(),"description":body.get("description",""),"priorite":body.get("priorite","normale"),"statut":"a_faire","deadline":body.get("deadline")})
+    return {"ok":True,"tache":result}
+
+@app.post("/industrial/tache/modifier")
+async def tache_modifier(body: dict):
+    token = body.get("token",""); entreprise_id = body.get("entreprise_id",""); tache_id = body.get("tache_id","")
+    if not await _verifier_salarie_token(token, entreprise_id): return {"ok":False,"erreur":"Non autorise"}
+    updates = {k:body[k] for k in ["titre","description","priorite","statut","deadline","assignee_id","commentaires"] if k in body}
+    updates["updated_at"] = datetime.utcnow().isoformat()
+    await _sb_update("taches_poste", f"id=eq.{tache_id}&entreprise_id=eq.{entreprise_id}", updates)
+    return {"ok":True}
+
+@app.get("/industrial/taches")
+async def taches_liste(token: str="", entreprise_id: str="", poste: str=""):
+    if not token or not entreprise_id: return {"taches":[]}
+    demandeur = await _verifier_salarie_token(token, entreprise_id)
+    if not demandeur: return {"taches":[]}
+    params = {"entreprise_id":f"eq.{entreprise_id}","select":"*","order":"created_at.desc","limit":"100"}
+    if demandeur.get("role") == "salarie": params["assignee_id"] = f"eq.{token}"
+    elif poste: params["poste_cible"] = f"eq.{poste}"
+    taches = await _sb_query("taches_poste", params)
+    return {"taches": taches if isinstance(taches,list) else []}
+
+@app.post("/industrial/fiche-rh/sauvegarder")
+async def fiche_rh_sauvegarder(body: dict):
+    token = body.get("token",""); entreprise_id = body.get("entreprise_id",""); salarie_id = body.get("salarie_id","")
+    demandeur = await _verifier_salarie_token(token, entreprise_id)
+    if not demandeur: return {"ok":False,"erreur":"Non autorise"}
+    if demandeur.get("role") == "salarie" and token != salarie_id: return {"ok":False,"erreur":"Acces refuse"}
+    champs = ["prenom","date_naissance","sexe","nationalite","num_secu","adresse","ville","code_postal","pays","telephone","email_perso","type_contrat","date_embauche","date_fin_contrat","salaire_brut","temps_travail","convention_collective","contact_urgence_nom","contact_urgence_tel","notes"]
+    data = {k:body[k] for k in champs if k in body}
+    data["updated_at"] = datetime.utcnow().isoformat()
+    existing = await _sb_query("fiches_rh",{"salarie_id":f"eq.{salarie_id}","select":"id","limit":"1"})
+    if existing and isinstance(existing,list) and existing: await _sb_update("fiches_rh",f"salarie_id=eq.{salarie_id}",data)
+    else:
+        data["entreprise_id"] = entreprise_id; data["salarie_id"] = salarie_id
+        await _sb_insert("fiches_rh",data)
+    return {"ok":True}
+
+@app.get("/industrial/fiche-rh")
+async def fiche_rh_get(token: str="", entreprise_id: str="", salarie_id: str=""):
+    if not token or not entreprise_id: return {"fiche":None}
+    demandeur = await _verifier_salarie_token(token, entreprise_id)
+    if not demandeur: return {"fiche":None}
+    cible = salarie_id or token
+    if demandeur.get("role") == "salarie" and cible != token: return {"fiche":None}
+    fiches = await _sb_query("fiches_rh",{"salarie_id":f"eq.{cible}","select":"*","limit":"1"})
+    return {"fiche": fiches[0] if isinstance(fiches,list) and fiches else None}
+
+@app.post("/industrial/absence/creer")
+async def absence_creer(body: dict):
+    token = body.get("token",""); entreprise_id = body.get("entreprise_id","")
+    demandeur = await _verifier_salarie_token(token, entreprise_id)
+    if not demandeur: return {"ok":False,"erreur":"Non autorise"}
+    salarie_id = body.get("salarie_id", token)
+    from datetime import date as _date
+    try: nb = (_date.fromisoformat(body.get("date_fin","")) - _date.fromisoformat(body.get("date_debut",""))).days + 1
+    except: nb = None
+    result = await _sb_insert("absences",{"entreprise_id":entreprise_id,"salarie_id":salarie_id,"nom_salarie":demandeur.get("nom",""),"type_absence":body.get("type_absence","autre"),"date_debut":body.get("date_debut"),"date_fin":body.get("date_fin"),"nb_jours":nb,"statut":"en_attente","commentaire":body.get("commentaire","")})
+    return {"ok":True,"absence":result}
+
+@app.post("/industrial/absence/approuver")
+async def absence_approuver(body: dict):
+    token = body.get("token",""); entreprise_id = body.get("entreprise_id",""); absence_id = body.get("absence_id",""); statut = body.get("statut","approuve")
+    demandeur = await _verifier_salarie_token(token, entreprise_id)
+    if not demandeur or demandeur.get("role") not in ("dirigeant","president","responsable"): return {"ok":False,"erreur":"Acces refuse"}
+    await _sb_update("absences",f"id=eq.{absence_id}&entreprise_id=eq.{entreprise_id}",{"statut":statut,"approuve_par":token})
+    return {"ok":True}
+
+@app.get("/industrial/absences")
+async def absences_liste(token: str="", entreprise_id: str=""):
+    if not token or not entreprise_id: return {"absences":[]}
+    demandeur = await _verifier_salarie_token(token, entreprise_id)
+    if not demandeur: return {"absences":[]}
+    params = {"entreprise_id":f"eq.{entreprise_id}","select":"*","order":"date_debut.desc","limit":"200"}
+    if demandeur.get("role") == "salarie": params["salarie_id"] = f"eq.{token}"
+    absences = await _sb_query("absences", params)
+    return {"absences": absences if isinstance(absences,list) else []}
+
 @app.websocket("/relais")
 async def relais(websocket: WebSocket):
     token = websocket.query_params.get("token", "")
