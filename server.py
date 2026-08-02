@@ -1722,6 +1722,7 @@ async def industrial_salarie_creer(body: dict):
         "equipe_id":        equipe_id,
         "responsable_id":   responsable_id,
         "actif":            True,
+        "terrain":          bool(body.get("terrain", False)),
         "mot_de_passe_hash": "TEMP",
     })
 
@@ -1926,6 +1927,313 @@ async def absences_liste(token: str="", entreprise_id: str=""):
     if demandeur.get("role") == "salarie": params["salarie_id"] = f"eq.{token}"
     absences = await _sb_query("absences", params)
     return {"absences": absences if isinstance(absences,list) else []}
+
+
+
+# ══════════════════════════════════════════════════════════════
+# COMPTABILITÉ — Factures + Transactions
+# ══════════════════════════════════════════════════════════════
+
+@app.post("/industrial/facture/creer")
+async def facture_creer(body: dict):
+    token = body.get("token",""); entreprise_id = body.get("entreprise_id","")
+    if not await _verifier_salarie_token(token, entreprise_id): return {"ok":False,"erreur":"Non autorise"}
+    import secrets as _s
+    num = body.get("numero") or "FA-" + _s.token_hex(3).upper()
+    mt_ht = float(body.get("montant_ht",0) or 0)
+    tva   = float(body.get("tva_taux",20) or 20)
+    mt_tva = round(mt_ht * tva / 100, 2)
+    result = await _sb_insert("factures",{
+        "entreprise_id":entreprise_id,"createur_id":token,
+        "type":body.get("type","client"),"numero":num,
+        "tiers_nom":body.get("tiers_nom","").strip(),"tiers_email":body.get("tiers_email",""),
+        "tiers_adresse":body.get("tiers_adresse",""),
+        "date_emission":body.get("date_emission"),"date_echeance":body.get("date_echeance"),
+        "montant_ht":mt_ht,"tva_taux":tva,"montant_tva":mt_tva,"montant_ttc":round(mt_ht+mt_tva,2),
+        "statut":body.get("statut","brouillon"),"mode_paiement":body.get("mode_paiement",""),
+        "lignes":body.get("lignes",[]),"notes":body.get("notes",""),
+    })
+    return {"ok":True,"facture":result}
+
+@app.post("/industrial/facture/modifier")
+async def facture_modifier(body: dict):
+    token = body.get("token",""); entreprise_id = body.get("entreprise_id",""); fid = body.get("facture_id","")
+    demandeur = await _verifier_salarie_token(token, entreprise_id)
+    if not demandeur: return {"ok":False,"erreur":"Non autorise"}
+    updates = {k:body[k] for k in ["tiers_nom","tiers_email","date_echeance","montant_ht","tva_taux","montant_tva","montant_ttc","statut","lignes","notes","mode_paiement"] if k in body}
+    if demandeur.get("role") in ("dirigeant","responsable") and body.get("valider"):
+        updates["valide_par"] = token; updates["statut"] = "envoyee"
+    updates["updated_at"] = datetime.utcnow().isoformat()
+    await _sb_update("factures", f"id=eq.{fid}&entreprise_id=eq.{entreprise_id}", updates)
+    return {"ok":True}
+
+@app.get("/industrial/factures")
+async def factures_liste(token: str="", entreprise_id: str="", type: str="", statut: str=""):
+    if not token or not entreprise_id: return {"factures":[]}
+    demandeur = await _verifier_salarie_token(token, entreprise_id)
+    if not demandeur: return {"factures":[]}
+    params = {"entreprise_id":f"eq.{entreprise_id}","select":"*","order":"created_at.desc","limit":"200"}
+    if type: params["type"] = f"eq.{type}"
+    if statut: params["statut"] = f"eq.{statut}"
+    if demandeur.get("role") == "salarie": params["createur_id"] = f"eq.{token}"
+    r = await _sb_query("factures", params)
+    return {"factures": r if isinstance(r,list) else []}
+
+@app.post("/industrial/transaction/creer")
+async def transaction_creer(body: dict):
+    token = body.get("token",""); entreprise_id = body.get("entreprise_id","")
+    if not await _verifier_salarie_token(token, entreprise_id): return {"ok":False,"erreur":"Non autorise"}
+    result = await _sb_insert("transactions",{
+        "entreprise_id":entreprise_id,"createur_id":token,
+        "date_operation":body.get("date_operation"),
+        "libelle":body.get("libelle","").strip(),
+        "montant":float(body.get("montant",0)),
+        "type":body.get("type","debit"),
+        "categorie":body.get("categorie",""),
+        "facture_id":body.get("facture_id"),
+        "compte_bancaire":body.get("compte_bancaire",""),
+        "notes":body.get("notes",""),"rapproche":False,
+    })
+    return {"ok":True,"transaction":result}
+
+@app.post("/industrial/transaction/rapprocher")
+async def transaction_rapprocher(body: dict):
+    token = body.get("token",""); entreprise_id = body.get("entreprise_id",""); tid = body.get("transaction_id","")
+    if not await _verifier_salarie_token(token, entreprise_id): return {"ok":False,"erreur":"Non autorise"}
+    await _sb_update("transactions", f"id=eq.{tid}&entreprise_id=eq.{entreprise_id}", {"rapproche":True,"facture_id":body.get("facture_id")})
+    return {"ok":True}
+
+@app.get("/industrial/transactions")
+async def transactions_liste(token: str="", entreprise_id: str="", rapproche: str=""):
+    if not token or not entreprise_id: return {"transactions":[]}
+    if not await _verifier_salarie_token(token, entreprise_id): return {"transactions":[]}
+    params = {"entreprise_id":f"eq.{entreprise_id}","select":"*","order":"date_operation.desc","limit":"500"}
+    if rapproche: params["rapproche"] = f"eq.{rapproche}"
+    r = await _sb_query("transactions", params)
+    return {"transactions": r if isinstance(r,list) else []}
+
+
+# ══════════════════════════════════════════════════════════════
+# ACHATS — Fournisseurs + Bons de commande
+# ══════════════════════════════════════════════════════════════
+
+@app.post("/industrial/fournisseur/creer")
+async def fournisseur_creer(body: dict):
+    token = body.get("token",""); entreprise_id = body.get("entreprise_id","")
+    if not await _verifier_salarie_token(token, entreprise_id): return {"ok":False,"erreur":"Non autorise"}
+    result = await _sb_insert("fournisseurs",{
+        "entreprise_id":entreprise_id,"createur_id":token,
+        "nom":body.get("nom","").strip(),"contact_nom":body.get("contact_nom",""),
+        "email":body.get("email",""),"telephone":body.get("telephone",""),
+        "adresse":body.get("adresse",""),"siret":body.get("siret",""),
+        "conditions_paiement":body.get("conditions_paiement","30 jours"),
+        "categorie":body.get("categorie",""),"note_qualite":body.get("note_qualite"),
+        "notes":body.get("notes",""),
+    })
+    return {"ok":True,"fournisseur":result}
+
+@app.post("/industrial/fournisseur/modifier")
+async def fournisseur_modifier(body: dict):
+    token = body.get("token",""); entreprise_id = body.get("entreprise_id",""); fid = body.get("fournisseur_id","")
+    if not await _verifier_salarie_token(token, entreprise_id): return {"ok":False,"erreur":"Non autorise"}
+    updates = {k:body[k] for k in ["nom","contact_nom","email","telephone","adresse","siret","conditions_paiement","categorie","note_qualite","notes","actif"] if k in body}
+    await _sb_update("fournisseurs", f"id=eq.{fid}&entreprise_id=eq.{entreprise_id}", updates)
+    return {"ok":True}
+
+@app.get("/industrial/fournisseurs")
+async def fournisseurs_liste(token: str="", entreprise_id: str=""):
+    if not token or not entreprise_id: return {"fournisseurs":[]}
+    if not await _verifier_salarie_token(token, entreprise_id): return {"fournisseurs":[]}
+    r = await _sb_query("fournisseurs",{"entreprise_id":f"eq.{entreprise_id}","actif":"eq.true","select":"*","order":"nom.asc","limit":"200"})
+    return {"fournisseurs": r if isinstance(r,list) else []}
+
+@app.post("/industrial/bon-commande/creer")
+async def bc_creer(body: dict):
+    token = body.get("token",""); entreprise_id = body.get("entreprise_id","")
+    if not await _verifier_salarie_token(token, entreprise_id): return {"ok":False,"erreur":"Non autorise"}
+    import secrets as _s2
+    lignes = body.get("lignes",[])
+    total = sum(float(l.get("qte",0))*float(l.get("prix_u",0)) for l in lignes if isinstance(l,dict))
+    result = await _sb_insert("bons_commande",{
+        "entreprise_id":entreprise_id,"createur_id":token,
+        "fournisseur_id":body.get("fournisseur_id"),
+        "fournisseur_nom":body.get("fournisseur_nom",""),
+        "numero":"BC-" + _s2.token_hex(3).upper(),
+        "date_commande":body.get("date_commande"),
+        "date_livraison_souhaitee":body.get("date_livraison_souhaitee"),
+        "lignes":lignes,"montant_total":round(total,2),
+        "statut":"en_attente","notes":body.get("notes",""),
+    })
+    return {"ok":True,"bon_commande":result}
+
+@app.post("/industrial/bon-commande/approuver")
+async def bc_approuver(body: dict):
+    token = body.get("token",""); entreprise_id = body.get("entreprise_id",""); bid = body.get("bc_id","")
+    demandeur = await _verifier_salarie_token(token, entreprise_id)
+    if not demandeur or demandeur.get("role") not in ("dirigeant","responsable"): return {"ok":False,"erreur":"Acces refuse"}
+    await _sb_update("bons_commande", f"id=eq.{bid}&entreprise_id=eq.{entreprise_id}", {"statut":body.get("statut","approuve"),"approbateur_id":token,"updated_at":datetime.utcnow().isoformat()})
+    return {"ok":True}
+
+@app.get("/industrial/bons-commande")
+async def bc_liste(token: str="", entreprise_id: str="", statut: str=""):
+    if not token or not entreprise_id: return {"bons_commande":[]}
+    demandeur = await _verifier_salarie_token(token, entreprise_id)
+    if not demandeur: return {"bons_commande":[]}
+    params = {"entreprise_id":f"eq.{entreprise_id}","select":"*","order":"created_at.desc","limit":"200"}
+    if statut: params["statut"] = f"eq.{statut}"
+    if demandeur.get("role") == "salarie": params["createur_id"] = f"eq.{token}"
+    r = await _sb_query("bons_commande", params)
+    return {"bons_commande": r if isinstance(r,list) else []}
+
+
+# ══════════════════════════════════════════════════════════════
+# SERVICE CLIENT — Tickets multicanal
+# ══════════════════════════════════════════════════════════════
+
+@app.post("/industrial/ticket/creer")
+async def ticket_creer(body: dict):
+    token = body.get("token",""); entreprise_id = body.get("entreprise_id","")
+    if not await _verifier_salarie_token(token, entreprise_id): return {"ok":False,"erreur":"Non autorise"}
+    desc = body.get("description","")
+    result = await _sb_insert("tickets",{
+        "entreprise_id":entreprise_id,
+        "assignee_id":body.get("assignee_id", token),
+        "client_nom":body.get("client_nom",""),"client_email":body.get("client_email",""),
+        "client_telephone":body.get("client_telephone",""),
+        "sujet":body.get("sujet","").strip(),"description":desc,
+        "canal":body.get("canal","manuel"),"priorite":body.get("priorite","normale"),
+        "statut":"ouvert",
+        "messages":[{"auteur":token,"texte":desc,"date":datetime.utcnow().isoformat()}] if desc else [],
+    })
+    return {"ok":True,"ticket":result}
+
+@app.post("/industrial/ticket/repondre")
+async def ticket_repondre(body: dict):
+    token = body.get("token",""); entreprise_id = body.get("entreprise_id",""); tid = body.get("ticket_id","")
+    if not await _verifier_salarie_token(token, entreprise_id): return {"ok":False,"erreur":"Non autorise"}
+    tickets = await _sb_query("tickets",{"id":f"eq.{tid}","select":"messages","limit":"1"})
+    msgs = (tickets[0].get("messages") or []) if isinstance(tickets,list) and tickets else []
+    msgs.append({"auteur":token,"texte":body.get("texte",""),"date":datetime.utcnow().isoformat()})
+    updates = {"messages":msgs,"updated_at":datetime.utcnow().isoformat()}
+    if body.get("statut"): updates["statut"] = body["statut"]
+    if body.get("statut") == "resolu": updates["resolu_at"] = datetime.utcnow().isoformat()
+    await _sb_update("tickets", f"id=eq.{tid}&entreprise_id=eq.{entreprise_id}", updates)
+    return {"ok":True}
+
+@app.post("/industrial/ticket/cloturer")
+async def ticket_cloturer(body: dict):
+    token = body.get("token",""); entreprise_id = body.get("entreprise_id",""); tid = body.get("ticket_id","")
+    if not await _verifier_salarie_token(token, entreprise_id): return {"ok":False,"erreur":"Non autorise"}
+    await _sb_update("tickets", f"id=eq.{tid}&entreprise_id=eq.{entreprise_id}", {
+        "statut":"ferme","resolu_at":datetime.utcnow().isoformat(),
+        "note_satisfaction":body.get("note_satisfaction"),
+        "updated_at":datetime.utcnow().isoformat()
+    })
+    return {"ok":True}
+
+@app.get("/industrial/tickets")
+async def tickets_liste(token: str="", entreprise_id: str="", statut: str=""):
+    if not token or not entreprise_id: return {"tickets":[]}
+    demandeur = await _verifier_salarie_token(token, entreprise_id)
+    if not demandeur: return {"tickets":[]}
+    params = {"entreprise_id":f"eq.{entreprise_id}","select":"*","order":"created_at.desc","limit":"200"}
+    if statut: params["statut"] = f"eq.{statut}"
+    if demandeur.get("role") == "salarie": params["assignee_id"] = f"eq.{token}"
+    r = await _sb_query("tickets", params)
+    return {"tickets": r if isinstance(r,list) else []}
+
+
+# ══════════════════════════════════════════════════════════════
+# LOGISTIQUE — Stock + Tournées
+# ══════════════════════════════════════════════════════════════
+
+@app.post("/industrial/stock/modifier")
+async def stock_modifier(body: dict):
+    token = body.get("token",""); entreprise_id = body.get("entreprise_id","")
+    if not await _verifier_salarie_token(token, entreprise_id): return {"ok":False,"erreur":"Non autorise"}
+    sid = body.get("stock_id","")
+    if sid:
+        updates = {k:body[k] for k in ["designation","categorie","quantite","unite","seuil_alerte","prix_unitaire","emplacement","actif"] if k in body}
+        updates["updated_at"] = datetime.utcnow().isoformat()
+        await _sb_update("stock", f"id=eq.{sid}&entreprise_id=eq.{entreprise_id}", updates)
+        return {"ok":True}
+    result = await _sb_insert("stock",{
+        "entreprise_id":entreprise_id,
+        "reference":body.get("reference","").strip(),
+        "designation":body.get("designation","").strip(),
+        "categorie":body.get("categorie",""),
+        "quantite":float(body.get("quantite",0)),
+        "unite":body.get("unite","unite"),
+        "seuil_alerte":float(body.get("seuil_alerte",0)),
+        "prix_unitaire":float(body.get("prix_unitaire",0)),
+        "emplacement":body.get("emplacement",""),
+    })
+    return {"ok":True,"article":result}
+
+@app.get("/industrial/stock")
+async def stock_liste(token: str="", entreprise_id: str=""):
+    if not token or not entreprise_id: return {"stock":[]}
+    if not await _verifier_salarie_token(token, entreprise_id): return {"stock":[]}
+    r = await _sb_query("stock",{"entreprise_id":f"eq.{entreprise_id}","actif":"eq.true","select":"*","order":"designation.asc","limit":"500"})
+    return {"stock": r if isinstance(r,list) else []}
+
+@app.post("/industrial/tournee/creer")
+async def tournee_creer(body: dict):
+    token = body.get("token",""); entreprise_id = body.get("entreprise_id","")
+    if not await _verifier_salarie_token(token, entreprise_id): return {"ok":False,"erreur":"Non autorise"}
+    livraisons = body.get("livraisons",[])
+    result = await _sb_insert("tournees",{
+        "entreprise_id":entreprise_id,"livreur_id":token,
+        "date_tournee":body.get("date_tournee"),
+        "sous_traitance":False,"statut":"planifie",
+        "livraisons":livraisons,"nb_livraisons":len(livraisons),"nb_livrees":0,
+        "notes":body.get("notes",""),
+    })
+    return {"ok":True,"tournee":result}
+
+@app.post("/industrial/tournee/sous-traitance")
+async def tournee_sous_traitance(body: dict):
+    """Responsable active/desactive le flag sous-traitance sur une tournee."""
+    token = body.get("token",""); entreprise_id = body.get("entreprise_id",""); tid = body.get("tournee_id","")
+    demandeur = await _verifier_salarie_token(token, entreprise_id)
+    if not demandeur or demandeur.get("role") not in ("dirigeant","responsable"): return {"ok":False,"erreur":"Acces refuse"}
+    await _sb_update("tournees", f"id=eq.{tid}&entreprise_id=eq.{entreprise_id}", {"sous_traitance":body.get("sous_traitance",False)})
+    return {"ok":True}
+
+@app.post("/industrial/tournee/livraison-confirmee")
+async def tournee_livraison_confirmee(body: dict):
+    """Marque une livraison comme effectuee. Deduit stock seulement si pas sous-traitance + responsable."""
+    token = body.get("token",""); entreprise_id = body.get("entreprise_id",""); tid = body.get("tournee_id","")
+    demandeur = await _verifier_salarie_token(token, entreprise_id)
+    if not demandeur: return {"ok":False,"erreur":"Non autorise"}
+    tournees = await _sb_query("tournees",{"id":f"eq.{tid}","select":"*","limit":"1"})
+    if not isinstance(tournees,list) or not tournees: return {"ok":False,"erreur":"Tournee introuvable"}
+    tournee = tournees[0]
+    livraisons = tournee.get("livraisons") or []
+    idx = body.get("livraison_index",0)
+    if idx < len(livraisons):
+        livraisons[idx]["statut"] = "livree"
+        livraisons[idx]["horodatage"] = datetime.utcnow().isoformat()
+    nb_livrees = sum(1 for l in livraisons if l.get("statut") == "livree")
+    await _sb_update("tournees", f"id=eq.{tid}&entreprise_id=eq.{entreprise_id}", {"livraisons":livraisons,"nb_livrees":nb_livrees})
+    if not tournee.get("sous_traitance") and demandeur.get("role") in ("dirigeant","responsable"):
+        for item in body.get("articles_livres",[]):
+            arts = await _sb_query("stock",{"entreprise_id":f"eq.{entreprise_id}","reference":f"eq.{item.get('reference','')}","select":"id,quantite","limit":"1"})
+            if isinstance(arts,list) and arts:
+                nq = float(arts[0].get("quantite",0)) - float(item.get("quantite",0))
+                await _sb_update("stock", f"id=eq.{arts[0]['id']}&entreprise_id=eq.{entreprise_id}", {"quantite":max(0,nq),"updated_at":datetime.utcnow().isoformat()})
+    return {"ok":True,"nb_livrees":nb_livrees,"stock_mis_a_jour": not tournee.get("sous_traitance")}
+
+@app.get("/industrial/tournees")
+async def tournees_liste(token: str="", entreprise_id: str="", date: str=""):
+    if not token or not entreprise_id: return {"tournees":[]}
+    demandeur = await _verifier_salarie_token(token, entreprise_id)
+    if not demandeur: return {"tournees":[]}
+    params = {"entreprise_id":f"eq.{entreprise_id}","select":"*","order":"date_tournee.desc","limit":"100"}
+    if date: params["date_tournee"] = f"eq.{date}"
+    if demandeur.get("role") == "salarie": params["livreur_id"] = f"eq.{token}"
+    r = await _sb_query("tournees", params)
+    return {"tournees": r if isinstance(r,list) else []}
 
 @app.websocket("/relais")
 async def relais(websocket: WebSocket):
