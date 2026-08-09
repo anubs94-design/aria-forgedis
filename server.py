@@ -1,4 +1,4 @@
-import os
+﻿import os
 import httpx
 import asyncio
 from contextlib import asynccontextmanager
@@ -1240,7 +1240,7 @@ async def verify_kids_access(body: dict):
         async with httpx.AsyncClient(timeout=8.0) as client:
             r = await client.get(
                 f"{SUPABASE_URL}/rest/v1/clients",
-                params={"token": f"eq.{token}", "select": "email,forfait,actif,trial_fin,date_fin"},
+                params={"token": f"eq.{token}", "select": "email,forfait,actif"},
                 headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
             )
             data = r.json()
@@ -1248,16 +1248,8 @@ async def verify_kids_access(body: dict):
                 return {"ok": False, "erreur": "Compte introuvable."}
             cl = data[0]
 
-            # Calculer jours trial restants
-            trial_restant = None
-            if cl.get("trial_fin"):
-                from datetime import datetime, timezone
-                try:
-                    tf = datetime.fromisoformat(cl["trial_fin"].replace("Z", "+00:00"))
-                    delta = (tf - datetime.now(timezone.utc)).days
-                    trial_restant = max(0, delta)
-                except Exception:
-                    pass
+            trial_restant = None  # colonne trial_fin non presente dans clients
+
 
             return {
                 "ok": True,
