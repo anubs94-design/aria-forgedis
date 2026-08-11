@@ -1,1 +1,35 @@
-﻿node_modules/
+﻿# Dépendances
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+
+# Environnements
+.env
+.env.local
+venv/
+.venv/
+
+# Fichiers de patch et scripts temporaires
+patch*.py
+fix*.py
+inspect*.py
+find*.py
+restore*.py
+test_endpoint.py
+create_*.py
+
+# Backups
+*.bak*
+*_BACKUP.py
+*_old.py
+*_fixed.py
+*_v2.py
+server.py.bak*
+aria_serveur_relais*.py
+
+# Netlify
+.netlify/
+
+# Divers
+package-lock.json
