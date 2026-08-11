@@ -1,4 +1,4 @@
-﻿import os
+import os
 import httpx
 import asyncio
 from contextlib import asynccontextmanager
@@ -4315,3 +4315,264 @@ async def relais(websocket: WebSocket):
     finally:
         if token in relais_connexions and relais_connexions[token].get(role) is websocket:
             relais_connexions[token][role] = None
+
+# ENDPOINTS MANQUANTS 11/08/2026
+
+@app.get("/industrial/base-connaissance")
+async def get_base_connaissance(token: str, entreprise_id: str = ""):
+    verif = await verifier_forfait(token)
+    if not verif["ok"]: raise HTTPException(403, verif.get("erreur","Acces refuse"))
+    try:
+        r = await supabase_get("base_connaissance_industrielle", {"entreprise_id": f"eq.{entreprise_id}", "select": "id,titre,categorie,contenu,created_at", "order": "created_at.desc"})
+        return {"articles": r or []}
+    except Exception as e:
+        return {"articles": [], "erreur": str(e)}
+
+
+@app.post("/industrial/base-connaissance/creer")
+async def creer_article_kc(req: dict):
+    token = req.get("token","")
+    verif = await verifier_forfait(token)
+    if not verif["ok"]: raise HTTPException(403, verif.get("erreur","Acces refuse"))
+    try:
+        data = {"id": secrets.token_hex(8), "entreprise_id": req.get("entreprise_id",""), "titre": req.get("titre",""), "categorie": req.get("categorie",""), "contenu": req.get("contenu","")}
+        await supabase_insert("base_connaissance_industrielle", data)
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "erreur": str(e)}
+
+
+@app.get("/industrial/satisfaction")
+async def get_satisfaction(token: str, entreprise_id: str = ""):
+    verif = await verifier_forfait(token)
+    if not verif["ok"]: raise HTTPException(403, verif.get("erreur","Acces refuse"))
+    try:
+        r = await supabase_get("satisfaction_industrielle", {"entreprise_id": f"eq.{entreprise_id}", "select": "*", "order": "created_at.desc", "limit": "100"})
+        evals = r or []
+        reclamations = len([e for e in evals if e.get("type") == "reclamation" and e.get("statut") != "resolu"])
+        return {"evaluations": evals, "reclamations": reclamations}
+    except Exception as e:
+        return {"evaluations": [], "reclamations": 0, "erreur": str(e)}
+
+
+@app.get("/industrial/escalades")
+async def get_escalades(token: str, entreprise_id: str = ""):
+    verif = await verifier_forfait(token)
+    if not verif["ok"]: raise HTTPException(403, verif.get("erreur","Acces refuse"))
+    try:
+        r = await supabase_get("escalades_industrielles", {"entreprise_id": f"eq.{entreprise_id}", "select": "id,ticket_id,ticket_sujet,raison,statut,created_at", "order": "created_at.desc"})
+        return {"escalades": r or []}
+    except Exception as e:
+        return {"escalades": [], "erreur": str(e)}
+
+
+@app.post("/industrial/ticket/escalader")
+async def escalader_ticket(req: dict):
+    token = req.get("token","")
+    verif = await verifier_forfait(token)
+    if not verif["ok"]: raise HTTPException(403, verif.get("erreur","Acces refuse"))
+    try:
+        ticket_id = req.get("ticket_id","")
+        t = await supabase_get("tickets_industriels", {"id": f"eq.{ticket_id}", "select": "sujet"})
+        sujet = t[0].get("sujet","") if t else ""
+        data = {"id": secrets.token_hex(8), "entreprise_id": req.get("entreprise_id",""), "ticket_id": ticket_id, "ticket_sujet": sujet, "raison": req.get("raison",""), "statut": "ouvert"}
+        await supabase_insert("escalades_industrielles", data)
+        await supabase_update("tickets_industriels", {"statut": "escalade"}, {"id": f"eq.{ticket_id}"})
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "erreur": str(e)}
+
+
+@app.post("/industrial/ticket/assigner")
+async def assigner_ticket(req: dict):
+    token = req.get("token","")
+    verif = await verifier_forfait(token)
+    if not verif["ok"]: raise HTTPException(403, verif.get("erreur","Acces refuse"))
+    try:
+        ticket_id = req.get("ticket_id","")
+        agent_id = req.get("agent_id","")
+        ag = await supabase_get("salaries_industriels", {"id": f"eq.{agent_id}", "select": "nom,prenom"})
+        nom = (ag[0].get("prenom","") + " " + ag[0].get("nom","")).strip() if ag else ""
+        await supabase_update("tickets_industriels", {"agent_id": agent_id, "agent_nom": nom, "statut": "en_cours"}, {"id": f"eq.{ticket_id}"})
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "erreur": str(e)}
+
+
+@app.get("/industrial/chat")
+async def get_chat(token: str, entreprise_id: str = ""):
+    verif = await verifier_forfait(token)
+    if not verif["ok"]: raise HTTPException(403, verif.get("erreur","Acces refuse"))
+    try:
+        r = await supabase_get("chat_industriel", {"entreprise_id": f"eq.{entreprise_id}", "select": "id,auteur_id,auteur_nom,texte,poste,created_at", "order": "created_at.asc", "limit": "100"})
+        return {"messages": r or []}
+    except Exception as e:
+        return {"messages": [], "erreur": str(e)}
+
+
+@app.post("/industrial/chat/envoyer")
+async def envoyer_chat(req: dict):
+    token = req.get("token","")
+    verif = await verifier_forfait(token)
+    if not verif["ok"]: raise HTTPException(403, verif.get("erreur","Acces refuse"))
+    try:
+        cl = await supabase_get("salaries_industriels", {"token": f"eq.{token}", "select": "nom,prenom"})
+        nom = (cl[0].get("prenom","") + " " + cl[0].get("nom","")).strip() if cl else "?"
+        data = {"id": secrets.token_hex(8), "entreprise_id": req.get("entreprise_id",""), "auteur_id": token, "auteur_nom": nom, "texte": req.get("texte","")[:1000], "poste": req.get("poste","")}
+        await supabase_insert("chat_industriel", data)
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "erreur": str(e)}
+
+
+@app.get("/industrial/candidats")
+async def get_candidats(token: str, entreprise_id: str = ""):
+    verif = await verifier_forfait(token)
+    if not verif["ok"]: raise HTTPException(403, verif.get("erreur","Acces refuse"))
+    try:
+        r = await supabase_get("candidats_industriels", {"entreprise_id": f"eq.{entreprise_id}", "select": "*", "order": "created_at.desc"})
+        return {"candidats": r or []}
+    except Exception as e:
+        return {"candidats": [], "erreur": str(e)}
+
+
+@app.post("/industrial/candidat/creer")
+async def creer_candidat(req: dict):
+    token = req.get("token","")
+    verif = await verifier_forfait(token)
+    if not verif["ok"]: raise HTTPException(403, verif.get("erreur","Acces refuse"))
+    try:
+        data = {"id": secrets.token_hex(8), "entreprise_id": req.get("entreprise_id",""), "nom": req.get("nom",""), "prenom": req.get("prenom",""), "email": req.get("email",""), "poste_vise": req.get("poste_vise",""), "statut": req.get("statut","nouveau"), "cv_notes": req.get("cv_notes","")}
+        await supabase_insert("candidats_industriels", data)
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "erreur": str(e)}
+
+
+@app.get("/industrial/entretiens")
+async def get_entretiens(token: str, entreprise_id: str = ""):
+    verif = await verifier_forfait(token)
+    if not verif["ok"]: raise HTTPException(403, verif.get("erreur","Acces refuse"))
+    try:
+        r = await supabase_get("entretiens_industriels", {"entreprise_id": f"eq.{entreprise_id}", "select": "*", "order": "created_at.desc"})
+        return {"entretiens": r or []}
+    except Exception as e:
+        return {"entretiens": [], "erreur": str(e)}
+
+
+@app.post("/industrial/entretien/creer")
+async def creer_entretien(req: dict):
+    token = req.get("token","")
+    verif = await verifier_forfait(token)
+    if not verif["ok"]: raise HTTPException(403, verif.get("erreur","Acces refuse"))
+    try:
+        data = {"id": secrets.token_hex(8), "entreprise_id": req.get("entreprise_id",""), "salarie_id": req.get("salarie_id",""), "salarie_nom": req.get("salarie_nom",""), "type_entretien": req.get("type_entretien","annuel"), "date_entretien": req.get("date_entretien",""), "evaluateur": req.get("evaluateur",""), "objectifs": req.get("objectifs",""), "bilan": req.get("bilan",""), "statut": req.get("statut","planifie")}
+        await supabase_insert("entretiens_industriels", data)
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "erreur": str(e)}
+
+
+@app.get("/industrial/formations")
+async def get_formations(token: str, entreprise_id: str = ""):
+    verif = await verifier_forfait(token)
+    if not verif["ok"]: raise HTTPException(403, verif.get("erreur","Acces refuse"))
+    try:
+        r = await supabase_get("formations_industrielles", {"entreprise_id": f"eq.{entreprise_id}", "select": "*", "order": "created_at.desc"})
+        return {"formations": r or []}
+    except Exception as e:
+        return {"formations": [], "erreur": str(e)}
+
+
+@app.post("/industrial/formation/creer")
+async def creer_formation(req: dict):
+    token = req.get("token","")
+    verif = await verifier_forfait(token)
+    if not verif["ok"]: raise HTTPException(403, verif.get("erreur","Acces refuse"))
+    try:
+        data = {"id": secrets.token_hex(8), "entreprise_id": req.get("entreprise_id",""), "titre": req.get("titre",""), "organisme": req.get("organisme",""), "salarie_id": req.get("salarie_id",""), "salarie_nom": req.get("salarie_nom",""), "date_debut": req.get("date_debut",""), "date_fin": req.get("date_fin",""), "cout": req.get("cout",0), "financement": req.get("financement",""), "statut": req.get("statut","planifiee")}
+        await supabase_insert("formations_industrielles", data)
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "erreur": str(e)}
+
+
+@app.get("/industrial/competences")
+async def get_competences(token: str, entreprise_id: str = "", salarie_id: str = ""):
+    verif = await verifier_forfait(token)
+    if not verif["ok"]: raise HTTPException(403, verif.get("erreur","Acces refuse"))
+    try:
+        params = {"entreprise_id": f"eq.{entreprise_id}", "select": "*"}
+        if salarie_id:
+            params["salarie_id"] = f"eq.{salarie_id}"
+        r = await supabase_get("competences_industrielles", params)
+        return {"competences": r or []}
+    except Exception as e:
+        return {"competences": [], "erreur": str(e)}
+
+
+@app.get("/industrial/sanctions")
+async def get_sanctions(token: str, entreprise_id: str = ""):
+    verif = await verifier_forfait(token)
+    if not verif["ok"]: raise HTTPException(403, verif.get("erreur","Acces refuse"))
+    try:
+        r = await supabase_get("sanctions_industrielles", {"entreprise_id": f"eq.{entreprise_id}", "select": "*", "order": "created_at.desc"})
+        return {"sanctions": r or []}
+    except Exception as e:
+        return {"sanctions": [], "erreur": str(e)}
+
+
+@app.post("/industrial/salarie/role")
+async def modifier_role_salarie(req: dict):
+    token = req.get("token","")
+    verif = await verifier_forfait(token)
+    if not verif["ok"]: raise HTTPException(403, verif.get("erreur","Acces refuse"))
+    try:
+        salarie_id = req.get("salarie_id","")
+        nouveau_role = req.get("role","salarie")
+        if nouveau_role not in ["salarie","responsable","drh","dirigeant"]:
+            return {"ok": False, "erreur": "Role invalide"}
+        await supabase_update("salaries_industriels", {"role": nouveau_role}, {"id": f"eq.{salarie_id}"})
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "erreur": str(e)}
+
+
+@app.get("/industrial/frais")
+async def get_frais(token: str, entreprise_id: str = ""):
+    verif = await verifier_forfait(token)
+    if not verif["ok"]: raise HTTPException(403, verif.get("erreur","Acces refuse"))
+    try:
+        r = await supabase_get("notes_frais_industrielles", {"entreprise_id": f"eq.{entreprise_id}", "select": "*", "order": "created_at.desc"})
+        return {"frais": r or []}
+    except Exception as e:
+        return {"frais": [], "erreur": str(e)}
+
+
+@app.post("/industrial/frais/creer")
+async def creer_frais(req: dict):
+    token = req.get("token","")
+    verif = await verifier_forfait(token)
+    if not verif["ok"]: raise HTTPException(403, verif.get("erreur","Acces refuse"))
+    try:
+        data = {"id": secrets.token_hex(8), "entreprise_id": req.get("entreprise_id",""), "salarie_id": req.get("salarie_id",token), "salarie_nom": req.get("salarie_nom",""), "date": req.get("date",""), "type_frais": req.get("type_frais",""), "montant": req.get("montant",0), "description": req.get("description",""), "statut": "en_attente"}
+        await supabase_insert("notes_frais_industrielles", data)
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "erreur": str(e)}
+
+
+@app.post("/industrial/frais/valider")
+async def valider_frais(req: dict):
+    token = req.get("token","")
+    verif = await verifier_forfait(token)
+    if not verif["ok"]: raise HTTPException(403, verif.get("erreur","Acces refuse"))
+    try:
+        frais_id = req.get("frais_id","")
+        statut = req.get("statut","approuve")
+        await supabase_update("notes_frais_industrielles", {"statut": statut}, {"id": f"eq.{frais_id}"})
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "erreur": str(e)}
+
+
