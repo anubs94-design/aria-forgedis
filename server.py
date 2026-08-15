@@ -214,16 +214,22 @@ async def verifier_forfait(token_recu, type_requete="eco"):
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            # Chercher le client par token
-            r = await client.get(
-                f"{SUPABASE_URL}/rest/v1/clients",
-                params={"token": f"eq.{token_recu}", "select": "*"},
-                headers={
-                    "apikey": SUPABASE_SERVICE_KEY,
-                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                },
-            )
-            data = r.json()
+            # token_installation (nouveau) ou token Aria (compatibilite)
+            data = []
+            if token_recu.startswith("aria_inst_"):
+                r = await client.get(
+                    f"{SUPABASE_URL}/rest/v1/clients",
+                    params={"token_installation": f"eq.{token_recu}", "select": "*"},
+                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
+                )
+                data = r.json() if isinstance(r.json(), list) else []
+            if not data:
+                r = await client.get(
+                    f"{SUPABASE_URL}/rest/v1/clients",
+                    params={"token": f"eq.{token_recu}", "select": "*"},
+                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
+                )
+                data = r.json() if isinstance(r.json(), list) else []
 
             if not data:
                 return False, "Token inconnu.", "aucun"
@@ -252,9 +258,14 @@ async def verifier_forfait(token_recu, type_requete="eco"):
                     return False, "Vous avez utilise vos 30 eco-taches du mois. Passez a Aria Facility pour continuer.", "gratuit"
 
             # Incrementer le compteur
+            _patch_param = (
+                {"token_installation": f"eq.{token_recu}"}
+                if token_recu.startswith("aria_inst_")
+                else {"token": f"eq.{token_recu}"}
+            )
             await client.patch(
                 f"{SUPABASE_URL}/rest/v1/clients",
-                params={"token": f"eq.{token_recu}"},
+                params=_patch_param,
                 headers={
                     "apikey": SUPABASE_SERVICE_KEY,
                     "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
