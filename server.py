@@ -202,34 +202,52 @@ async def envoyer_email(to: str, subject: str, html: str):
         return False
 
 # --- Verification forfait client via Supabase ---
+async def _token_installation_vers_client(token_inst: str) -> dict:
+    """Resout token_installation (machine) vers client Supabase (compte).
+    Retourne dict {email, token, forfait, actif} ou None.
+    Separation stricte :
+    - Cette fonction : machine -> compte
+    - verifier_forfait() : compte -> forfait/quotas
+    Test securite : token_inst A + email B -> None impossible.
+    """
+    if not token_inst or not token_inst.startswith("aria_inst_"):
+        return None
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as hx:
+            r = await hx.get(
+                f"{SUPABASE_URL}/rest/v1/clients",
+                params={"token_installation": f"eq.{token_inst}", "select": "email,token,forfait,actif"},
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
+            )
+            rows = r.json() if isinstance(r.json(), list) else []
+            return rows[0] if rows else None
+    except Exception:
+        return None
+
+
 async def verifier_forfait(token_recu, type_requete="eco"):
     """Verifie le forfait du client. Retourne (autorise, message, forfait).
     type_requete: 'eco' (conversation Haiku) ou 'reflexion' (vision Sonnet)
+    Identifie uniquement par token Aria (compte).
+    La resolution machine->compte est separee dans _token_installation_vers_client().
     """
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
-        return True, "", "dev"  # Pas de Supabase configure = mode dev, tout passe
-
-    # Si c'est le token de dev de Victor, toujours autoriser
-    # PROXY_TOKEN ne bypass plus les forfaits - uniquement relay WebSocket
+        return True, "", "dev"
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            # token_installation (nouveau) ou token Aria (compatibilite)
-            data = []
-            if token_recu.startswith("aria_inst_"):
-                r = await client.get(
-                    f"{SUPABASE_URL}/rest/v1/clients",
-                    params={"token_installation": f"eq.{token_recu}", "select": "*"},
-                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
-                )
-                data = r.json() if isinstance(r.json(), list) else []
-            if not data:
-                r = await client.get(
-                    f"{SUPABASE_URL}/rest/v1/clients",
-                    params={"token": f"eq.{token_recu}", "select": "*"},
-                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
-                )
-                data = r.json() if isinstance(r.json(), list) else []
+            # Token Aria uniquement — separation stricte machine/compte
+            r = await client.get(
+                f"{SUPABASE_URL}/rest/v1/clients",
+                params={"token": f"eq.{token_recu}", "select": "*"},
+                headers={
+                    "apikey": SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                },
+            )
+            data = r.json() if isinstance(r.json(), list) else []
 
             if not data:
                 return False, "Token inconnu.", "aucun"
@@ -243,14 +261,12 @@ async def verifier_forfait(token_recu, type_requete="eco"):
             taches = client_data.get("taches_ce_mois", 0)
             mois = client_data.get("mois_en_cours", "")
 
-            # Reset compteur si nouveau mois
             import datetime
             mois_actuel = datetime.datetime.now().strftime("%Y-%m")
             if mois != mois_actuel:
                 taches = 0
                 mois = mois_actuel
 
-            # Verifier les plafonds
             if forfait == "gratuit":
                 if type_requete == "reflexion":
                     return False, "Le pilotage PC est reserve a Aria Facility (12,99 euros/mois). Passez a Facility pour debloquer toutes les fonctions.", "gratuit"
@@ -258,14 +274,9 @@ async def verifier_forfait(token_recu, type_requete="eco"):
                     return False, "Vous avez utilise vos 30 eco-taches du mois. Passez a Aria Facility pour continuer.", "gratuit"
 
             # Incrementer le compteur
-            _patch_param = (
-                {"token_installation": f"eq.{token_recu}"}
-                if token_recu.startswith("aria_inst_")
-                else {"token": f"eq.{token_recu}"}
-            )
             await client.patch(
                 f"{SUPABASE_URL}/rest/v1/clients",
-                params=_patch_param,
+                params={"token": f"eq.{token_recu}"},
                 headers={
                     "apikey": SUPABASE_SERVICE_KEY,
                     "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
@@ -278,8 +289,6 @@ async def verifier_forfait(token_recu, type_requete="eco"):
             return True, "", forfait
 
     except Exception as e:
-        # Fail-closed : en cas d'erreur Supabase, on refuse l'accès
-        # Jamais autoriser en cas de doute — sécurité > disponibilité
         print(f"[verifier_forfait] Erreur Supabase: {e}")
         return False, "Service temporairement indisponible. Réessayez dans quelques secondes.", "erreur"
 
