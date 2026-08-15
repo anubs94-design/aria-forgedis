@@ -41,7 +41,13 @@ async def scheduler_loop():
 
 @asynccontextmanager
 async def lifespan(app):
-    # Démarrer le scheduler au lancement du serveur
+    _manquantes = []
+    for _var in ("SUPABASE_URL", "SUPABASE_SERVICE_KEY", "ARIA_CLAUDE_KEY"):
+        if not os.environ.get(_var):
+            _manquantes.append(_var)
+    if _manquantes:
+        raise RuntimeError("[STARTUP] Variables critiques manquantes : " + ", ".join(_manquantes))
+    print("[STARTUP] Variables critiques presentes - OK")
     task = asyncio.create_task(scheduler_loop())
     print("[STARTUP] Scheduler reset mensuel demarre")
     yield
@@ -80,7 +86,7 @@ def sante():
 async def ask(body: dict):
     msg = body.get("message", "")
     token_recu = body.get("token", "")
-    system = body.get("system", SYSTEM_SENIOR)
+    # System prompt verrouille cote serveur
     if token_recu:
         autorise, msg_err, forfait = await verifier_forfait(token_recu, "eco")
         if not autorise:
@@ -90,7 +96,7 @@ async def ask(body: dict):
     async with httpx.AsyncClient(timeout=30.0) as client:
         r = await client.post("https://api.anthropic.com/v1/messages",
             headers={"x-api-key": CLAUDE_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
-            json={"model": "claude-haiku-4-5-20251001", "max_tokens": 300, "system": system, "messages": [{"role": "user", "content": msg}]})
+            json={"model": "claude-haiku-4-5-20251001", "max_tokens": 300, "system": SYSTEM_SENIOR, "messages": [{"role": "user", "content": msg}]})
         data = r.json()
         return {"response": data["content"][0]["text"]}
 
@@ -218,7 +224,10 @@ import secrets as secrets_mod
 
 @app.post("/client-token")
 async def client_token(body: dict):
-    """Le PC ou l'app envoie l'email du client, on renvoie son token."""
+    """Requiert PROXY_TOKEN - email seul ne suffit pas."""
+    proxy_recu = body.get("proxy_token", "")
+    if not proxy_recu or proxy_recu != PROXY_TOKEN:
+        return {"erreur": "Non autorise."}
     email = body.get("email", "").strip().lower()
     if not email:
         return {"erreur": "Email manquant."}
@@ -293,12 +302,18 @@ async def stripe_webhook(request: Request):
 
     if not STRIPE_WEBHOOK_SECRET:
         return {"erreur": "webhook non configure"}
+    if not sig:
+        return {"erreur": "signature manquante"}
 
     try:
-        import json as json_mod
-        event = json_mod.loads(body)
-    except Exception:
+        import stripe as _stripe
+        event = _stripe.Webhook.construct_event(
+            payload=body, sig_header=sig, secret=STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError:
         return {"erreur": "body invalide"}
+    except _stripe.error.SignatureVerificationError:
+        return {"erreur": "signature invalide"}
 
     # ── Idempotence : rejeter les événements déjà traités ──
     event_id = event.get("id", "")
@@ -1305,6 +1320,9 @@ async def ask_kids(body: dict):
 
 @app.post("/client-token-kids")
 async def client_token_kids(body: dict):
+    proxy_recu = body.get("proxy_token", "")
+    if not proxy_recu or proxy_recu != PROXY_TOKEN:
+        return {"erreur": "Non autorise."}
     email = body.get("email", "").strip().lower()
     if not email:
         return {"erreur": "Email manquant."}
@@ -1374,7 +1392,7 @@ async def ask_industrial(body: dict):
     msg = body.get("message", "")
     token_recu = body.get("token", "")
     max_tokens = min(int(body.get("max_tokens", 500)), 800)
-    system_custom = body.get("system", SYSTEM_INDUSTRIAL)
+    # System prompt verrouille cote serveur
     if not msg:
         return {"response": "Message vide."}
     if not CLAUDE_KEY:
@@ -1388,7 +1406,7 @@ async def ask_industrial(body: dict):
             r = await client.post(
                 "https://api.anthropic.com/v1/messages",
                 headers={"x-api-key": CLAUDE_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
-                json={"model": "claude-haiku-4-5-20251001", "max_tokens": max_tokens, "system": system_custom, "messages": [{"role": "user", "content": msg}]},
+                json={"model": "claude-haiku-4-5-20251001", "max_tokens": max_tokens, "system": SYSTEM_INDUSTRIAL, "messages": [{"role": "user", "content": msg}]},
             )
             data = r.json()
             if "content" not in data:
