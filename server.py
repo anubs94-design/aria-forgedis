@@ -78,6 +78,61 @@ COMPORTEMENT :
 - Utilise le prenom de l utilisateur quand tu le connais
 - Sois chaleureux, patient, encourageant"""
 
+
+async def _jwt_vers_email(jwt_token: str, request) -> tuple:
+    """Verifie JWT Supabase Auth, retourne (email, erreur). Seul chemin accepte."""
+    auth_header = request.headers.get("Authorization", "")
+    tok = auth_header[7:].strip() if auth_header.startswith("Bearer ") else jwt_token
+    if not tok:
+        return "", "Authentification requise. Connectez-vous avec email + mot de passe."
+    email_jwt = _verifier_jwt_supabase(tok)
+    if not email_jwt:
+        return "", "Session invalide ou expiree. Reconnectez-vous."
+    try:
+        import httpx as _hx
+        async with _hx.AsyncClient(timeout=8.0) as hxa:
+            ru = await hxa.get(
+                f"{SUPABASE_URL}/auth/v1/user",
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {tok}"}
+            )
+            if ru.status_code != 200:
+                return "", "Session invalide. Reconnectez-vous."
+            email = ru.json().get("email","").strip().lower()
+            if not email or email != email_jwt:
+                return "", "Token incoherent. Reconnectez-vous."
+            return email, ""
+    except Exception:
+        return "", "Verification impossible. Reessayez."
+
+
+@app.post("/enroler-installation")
+async def enroler_installation(body: dict, request: Request):
+    """JWT valide => token_installation unique genere et lie a l email.
+    Chaque PC Aria recoit un identifiant unique lors du premier demarrage.
+    Un PC compromise ne peut pas usurper l identite d un autre client.
+    """
+    auth_header = request.headers.get("Authorization","")
+    jwt_token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else ""
+    email, erreur = await _jwt_vers_email(jwt_token, request)
+    if erreur:
+        return {"erreur": erreur}
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return {"erreur": "Service indisponible."}
+    import secrets as _sec2
+    tok_inst = "aria_inst_" + _sec2.token_hex(24)
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as hx2:
+            await hx2.patch(
+                f"{SUPABASE_URL}/rest/v1/clients",
+                params={"email": f"eq.{email}"},
+                headers={"apikey": SUPABASE_SERVICE_KEY,"Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                         "Content-Type":"application/json","Prefer":"return=minimal"},
+                json={"token_installation": tok_inst}
+            )
+        return {"token_installation": tok_inst, "email": email}
+    except Exception:
+        return {"erreur": "Enrolement impossible. Reessayez."}
+
 @app.get("/sante")
 def sante():
     return {"status": "ok"}
@@ -155,8 +210,7 @@ async def verifier_forfait(token_recu, type_requete="eco"):
         return True, "", "dev"  # Pas de Supabase configure = mode dev, tout passe
 
     # Si c'est le token de dev de Victor, toujours autoriser
-    if token_recu == PROXY_TOKEN:
-        return True, "", "dev"
+    # PROXY_TOKEN ne bypass plus les forfaits - uniquement relay WebSocket
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -247,30 +301,9 @@ def _verifier_jwt_supabase(jwt_token: str) -> str:
 async def client_token(body: dict, request: Request):
     auth_header = request.headers.get("Authorization", "")
     jwt_token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else ""
-    if jwt_token:
-        email_jwt = _verifier_jwt_supabase(jwt_token)
-        if not email_jwt:
-            return {"erreur": "Session invalide ou expiree. Reconnectez-vous."}
-        try:
-            async with httpx.AsyncClient(timeout=8.0) as hx_auth:
-                r_user = await hx_auth.get(
-                    f"{SUPABASE_URL}/auth/v1/user",
-                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {jwt_token}"}
-                )
-                if r_user.status_code != 200:
-                    return {"erreur": "Session invalide. Reconnectez-vous."}
-                user_data = r_user.json()
-                email = user_data.get("email", "").strip().lower()
-                if not email or email != email_jwt:
-                    return {"erreur": "Token incoherent. Reconnectez-vous."}
-        except Exception:
-            return {"erreur": "Verification impossible. Reessayez."}
-    elif body.get("proxy_token", "") == PROXY_TOKEN and PROXY_TOKEN:
-        email = body.get("email", "").strip().lower()
-        if not email:
-            return {"erreur": "Email manquant."}
-    else:
-        return {"erreur": "Authentification requise (JWT Supabase ou proxy_token agent)."}
+    email, erreur = await _jwt_vers_email(jwt_token, request)
+    if erreur:
+        return {"erreur": erreur}
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
         return {"erreur": "Service indisponible."}
     try:
