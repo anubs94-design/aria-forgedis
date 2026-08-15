@@ -1,8 +1,10 @@
 import os
 import httpx
 import asyncio
+import base64 as _b64
+import json as _json_mod
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 # ── Scheduler reset compteurs mensuels ──
@@ -122,15 +124,35 @@ async def enroler_installation(body: dict, request: Request):
     tok_inst = "aria_inst_" + _sec2.token_hex(24)
     try:
         async with httpx.AsyncClient(timeout=10.0) as hx2:
+            # 1. Stocker token_installation — lie a l email verifie par JWT
             await hx2.patch(
                 f"{SUPABASE_URL}/rest/v1/clients",
                 params={"email": f"eq.{email}"},
-                headers={"apikey": SUPABASE_SERVICE_KEY,"Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                         "Content-Type":"application/json","Prefer":"return=minimal"},
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                         "Content-Type": "application/json", "Prefer": "return=minimal"},
                 json={"token_installation": tok_inst}
             )
-        return {"token_installation": tok_inst, "email": email}
-    except Exception:
+            # 2. Recuperer token Aria + forfait du compte
+            r_cli = await hx2.get(
+                f"{SUPABASE_URL}/rest/v1/clients",
+                params={"email": f"eq.{email}", "select": "token,forfait,actif"},
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
+            )
+            rows = r_cli.json() if isinstance(r_cli.json(), list) else []
+            if not rows:
+                return {"erreur": "Compte introuvable."}
+            if not rows[0].get("actif"):
+                return {"erreur": "Compte inactif. Verifiez votre abonnement."}
+            aria_token = rows[0]["token"]
+            forfait    = rows[0].get("forfait", "gratuit")
+        return {
+            "token_installation": tok_inst,
+            "token":   aria_token,
+            "forfait": forfait,
+            "email":   email
+        }
+    except Exception as e:
+        print(f"[ENROL] {e}")
         return {"erreur": "Enrolement impossible. Reessayez."}
 
 @app.get("/sante")
@@ -293,7 +315,6 @@ async def verifier_forfait(token_recu, type_requete="eco"):
         return False, "Service temporairement indisponible. Réessayez dans quelques secondes.", "erreur"
 
 # --- STRIPE WEBHOOK ---
-from fastapi import Request
 import secrets as secrets_mod
 
 def _verifier_jwt_supabase(jwt_token: str) -> str:
