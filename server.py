@@ -222,15 +222,55 @@ async def verifier_forfait(token_recu, type_requete="eco"):
 from fastapi import Request
 import secrets as secrets_mod
 
+def _verifier_jwt_supabase(jwt_token: str) -> str:
+    if not jwt_token:
+        return ""
+    try:
+        parts = jwt_token.split(".")
+        if len(parts) != 3:
+            return ""
+        padding = 4 - len(parts[1]) % 4
+        payload_bytes = _b64.urlsafe_b64decode(parts[1] + "=" * padding)
+        payload = _json_mod.loads(payload_bytes)
+        import time as _time
+        if payload.get("exp", 0) < _time.time():
+            return ""
+        iss = payload.get("iss", "")
+        if SUPABASE_URL and SUPABASE_URL not in iss:
+            return ""
+        return payload.get("email", "").strip().lower()
+    except Exception:
+        return ""
+
+
 @app.post("/client-token")
-async def client_token(body: dict):
-    """Requiert PROXY_TOKEN - email seul ne suffit pas."""
-    proxy_recu = body.get("proxy_token", "")
-    if not proxy_recu or proxy_recu != PROXY_TOKEN:
-        return {"erreur": "Non autorise."}
-    email = body.get("email", "").strip().lower()
-    if not email:
-        return {"erreur": "Email manquant."}
+async def client_token(body: dict, request: Request):
+    auth_header = request.headers.get("Authorization", "")
+    jwt_token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else ""
+    if jwt_token:
+        email_jwt = _verifier_jwt_supabase(jwt_token)
+        if not email_jwt:
+            return {"erreur": "Session invalide ou expiree. Reconnectez-vous."}
+        try:
+            async with httpx.AsyncClient(timeout=8.0) as hx_auth:
+                r_user = await hx_auth.get(
+                    f"{SUPABASE_URL}/auth/v1/user",
+                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {jwt_token}"}
+                )
+                if r_user.status_code != 200:
+                    return {"erreur": "Session invalide. Reconnectez-vous."}
+                user_data = r_user.json()
+                email = user_data.get("email", "").strip().lower()
+                if not email or email != email_jwt:
+                    return {"erreur": "Token incoherent. Reconnectez-vous."}
+        except Exception:
+            return {"erreur": "Verification impossible. Reessayez."}
+    elif body.get("proxy_token", "") == PROXY_TOKEN and PROXY_TOKEN:
+        email = body.get("email", "").strip().lower()
+        if not email:
+            return {"erreur": "Email manquant."}
+    else:
+        return {"erreur": "Authentification requise (JWT Supabase ou proxy_token agent)."}
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
         return {"erreur": "Service indisponible."}
     try:
@@ -238,24 +278,15 @@ async def client_token(body: dict):
             r = await client.get(
                 f"{SUPABASE_URL}/rest/v1/clients",
                 params={"email": f"eq.{email}", "select": "token,forfait,actif"},
-                headers={
-                    "apikey": SUPABASE_SERVICE_KEY,
-                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                },
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
             )
             data = r.json()
             if not data:
-                # Aucun compte : creation automatique d'un compte gratuit
-                # (offre Decouverte, sans carte, sans passer par Stripe)
-                nouveau_token = "aria_" + secrets_mod.token_hex(32)
+                nouveau_token = "aria_" + __import__("secrets").token_hex(32)
                 r_create = await client.post(
                     f"{SUPABASE_URL}/rest/v1/clients",
-                    headers={
-                        "apikey": SUPABASE_SERVICE_KEY,
-                        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                        "Content-Type": "application/json",
-                        "Prefer": "return=representation",
-                    },
+                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                             "Content-Type": "application/json", "Prefer": "return=representation"},
                     json={"email": email, "token": nouveau_token, "forfait": "gratuit", "actif": True},
                 )
                 if r_create.status_code not in (200, 201):
@@ -267,16 +298,12 @@ async def client_token(body: dict):
             client_data = data[0]
             if not client_data.get("actif", False):
                 return {"erreur": "Votre abonnement est inactif."}
-            # Recuperer le poste du salarie dans la table salaries
             poste = "dirigeant"
             try:
                 r_sal = await client.get(
                     f"{SUPABASE_URL}/rest/v1/salaries",
                     params={"email": f"eq.{email}", "select": "poste"},
-                    headers={
-                        "apikey": SUPABASE_SERVICE_KEY,
-                        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                    },
+                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
                 )
                 sal_data = r_sal.json()
                 if sal_data and sal_data[0].get("poste"):
@@ -286,7 +313,6 @@ async def client_token(body: dict):
             return {"token": client_data["token"], "forfait": client_data["forfait"], "poste": poste}
     except Exception as e:
         return {"erreur": str(e)}
-
 # Cache idempotence webhook Stripe (in-memory, reset au redémarrage)
 # Pour une idempotence persistante, migrer vers une table Supabase `stripe_events`
 _stripe_events_traites: set = set()
