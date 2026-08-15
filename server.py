@@ -163,11 +163,12 @@ def sante():
 async def ask(body: dict):
     msg = body.get("message", "")
     token_recu = body.get("token", "")
-    # System prompt verrouille cote serveur
-    if token_recu:
-        autorise, msg_err, forfait = await verifier_forfait(token_recu, "eco")
-        if not autorise:
-            return {"response": msg_err}
+    # Fail-closed : token obligatoire — aucun appel Claude sans identification
+    if not token_recu:
+        return {"response": "Token requis."}
+    autorise, msg_err, forfait = await verifier_forfait(token_recu, "eco")
+    if not autorise:
+        return {"response": msg_err}
     if not CLAUDE_KEY:
         return {"response": "Cle API manquante"}
     async with httpx.AsyncClient(timeout=30.0) as client:
@@ -1495,12 +1496,14 @@ async def ask_industrial(body: dict):
     # System prompt verrouille cote serveur
     if not msg:
         return {"response": "Message vide."}
+    # Fail-closed : token obligatoire — aucun appel Claude sans identification
+    if not token_recu:
+        return {"response": "Token requis."}
+    autorise, msg_err, forfait = await verifier_forfait(token_recu, "eco")
+    if not autorise:
+        return {"response": msg_err}
     if not CLAUDE_KEY:
         return {"response": "Cle API manquante."}
-    if token_recu and token_recu != PROXY_TOKEN and SUPABASE_URL and SUPABASE_SERVICE_KEY:
-        autorise, msg_err, forfait = await verifier_forfait(token_recu, "eco")
-        if not autorise:
-            return {"response": msg_err}
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             r = await client.post(
