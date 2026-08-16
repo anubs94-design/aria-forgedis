@@ -4382,35 +4382,31 @@ async def equipe_comptabilite(token: str="", entreprise_id: str=""):
 
 @app.websocket("/relais")
 async def relais(websocket: WebSocket):
-    token = websocket.query_params.get("token", "")
-    role = websocket.query_params.get("role", "")
+    token             = websocket.query_params.get("token", "")
+    role              = websocket.query_params.get("role", "")
+    installation_token = websocket.query_params.get("installation_token", "")
 
-    # Validation token
-    import httpx
-    SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
-    SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
     _PROXY_TOKEN = os.environ.get("ARIA_PROXY_TOKEN", "")
 
-    # Le PROXY_TOKEN de dev est toujours valide (pas dans Supabase)
-    if _PROXY_TOKEN and token == _PROXY_TOKEN:
-        token_valide = True
-    else:
-        token_valide = False
-        try:
-            async with httpx.AsyncClient() as client:
-                r = await client.get(
-                    SUPABASE_URL + "/rest/v1/clients",
-                    headers={"apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY},
-                    params={"token": "eq." + token, "actif": "eq.true", "select": "token"}
-                )
-                data = r.json()
-                token_valide = isinstance(data, list) and len(data) > 0
-        except Exception:
-            token_valide = False
-    if not token_valide:
+    # Etape 1 : verifier PROXY_TOKEN (canal technique)
+    if not _PROXY_TOKEN or token != _PROXY_TOKEN:
         await websocket.close(code=4001)
         return
-    if role not in ("agent", "phone"):
+
+    # Etape 2 : si role=agent, verifier INSTALLATION_TOKEN -> client actif
+    # role=phone est audite separement (pas de changement ici)
+    if role == "agent":
+        if not installation_token:
+            await websocket.close(code=4003)
+            return
+        client_data = await _token_installation_vers_client(installation_token)
+        if not client_data:
+            await websocket.close(code=4003)
+            return
+        if not client_data.get("actif", False):
+            await websocket.close(code=4003)
+            return
+    elif role != "phone":
         await websocket.close(code=4002)
         return
 
