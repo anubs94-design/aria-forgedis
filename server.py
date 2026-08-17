@@ -66,7 +66,9 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization", "stripe-signature"],
 )
 
-CLAUDE_KEY = os.environ.get("ARIA_CLAUDE_KEY", "")
+CLAUDE_KEY          = os.environ.get("ARIA_CLAUDE_KEY", "")
+GOOGLE_TTS_API_KEY  = os.environ.get("GOOGLE_TTS_API_KEY", "")
+GOOGLE_TTS_URL      = "https://texttospeech.googleapis.com/v1/text:synthesize"
 
 SYSTEM_SENIOR = """Tu es Aria, assistante vocale intelligente de Forgedis pour les seniors de 60 ans et plus.
 
@@ -154,6 +156,56 @@ async def enroler_installation(body: dict, request: Request):
     except Exception as e:
         print(f"[ENROL] {e}")
         return {"erreur": "Enrolement impossible. Reessayez."}
+
+
+@app.post("/tts")
+async def tts_proxy(body: dict):
+    """Proxy TTS Google Cloud — cle API uniquement cote serveur.
+    Meme architecture que /ask : token Aria obligatoire, verifier_forfait().
+    Le PC client n a jamais acces a GOOGLE_TTS_API_KEY.
+    """
+    token  = body.get("token", "")
+    texte  = body.get("texte", "")
+
+    # Fail-closed : token obligatoire
+    if not token:
+        return {"audio": None, "erreur": "Token requis."}
+
+    autorise, msg_err, forfait = await verifier_forfait(token, "eco")
+    if not autorise:
+        return {"audio": None, "erreur": msg_err}
+
+    if not GOOGLE_TTS_API_KEY:
+        return {"audio": None, "erreur": "TTS non configure cote serveur."}
+
+    texte_final = texte.strip()
+    if not texte_final:
+        return {"audio": None}
+
+    # Plafond 1000 chars cote serveur
+    if len(texte_final) > 1000:
+        texte_final = texte_final[:997] + "..."
+
+    try:
+        async with httpx.AsyncClient(timeout=12.0) as hx:
+            r = await hx.post(
+                GOOGLE_TTS_URL,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-Goog-Api-Key": GOOGLE_TTS_API_KEY,
+                },
+                json={
+                    "input": {"text": texte_final},
+                    "voice": {"languageCode": "fr-FR", "name": "fr-FR-Neural2-C"},
+                    "audioConfig": {"audioEncoding": "MP3"},
+                }
+            )
+            r.raise_for_status()
+            return {"audio": r.json().get("audioContent")}
+    except Exception as e:
+        print(f"[TTS] Erreur proxy: {e}")
+        return {"audio": None, "erreur": "Erreur generation audio."}
+
 
 @app.get("/sante")
 def sante():
