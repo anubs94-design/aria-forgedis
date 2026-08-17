@@ -69,6 +69,7 @@ app.add_middleware(
 CLAUDE_KEY          = os.environ.get("ARIA_CLAUDE_KEY", "")
 GOOGLE_TTS_API_KEY  = os.environ.get("GOOGLE_TTS_API_KEY", "")
 GOOGLE_TTS_URL      = "https://texttospeech.googleapis.com/v1/text:synthesize"
+VERSION_AGENT       = "1.4.0"   # Incrementer a chaque mise a jour deployee
 
 SYSTEM_SENIOR = """Tu es Aria, assistante vocale intelligente de Forgedis pour les seniors de 60 ans et plus.
 
@@ -205,6 +206,55 @@ async def tts_proxy(body: dict):
     except Exception as e:
         print(f"[TTS] Erreur proxy: {e}")
         return {"audio": None, "erreur": "Erreur generation audio."}
+
+
+
+@app.get("/version")
+async def get_version():
+    """Retourne la version courante de l agent PC et la liste des fichiers a mettre a jour.
+    agent.py verifie cet endpoint au demarrage et se met a jour silencieusement si necessaire.
+    """
+    return {
+        "version": VERSION_AGENT,
+        "fichiers": [
+            "agent.py",
+            "agentic_loop.py",
+            "aria_widget.py",
+            "aria_keepalive.py",
+            "stockage.py",
+            "tts.py",
+            "scan_apps.py",
+            "scan_documents.py",
+        ]
+    }
+
+
+@app.get("/fichier/{nom_fichier}")
+async def telecharger_fichier(nom_fichier: str, request: Request):
+    """Telecharge un fichier source de l agent PC pour mise a jour.
+    Protege par PROXY_TOKEN pour eviter le telechargement anonyme.
+    """
+    proxy_recu = request.headers.get("X-Proxy-Token", "")
+    if not proxy_recu or proxy_recu != PROXY_TOKEN:
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"erreur": "Non autorise."}, status_code=403)
+
+    FICHIERS_AUTORISES = {
+        "agent.py", "agentic_loop.py", "aria_widget.py", "aria_keepalive.py",
+        "stockage.py", "tts.py", "scan_apps.py", "scan_documents.py",
+    }
+    if nom_fichier not in FICHIERS_AUTORISES:
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"erreur": "Fichier non autorise."}, status_code=403)
+
+    import pathlib
+    chemin = pathlib.Path(__file__).parent / nom_fichier
+    if not chemin.exists():
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"erreur": "Fichier introuvable."}, status_code=404)
+
+    from fastapi.responses import FileResponse
+    return FileResponse(str(chemin), media_type="text/plain", filename=nom_fichier)
 
 
 @app.get("/sante")
