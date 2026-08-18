@@ -2586,19 +2586,30 @@ async def jumelage_statut(body: dict):
 # ══════════════════════════════════════════════════════════════
 
 async def _verifier_salarie(email_entreprise: str, mot_de_passe: str):
-    """Verifie les credentials d un salarie Industrial."""
+    """Verifie les credentials d un salarie Industrial.
+    Requete directe sur public.salaries — SHA-256 du mot de passe.
+    """
+    import hashlib
+    mdp_hash = hashlib.sha256(mot_de_passe.encode()).hexdigest()
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            r = await client.post(
-                f"{SUPABASE_URL}/rest/v1/rpc/verifier_salarie",
+            r = await client.get(
+                f"{SUPABASE_URL}/rest/v1/salaries",
+                params={
+                    "email_bureau": f"eq.{email_entreprise}",
+                    "mot_de_passe_hash": f"eq.{mdp_hash}",
+                    "select": "id,nom,email_bureau,poste,role,equipe_id,responsable_id,entreprise_id,actif,terrain,langue",
+                    "limit": "1"
+                },
                 headers={
                     "apikey": SUPABASE_SERVICE_KEY,
-                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                    "Content-Type": "application/json"
-                },
-                json={"p_email_entreprise": email_entreprise, "p_mot_de_passe": mot_de_passe}
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"
+                }
             )
-            return r.json()
+            result = r.json()
+            if isinstance(result, list) and result:
+                return result[0]
+            return None
     except Exception as e:
         print(f"[AUTH SALARIE] Erreur: {e}")
         return None
