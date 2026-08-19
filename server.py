@@ -103,8 +103,9 @@ async def _jwt_vers_email(jwt_token: str, request) -> tuple:
             if ru.status_code != 200:
                 return "", "Session invalide. Reconnectez-vous."
             email = ru.json().get("email","").strip().lower()
-            if not email or email != email_jwt:
+            if not email:
                 return "", "Token incoherent. Reconnectez-vous."
+            # email_jwt peut etre sub (UUID) pour tokens password - on fait confiance a /auth/v1/user
             return email, ""
     except Exception:
         return "", "Verification impossible. Reessayez."
@@ -436,7 +437,14 @@ def _verifier_jwt_supabase(jwt_token: str) -> str:
         iss = payload.get("iss", "")
         if SUPABASE_URL and SUPABASE_URL not in iss:
             return ""
-        return payload.get("email", "").strip().lower()
+        # Email peut etre dans le payload directement ou dans user_metadata
+        email = payload.get("email", "")
+        if not email:
+            email = payload.get("user_metadata", {}).get("email", "")
+        if not email:
+            # Pour les tokens password, email est absent - on retourne sub pour validation ulterieure
+            email = payload.get("sub", "")
+        return email.strip().lower()
     except Exception:
         return ""
 
