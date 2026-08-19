@@ -4703,3 +4703,24 @@ async def chat_envoyer(body: dict):
         "poste": body.get("poste",""),
     })
     return {"ok": True, "message": result}
+
+
+@app.post("/admin-reset-password")
+async def admin_reset_password(request: Request):
+    body = await request.json()
+    user_id = body.get("user_id")
+    new_password = body.get("password")
+    secret = body.get("secret")
+    import os
+    if secret != os.environ.get("ARIA_PROXY_TOKEN", ""):
+        raise HTTPException(status_code=403, detail="Interdit")
+    if not user_id or not new_password:
+        raise HTTPException(status_code=400, detail="Parametres manquants")
+    r = requests.put(
+        f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
+        json={"password": new_password}
+    )
+    if r.status_code != 200:
+        return {"erreur": r.text}
+    return {"ok": True}
