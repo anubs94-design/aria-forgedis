@@ -4716,11 +4716,12 @@ async def admin_reset_password(request: Request):
         raise HTTPException(status_code=403, detail="Interdit")
     if not user_id or not new_password:
         raise HTTPException(status_code=400, detail="Parametres manquants")
-    r = requests.put(
-        f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
-        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
-        json={"password": new_password}
-    )
+    async with httpx.AsyncClient() as client:
+        r = await client.put(
+            f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+            headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
+            json={"password": new_password}
+        )
     if r.status_code != 200:
         return {"erreur": r.text}
     return {"ok": True}
