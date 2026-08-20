@@ -1701,6 +1701,7 @@ async def checkout_industrial(body: dict):
                     "subscription_data[metadata][cloud]": "oui" if cloud else "non",
                     "success_url": success_url,
                     "cancel_url": cancel_url,
+                    "discounts[0][promotion_code]": "promo_1U6JyqI54RQfwJiY3kvZMAq8",
                     **{f"line_items[{i}][price]": item["price"] for i, item in enumerate(line_items)},
                     **{f"line_items[{i}][quantity]": str(item["quantity"]) for i, item in enumerate(line_items)},
                 }
@@ -2076,6 +2077,7 @@ async def checkout_kids(body: dict):
                     "subscription_data[metadata][produit]": forfait,
                     "line_items[0][price]": price_id,
                     "line_items[0][quantity]": "1",
+                    "discounts[0][promotion_code]": "promo_1U6JyqI54RQfwJiY3kvZMAq8",
                     "success_url": success_url,
                     "cancel_url": cancel_url,
                 }
