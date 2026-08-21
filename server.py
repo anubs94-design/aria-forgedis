@@ -353,14 +353,70 @@ async def _token_installation_vers_client(token_inst: str) -> dict:
         return None
 
 
+async def get_press_access(token_recu: str, produit: str):
+    """
+    Verifie si un token presse est valide.
+    Criteres stricts : token prefixe aria_press_ + auth_user_id UUID exact
+    + is_active + expires_at > NOW() + produit inclus dans produits.
+    Retourne dict si acces valide, None sinon.
+    Ne loggue jamais le token en clair.
+    """
+    if not token_recu or not token_recu.startswith("aria_press_"):
+        return None
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return None
+    try:
+        import datetime
+        from datetime import timezone
+        async with httpx.AsyncClient(timeout=8.0) as hx:
+            r = await hx.get(
+                f"{SUPABASE_URL}/rest/v1/comptes_presse",
+                params={
+                    "token_presse": f"eq.{token_recu}",
+                    "is_active": "eq.true",
+                    "select": "auth_user_id,expires_at,produits,entreprise_demo_id"
+                },
+                headers={
+                    "apikey": SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                },
+            )
+            rows = r.json() if isinstance(r.json(), list) else []
+            if not rows:
+                return None
+            data = rows[0]
+            expires = datetime.datetime.fromisoformat(
+                data["expires_at"].replace("Z", "+00:00")
+            )
+            if datetime.datetime.now(timezone.utc) >= expires:
+                print("[PRESSE] Acces expire pour token presse.")
+                return None
+            produits_autorises = data.get("produits") or []
+            if produit not in produits_autorises:
+                return None
+            return data
+    except Exception as e:
+        print(f"[PRESSE] Erreur verification: {e}")
+        return None
+
+
 async def verifier_forfait(token_recu, type_requete="eco"):
     """Verifie le forfait du client. Retourne (autorise, message, forfait).
     type_requete: 'eco' (conversation Haiku) ou 'reflexion' (vision Sonnet)
     Identifie uniquement par token Aria (compte).
     La resolution machine->compte est separee dans _token_installation_vers_client().
+    Comptes presse (token aria_press_*) : bypass Stripe, verification expiration uniquement.
     """
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
         return True, "", "dev"
+
+    # --- ACCES PRESSE (verifie en premier, avant tout acces table clients) ---
+    if token_recu and token_recu.startswith("aria_press_"):
+        produit = "facility" if type_requete == "eco" else "facility"
+        press = await get_press_access(token_recu, produit)
+        if press is None:
+            return False, "Acces presse expire ou invalide. Contactez contact@forgedis.fr", "inactif"
+        return True, "", "press_demo"
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -416,7 +472,7 @@ async def verifier_forfait(token_recu, type_requete="eco"):
 
     except Exception as e:
         print(f"[verifier_forfait] Erreur Supabase: {e}")
-        return False, "Service temporairement indisponible. Réessayez dans quelques secondes.", "erreur"
+        return False, "Service temporairement indisponible. Reessayez dans quelques secondes.", "erreur"
 
 # --- STRIPE WEBHOOK ---
 import secrets as secrets_mod
