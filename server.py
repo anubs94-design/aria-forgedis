@@ -782,7 +782,7 @@ async def _check_president(token):
     autorise, msg, forfait = await verifier_forfait(token, "eco")
     if not autorise:
         return False, None, msg or "Accès refusé."
-    if forfait not in ("industrial", "dev", "tous"):
+    if forfait not in ("industrial", "dev", "tous", "press_demo"):
         return False, None, "Forfait Industrial requis."
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -1514,7 +1514,7 @@ async def verify_kids_access(body: dict):
     if not autorise:
         return {"ok": False, "erreur": msg_err or "Accès refusé."}
 
-    if forfait not in ("kids_solo", "kids_famille", "dev", "tous", "forgedis"):
+    if forfait not in ("kids_solo", "kids_famille", "dev", "tous", "forgedis", "press_demo"):
         return {"ok": False, "erreur": "Forfait insuffisant pour Aria Kids."}
 
     # Récupérer infos complètes depuis Supabase
@@ -1556,7 +1556,7 @@ async def ask_kids(body: dict):
     autorise, msg_err, forfait = await verifier_forfait(token)
     if not autorise:
         return {"erreur": msg_err or "Token invalide ou forfait inactif."}
-    if forfait not in ("kids_solo", "kids_famille", "facility", "forgedis", "tous", "industrial", "dev", "erreur"):
+    if forfait not in ("kids_solo", "kids_famille", "facility", "forgedis", "tous", "industrial", "dev", "erreur", "press_demo"):
         return {"erreur": "Forfait insuffisant pour Aria Kids."}
 
     model_a_utiliser = "claude-sonnet-4-6" if model_req == "sonnet" else "claude-haiku-4-5-20251001"
@@ -1880,7 +1880,7 @@ async def vision_kids(body: dict):
     autorise, msg, forfait = await verifier_forfait(token, "reflexion")
     if not autorise:
         return {"ok": False, "erreur": msg or "Accès refusé."}
-    if forfait not in ("kids_solo", "kids_famille", "dev", "tous"):
+    if forfait not in ("kids_solo", "kids_famille", "dev", "tous", "press_demo"):
         return {"ok": False, "erreur": "Forfait Kids requis."}
 
     image_b64 = body.get("image_b64", "").strip()
@@ -2237,7 +2237,7 @@ async def kids_generer_question(body: dict):
     autorise, msg_err, forfait = await verifier_forfait(token)
     if not autorise:
         return {"erreur": msg_err or "Token invalide."}
-    if forfait not in ("kids_solo", "kids_famille", "facility", "forgedis", "tous", "industrial", "dev", "erreur"):
+    if forfait not in ("kids_solo", "kids_famille", "facility", "forgedis", "tous", "industrial", "dev", "erreur", "press_demo"):
         return {"erreur": "Forfait insuffisant."}
 
     prompt = (
