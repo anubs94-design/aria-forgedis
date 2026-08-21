@@ -373,7 +373,7 @@ async def get_press_access(token_recu: str, produit: str):
                 f"{SUPABASE_URL}/rest/v1/comptes_presse",
                 params={
                     "token_presse": f"eq.{token_recu}",
-                    "is_active": "eq.true",
+                    "is_active": "is.true",
                     "select": "auth_user_id,expires_at,produits,entreprise_demo_id"
                 },
                 headers={
