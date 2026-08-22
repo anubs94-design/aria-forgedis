@@ -4567,10 +4567,15 @@ async def relais(websocket: WebSocket):
     role              = websocket.query_params.get("role", "")
     installation_token = websocket.query_params.get("installation_token", "")
 
+    # Log masque — jamais de token complet dans les logs
+    _tok_log = (token[:8] + "****") if token else "(vide)"
+    print(f"[RELAIS] Connexion role={role} token={_tok_log}")
+
     _PROXY_TOKEN = os.environ.get("ARIA_PROXY_TOKEN", "")
 
     # Etape 1 : verifier PROXY_TOKEN (canal technique)
     if not _PROXY_TOKEN or token != _PROXY_TOKEN:
+        print(f"[RELAIS] Token rejete role={role} token={_tok_log}")
         await websocket.close(code=4001)
         return
 
@@ -4773,13 +4778,14 @@ async def chat_envoyer(body: dict):
 
 @app.post("/admin-reset-password")
 async def admin_reset_password(request: Request):
+    from fastapi.responses import JSONResponse as _jr
     body = await request.json()
     user_id = body.get("user_id")
     new_password = body.get("password")
     secret = body.get("secret")
     import os
     if secret != os.environ.get("ARIA_PROXY_TOKEN", ""):
-        raise HTTPException(status_code=403, detail="Interdit")
+        return _jr({"erreur": "Acces interdit."}, status_code=403)
     if not user_id or not new_password:
         raise HTTPException(status_code=400, detail="Parametres manquants")
     async with httpx.AsyncClient() as client:
