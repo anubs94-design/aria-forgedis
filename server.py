@@ -4563,11 +4563,13 @@ async def equipe_comptabilite(token: str="", entreprise_id: str=""):
 
 @app.websocket("/relais")
 async def relais(websocket: WebSocket):
-    token             = websocket.query_params.get("token", "")
-    role              = websocket.query_params.get("role", "")
-    installation_token = websocket.query_params.get("installation_token", "")
+    # Secrets lus depuis les headers HTTP — jamais dans la query string
+    # Les headers ne sont pas logues par uvicorn, contrairement aux URLs
+    token              = websocket.headers.get("x-proxy-token", "")
+    installation_token = websocket.headers.get("x-installation-token", "")
+    role               = websocket.query_params.get("role", "")  # non secret
 
-    # Log masque — jamais de token complet dans les logs
+    # Log masque — jamais de credential complet dans les logs
     _tok_log = (token[:8] + "****") if token else "(vide)"
     print(f"[RELAIS] Connexion role={role} token={_tok_log}")
 
