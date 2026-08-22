@@ -4563,27 +4563,21 @@ async def equipe_comptabilite(token: str="", entreprise_id: str=""):
 
 @app.websocket("/relais")
 async def relais(websocket: WebSocket):
-    # Secrets lus depuis les headers HTTP — jamais dans la query string
-    # Les headers ne sont pas logues par uvicorn, contrairement aux URLs
-    token              = websocket.headers.get("x-proxy-token", "")
-    installation_token = websocket.headers.get("x-installation-token", "")
-    role               = websocket.query_params.get("role", "")  # non secret
+    role = websocket.query_params.get("role", "")
 
-    # Log masque — jamais de credential complet dans les logs
-    _tok_log = (token[:8] + "****") if token else "(vide)"
-    print(f"[RELAIS] Connexion role={role} token={_tok_log}")
-
-    _PROXY_TOKEN = os.environ.get("ARIA_PROXY_TOKEN", "")
-
-    # Etape 1 : verifier PROXY_TOKEN (canal technique)
-    if not _PROXY_TOKEN or token != _PROXY_TOKEN:
-        print(f"[RELAIS] Token rejete role={role} token={_tok_log}")
-        await websocket.close(code=4001)
-        return
-
-    # Etape 2 : si role=agent, verifier INSTALLATION_TOKEN -> client actif
-    # role=phone est audite separement (pas de changement ici)
     if role == "agent":
+        # Agent PC : secrets en headers HTTP uniquement
+        token              = websocket.headers.get("x-proxy-token", "")
+        installation_token = websocket.headers.get("x-installation-token", "")
+        _tok_log = (token[:8] + "****") if token else "(vide)"
+        print(f"[RELAIS] Connexion role=agent token={_tok_log}")
+
+        _PROXY_TOKEN = os.environ.get("ARIA_PROXY_TOKEN", "")
+        if not _PROXY_TOKEN or token != _PROXY_TOKEN:
+            print(f"[RELAIS] Token agent rejete token={_tok_log}")
+            await websocket.close(code=4001)
+            return
+
         if not installation_token:
             await websocket.close(code=4003)
             return
@@ -4594,15 +4588,53 @@ async def relais(websocket: WebSocket):
         if not client_data.get("actif", False):
             await websocket.close(code=4003)
             return
-    elif role != "phone":
+
+        await websocket.accept()
+        # Cle de session = token_installation (partage avec le phone du meme compte)
+        session_key = installation_token
+        if session_key not in relais_connexions:
+            relais_connexions[session_key] = {"agent": None, "phone": None}
+        relais_connexions[session_key]["agent"] = websocket
+        token = session_key  # alias pour la boucle de routage
+
+    elif role == "phone":
+        # Mobile : token client en query string (token Aria du compte)
+        phone_token = websocket.query_params.get("token", "")
+        _tok_log = (phone_token[:8] + "****") if phone_token else "(vide)"
+        print(f"[RELAIS] Connexion role=phone token={_tok_log}")
+
+        if not phone_token or not phone_token.startswith("aria_"):
+            await websocket.close(code=4001)
+            return
+
+        # Verifier que ce token correspond a un client actif
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as hx:
+                r = await hx.get(
+                    f"{SUPABASE_URL}/rest/v1/clients",
+                    params={"token": f"eq.{phone_token}", "select": "actif,token_installation"},
+                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
+                )
+                rows = r.json() if isinstance(r.json(), list) else []
+                if not rows or not rows[0].get("actif"):
+                    await websocket.close(code=4001)
+                    return
+                # La session relay est identifiee par le token_installation du compte
+                session_key = rows[0].get("token_installation", phone_token)
+        except Exception:
+            await websocket.close(code=4001)
+            return
+
+        await websocket.accept()
+        if session_key not in relais_connexions:
+            relais_connexions[session_key] = {"agent": None, "phone": None}
+        relais_connexions[session_key]["phone"] = websocket
+        # Alias pour la boucle de routage
+        token = session_key
+
+    else:
         await websocket.close(code=4002)
         return
-
-    await websocket.accept()
-
-    if token not in relais_connexions:
-        relais_connexions[token] = {"agent": None, "phone": None}
-    relais_connexions[token][role] = websocket
 
     autre_role = "phone" if role == "agent" else "agent"
 
