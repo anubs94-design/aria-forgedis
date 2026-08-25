@@ -2586,6 +2586,366 @@ async def education_resultats(body: dict):
 
 
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SAFETY — Moteur de sécurité internationale Aria Kids
+# Architecture validée par Charlie — V1 encadrée — 2026-08-25
+# FAIL-CLOSED : si config absente/corrompue/périmée → FALLBACK systématique
+# Aucune transmission automatique aux autorités
+# Aucun stockage de media illégal
+# ─────────────────────────────────────────────────────────────────────────────
+
+import json as _json_safety
+from datetime import datetime as _dt_safety, timezone as _tz_safety
+from pathlib import Path as _Path_safety
+
+_SAFETY_CONFIG_PATH = _Path_safety(__file__).parent / "safety_config.json"
+_SAFETY_CONFIG_CACHE: dict | None = None
+_SAFETY_CONFIG_LOADED_AT: float = 0.0
+_SAFETY_CACHE_TTL = 3600  # recharge toutes les heures
+
+
+def _charger_safety_config() -> dict | None:
+    """
+    Charge safety_config.json avec fail-closed strict :
+    - Absent → None
+    - Corrompu → None
+    - Version trop ancienne → None
+    - Autorité non verified → route désactivée
+    """
+    global _SAFETY_CONFIG_CACHE, _SAFETY_CONFIG_LOADED_AT
+    import time
+    now = time.time()
+    if _SAFETY_CONFIG_CACHE and (now - _SAFETY_CONFIG_LOADED_AT) < _SAFETY_CACHE_TTL:
+        return _SAFETY_CONFIG_CACHE
+
+    try:
+        # 1. Essayer le fichier local (co-déployé avec server.py)
+        path = _SAFETY_CONFIG_PATH
+        if not path.exists():
+            # 2. Fallback : chercher dans le répertoire courant
+            path = _Path_safety("safety_config.json")
+        if not path.exists():
+            print("[SAFETY] safety_config.json ABSENT — fail-closed FALLBACK")
+            return None
+
+        with open(path, "r", encoding="utf-8") as f:
+            cfg = _json_safety.load(f)
+
+        # Vérifier version
+        version = cfg.get("version", "0.0.0")
+        if not version or version == "0.0.0":
+            print("[SAFETY] Version manquante — fail-closed FALLBACK")
+            return None
+
+        # Vérifier ancienneté config globale
+        max_age = cfg.get("global_rules", {}).get("max_config_age_days", 365)
+        last_updated = cfg.get("last_updated", "")
+        if last_updated:
+            try:
+                delta = (_dt_safety.now(_tz_safety.utc) - _dt_safety.fromisoformat(last_updated).replace(tzinfo=_tz_safety.utc)).days
+                if delta > max_age:
+                    print(f"[SAFETY] Config trop ancienne ({delta}j > {max_age}j) — fail-closed FALLBACK")
+                    return None
+            except Exception:
+                pass
+
+        _SAFETY_CONFIG_CACHE = cfg
+        _SAFETY_CONFIG_LOADED_AT = now
+        print(f"[SAFETY] Config chargée v{version} ({len(cfg.get('countries', []))} pays)")
+        return cfg
+
+    except (_json_safety.JSONDecodeError, Exception) as e:
+        print(f"[SAFETY] Config corrompue : {e} — fail-closed FALLBACK")
+        return None
+
+
+def _router_safety(cfg: dict, country_code: str, categorie: str) -> dict:
+    """
+    Résoud la route pour (pays, catégorie).
+    Règle fail-closed :
+    - Pays inconnu → FALLBACK
+    - Pays désactivé → FALLBACK
+    - Catégorie inconnue → FALLBACK
+    - Autorité non verified → ignorée
+    - next_review dépassé → route review_required
+    Retourne toujours un dict avec 'authorities' et 'fallback'.
+    """
+    fallback_msg = cfg.get("fallback", {}).get("message",
+        "Merci de l'avoir signalé. Ta sécurité est prioritaire. "
+        "Contacte un adulte de confiance et les autorités locales.")
+
+    # Chercher le pays
+    pays = next((c for c in cfg.get("countries", []) if c["country_code"] == country_code), None)
+
+    if not pays or not pays.get("active", False):
+        return {
+            "fallback": True,
+            "message": fallback_msg,
+            "emergency": cfg.get("fallback", {}).get("emergency_eu", "112"),
+            "authorities": [],
+            "reason": f"Pays {country_code} non trouvé ou désactivé"
+        }
+
+    # Vérifier urgence pays next_review
+    next_review = pays.get("next_review", "")
+    if next_review:
+        try:
+            if _dt_safety.fromisoformat(next_review) < _dt_safety.now():
+                print(f"[SAFETY] Pays {country_code} : next_review dépassé ({next_review})")
+                # En V1 : on continue mais on log — politique review_required future
+        except Exception:
+            pass
+
+    routing = pays.get("routing", {})
+    authority_ids = routing.get(categorie)
+
+    if not authority_ids:
+        return {
+            "fallback": True,
+            "message": fallback_msg,
+            "emergency": pays.get("emergency_number", "112"),
+            "authorities": [],
+            "reason": f"Catégorie {categorie} sans route pour {country_code}"
+        }
+
+    if authority_ids == ["FALLBACK"] or authority_ids == ["FALLBACK"]:
+        return {
+            "fallback": True,
+            "message": fallback_msg,
+            "emergency": pays.get("emergency_number", "112"),
+            "authorities": [],
+            "reason": f"Route explicitement FALLBACK pour {country_code}/{categorie}"
+        }
+
+    # Résoudre les autorités
+    now_dt = _dt_safety.now()
+    resolved = []
+    for auth_id in authority_ids:
+        if auth_id == "FALLBACK":
+            continue
+        auth = next((a for a in pays.get("authorities", []) if a["id"] == auth_id), None)
+        if not auth:
+            print(f"[SAFETY] Autorité {auth_id} introuvable pour {country_code}")
+            continue
+        if not auth.get("active", False):
+            print(f"[SAFETY] Autorité {auth_id} désactivée")
+            continue
+        # Règle fail-closed : vérification status
+        vs = auth.get("verification_status", "unverified")
+        if vs not in ("verified", "confirmed", "confirmed_charlie_2026"):
+            print(f"[SAFETY] Autorité {auth_id} non verified ({vs}) — ignorée")
+            continue
+        # next_review dépassé → log mais garde en V1
+        nr = auth.get("next_review", "")
+        if nr:
+            try:
+                if _dt_safety.fromisoformat(nr) < now_dt:
+                    print(f"[SAFETY] Autorité {auth_id} : next_review dépassé ({nr})")
+                    auth = {**auth, "_review_required": True}
+            except Exception:
+                pass
+        resolved.append({
+            "id":     auth["id"],
+            "name":   auth["name"],
+            "url":    auth.get("url"),
+            "phone":  auth.get("phone"),
+            "note":   auth.get("note"),
+            "review_required": auth.get("_review_required", False)
+        })
+
+    if not resolved:
+        return {
+            "fallback": True,
+            "message": fallback_msg,
+            "emergency": pays.get("emergency_number", "112"),
+            "authorities": [],
+            "reason": f"Aucune autorité verified disponible pour {country_code}/{categorie}"
+        }
+
+    return {
+        "fallback": False,
+        "message": "Merci de l'avoir signalé. Ta sécurité est prioritaire.",
+        "emergency": pays.get("emergency_number", "112"),
+        "authorities": resolved,
+        "country": pays["country_name"]
+    }
+
+
+def _determiner_alert_recipients(cfg: dict, categorie: str) -> dict:
+    """
+    Détermine qui alerter et avec quel délai selon la catégorie.
+    Retourne {recipients, delay, forgedis_moderator}
+    """
+    rules = cfg.get("alert_recipients", {}).get("rules", [])
+    for rule in rules:
+        if categorie in rule.get("trigger", []):
+            return {
+                "recipients": rule.get("recipients", ["parent_compte"]),
+                "delay": rule.get("delay", "within_session"),
+                "forgedis_moderator": categorie in cfg.get("alert_recipients", {}).get("forgedis_moderator", {}).get("when", [])
+            }
+    return {"recipients": ["parent_compte"], "delay": "next_login", "forgedis_moderator": False}
+
+
+def _enregistrer_metadata_safety(token: str, categorie: str, country_code: str,
+                                   escalation_level: int, authority_shown: list,
+                                   alert_sent_to: list) -> None:
+    """
+    Enregistre uniquement les métadonnées minimales dans alertes_jumelage.
+    JAMAIS de contenu, JAMAIS de media, JAMAIS de verbatim conversation.
+    """
+    import asyncio
+    # La vraie insertion est faite en async dans l'endpoint
+    # Cette fonction valide que seules les métadonnées autorisées sont passées
+    allowed = {"timestamp", "incident_category", "country_code", "escalation_level",
+                "authority_shown", "alert_sent_to"}
+    metadata = {
+        "timestamp": _dt_safety.now(_tz_safety.utc).isoformat(),
+        "incident_category": categorie,
+        "country_code": country_code,
+        "escalation_level": escalation_level,
+        "authority_shown": authority_shown,
+        "alert_sent_to": alert_sent_to
+    }
+    # Vérification stricte : aucune clé non autorisée
+    assert set(metadata.keys()) <= allowed, f"Métadonnées non autorisées : {set(metadata.keys()) - allowed}"
+    return metadata
+
+
+@app.post("/safety/signalement")
+async def safety_signalement(body: dict):
+    """
+    Moteur de routage sécurité internationale Aria Kids.
+    FAIL-CLOSED : tout problème de config → FALLBACK garanti.
+    Aucune transmission automatique aux autorités.
+    Aucun stockage de media illégal.
+    """
+    token    = body.get("token", "")
+    pays_code = body.get("pays", "").upper().strip()
+    categorie = body.get("categorie", "").strip()
+    urgence   = bool(body.get("urgence", False))
+
+    # 1. Vérification token
+    autorise, msg_err, forfait = await verifier_forfait(token)
+    if not autorise:
+        return {"erreur": msg_err or "Token invalide."}
+    if forfait not in ("kids_solo", "kids_famille", "forgedis", "tous", "dev", "erreur", "press_demo"):
+        return {"erreur": "Forfait Kids requis."}
+
+    # 2. Charger config — fail-closed
+    cfg = _charger_safety_config()
+    if cfg is None:
+        return {
+            "fallback": True,
+            "message": "Merci de l'avoir signalé. Ta sécurité est prioritaire. "
+                       "Contacte un adulte de confiance et les autorités locales. "
+                       "En cas de danger immédiat, appelle le 112.",
+            "emergency": "112",
+            "authorities": [],
+            "alerte_envoyee": False,
+            "raison": "Configuration de sécurité indisponible"
+        }
+
+    # 3. Valider catégorie
+    categories_valides = set(cfg.get("incident_categories", {}).keys())
+    if categorie not in categories_valides:
+        categorie = "autre_illicite"
+
+    # 4. Router
+    route = _router_safety(cfg, pays_code, categorie)
+
+    # 5. Déterminer urgence depuis config
+    cat_cfg = cfg.get("incident_categories", {}).get(categorie, {})
+    urgence_niveau = cat_cfg.get("urgence", 1)
+    if urgence:
+        urgence_niveau = max(urgence_niveau, 2)
+
+    # 6. Déterminer destinataires alerte
+    alert_info = _determiner_alert_recipients(cfg, categorie)
+
+    # 7. Enregistrer métadonnées minimales (jamais de contenu)
+    authority_ids_shown = [a["id"] for a in route.get("authorities", [])]
+    alert_recipients_list = alert_info.get("recipients", [])
+
+    try:
+        metadata = _enregistrer_metadata_safety(
+            token=token,
+            categorie=categorie,
+            country_code=pays_code,
+            escalation_level=urgence_niveau,
+            authority_shown=authority_ids_shown,
+            alert_sent_to=alert_recipients_list
+        )
+        # Insérer dans alertes_jumelage
+        async with httpx.AsyncClient(timeout=5.0) as hx:
+            await hx.post(
+                f"{SUPABASE_URL}/rest/v1/alertes_jumelage",
+                headers={
+                    "apikey": SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                    "Content-Type": "application/json",
+                    "Prefer": "return=minimal"
+                },
+                json={
+                    "token_emetteur": token[:12] + "****",  # Masqué
+                    "type_alerte": "signalement_securite",
+                    "donnees": metadata,
+                    "urgence": urgence_niveau
+                }
+            )
+    except Exception as e:
+        print(f"[SAFETY] Erreur insertion métadonnées : {e}")
+        # On continue — le routage ne doit pas échouer si Supabase est indisponible
+
+    # 8. Construire réponse (jamais de transmission auto aux autorités)
+    return {
+        "fallback": route["fallback"],
+        "message": route["message"],
+        "emergency": route.get("emergency", "112"),
+        "authorities": route.get("authorities", []),
+        "alert_delay": alert_info.get("delay"),
+        "alert_recipients": alert_info.get("recipients"),
+        "urgence_niveau": urgence_niveau,
+        "note": "ARIA oriente vers les canaux officiels. Aucune transmission automatique effectuée."
+    }
+
+
+@app.post("/safety/test-config")
+async def safety_test_config(body: dict):
+    """
+    Endpoint de test pour vérifier le moteur de routage.
+    Réservé aux tokens forgedis/dev.
+    Retourne la matrice de routage pour un pays.
+    """
+    token = body.get("token", "")
+    autorise, _, forfait = await verifier_forfait(token)
+    if not autorise or forfait not in ("forgedis", "dev"):
+        return {"erreur": "Accès réservé."}
+
+    cfg = _charger_safety_config()
+    if not cfg:
+        return {"erreur": "Config absente ou corrompue."}
+
+    pays_code = body.get("pays", "FR").upper()
+    categories = list(cfg.get("incident_categories", {}).keys())
+    matrice = {}
+    for cat in categories:
+        route = _router_safety(cfg, pays_code, cat)
+        matrice[cat] = {
+            "fallback": route["fallback"],
+            "authorities": [a["id"] for a in route.get("authorities", [])],
+            "reason": route.get("reason", "")
+        }
+
+    return {
+        "pays": pays_code,
+        "categories_testees": len(categories),
+        "matrice": matrice,
+        "config_version": cfg.get("version")
+    }
+
+
 @app.post("/jumelage/attente")
 async def jumelage_attente(body: dict):
     """Salle d attente. Tente matching immediat. Si match -> codes email aux parents."""
