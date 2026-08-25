@@ -2328,6 +2328,264 @@ async def _sb_delete(table: str, filtre: str):
         return r.status_code
 
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API EDUCATION NATIONALE — data.education.gouv.fr (acces libre, sans cle)
+# Trois endpoints : programmes officiels, annuaire etablissements, resultats
+# ─────────────────────────────────────────────────────────────────────────────
+
+EDUCATION_API = "https://data.education.gouv.fr/api/explore/v2.1"
+
+
+@app.post("/education/programmes")
+async def education_programmes(body: dict):
+    """Programmes officiels EN par niveau/discipline. Utilise par Aria Kids."""
+    token      = body.get("token", "")
+    niveau     = body.get("niveau", "").strip()
+    discipline = body.get("discipline", "").strip()
+
+    autorise, msg_err, forfait = await verifier_forfait(token)
+    if not autorise:
+        return {"erreur": msg_err or "Token invalide."}
+    if forfait not in ("kids_solo", "kids_famille", "facility", "forgedis", "tous",
+                       "industrial", "dev", "erreur", "press_demo"):
+        return {"erreur": "Forfait Kids requis."}
+
+    try:
+        conditions = []
+        if niveau:
+            conditions.append(f'niveau_d_enseignement like "{niveau}"')
+        if discipline:
+            conditions.append(f'discipline like "{discipline}"')
+
+        params = {"limit": 20, "lang": "fr"}
+        if conditions:
+            params["where"] = " and ".join(conditions)
+
+        async with httpx.AsyncClient(timeout=10.0) as hx:
+            r1 = await hx.get(
+                f"{EDUCATION_API}/catalog/datasets/fr-en-programmes-enseignement-premier-degre/records",
+                params=params
+            )
+            r2 = await hx.get(
+                f"{EDUCATION_API}/catalog/datasets/fr-en-complements-programmes-second-degre/records",
+                params=params
+            )
+
+        programmes = []
+        if r1.status_code == 200:
+            programmes += r1.json().get("results", [])
+        if r2.status_code == 200:
+            programmes += r2.json().get("results", [])
+
+        result = []
+        for p in programmes:
+            result.append({
+                "descriptif":     p.get("descriptif", ""),
+                "niveau":         p.get("niveau_d_enseignement", ""),
+                "discipline":     p.get("discipline", ""),
+                "nature":         p.get("nature_du_complement", "Programme officiel"),
+                "texte_officiel": p.get("texte_officiel", ""),
+                "lien_pdf":       p.get("contenu", p.get("contenu_sur_le_site", "")),
+                "en_vigueur":     p.get("entre_en_vigueur_a_la_rentree", ""),
+                "abroge":         p.get("abroge_a_la_rentree", None),
+            })
+
+        return {
+            "programmes": result,
+            "total": len(result),
+            "source": "Ministere de l Education Nationale — data.education.gouv.fr"
+        }
+    except Exception as e:
+        print(f"[EDUCATION-PROGRAMMES] Erreur: {e}")
+        return {"erreur": "Service Education nationale temporairement indisponible."}
+
+
+@app.post("/education/etablissement")
+async def education_etablissement(body: dict):
+    """Recherche etablissement scolaire par nom, code postal ou commune."""
+    token       = body.get("token", "")
+    nom         = body.get("nom", "").strip()
+    code_postal = body.get("code_postal", "").strip()
+    commune     = body.get("commune", "").strip()
+
+    autorise, msg_err, forfait = await verifier_forfait(token)
+    if not autorise:
+        return {"erreur": msg_err or "Token invalide."}
+    if forfait not in ("kids_solo", "kids_famille", "facility", "forgedis", "tous",
+                       "industrial", "dev", "erreur", "press_demo"):
+        return {"erreur": "Forfait Kids requis."}
+
+    if not any([nom, code_postal, commune]):
+        return {"erreur": "Fournir au moins nom, code_postal ou commune."}
+
+    try:
+        conditions = []
+        if nom:
+            conditions.append(f'nom_etablissement like "{nom}"')
+        if code_postal:
+            conditions.append(f'code_postal like "{code_postal}%"')
+        if commune:
+            conditions.append(f'nom_commune like "{commune}"')
+
+        params = {
+            "limit": 10,
+            "lang": "fr",
+            "where": " and ".join(conditions),
+            "select": (
+                "identifiant_de_l_etablissement,nom_etablissement,type_etablissement,"
+                "statut_public_prive,adresse_1,code_postal,nom_commune,"
+                "libelle_departement,libelle_academie,telephone,mail,web,"
+                "ecole_maternelle,ecole_elementaire,voie_generale,"
+                "voie_technologique,voie_professionnelle,"
+                "restauration,hebergement,ulis,section_sport,"
+                "section_internationale,section_europeenne,"
+                "appartenance_education_prioritaire,latitude,longitude,etat"
+            )
+        }
+
+        async with httpx.AsyncClient(timeout=10.0) as hx:
+            r = await hx.get(
+                f"{EDUCATION_API}/catalog/datasets/fr-en-annuaire-education/records",
+                params=params
+            )
+
+        if r.status_code != 200:
+            return {"erreur": "Impossible de joindre l annuaire Education Nationale."}
+
+        data = r.json()
+        etablissements = []
+        for e in data.get("results", []):
+            if e.get("etat") != "OUVERT":
+                continue
+            niveaux = []
+            if e.get("ecole_maternelle"): niveaux.append("Maternelle")
+            if e.get("ecole_elementaire"): niveaux.append("Elementaire")
+            if e.get("voie_generale"): niveaux.append("General")
+            if e.get("voie_technologique"): niveaux.append("Technologique")
+            if e.get("voie_professionnelle"): niveaux.append("Professionnel")
+
+            options = []
+            if e.get("ulis"): options.append("ULIS")
+            if e.get("section_sport"): options.append("Section sport")
+            if e.get("section_internationale"): options.append("Section internationale")
+            if e.get("section_europeenne"): options.append("Section europeenne")
+            prio = e.get("appartenance_education_prioritaire")
+            if prio: options.append(f"Education prioritaire ({prio})")
+
+            etablissements.append({
+                "id":          e.get("identifiant_de_l_etablissement"),
+                "nom":         e.get("nom_etablissement"),
+                "type":        e.get("type_etablissement"),
+                "secteur":     e.get("statut_public_prive"),
+                "adresse":     e.get("adresse_1"),
+                "code_postal": e.get("code_postal"),
+                "commune":     e.get("nom_commune"),
+                "departement": e.get("libelle_departement"),
+                "academie":    e.get("libelle_academie"),
+                "telephone":   e.get("telephone"),
+                "mail":        e.get("mail"),
+                "web":         e.get("web"),
+                "niveaux":     niveaux,
+                "options":     options,
+                "restauration":bool(e.get("restauration")),
+                "hebergement": bool(e.get("hebergement")),
+                "coordonnees": {"lat": e.get("latitude"), "lon": e.get("longitude")},
+            })
+
+        return {
+            "etablissements": etablissements,
+            "total": data.get("total_count", len(etablissements)),
+            "source": "Annuaire Education Nationale — data.education.gouv.fr"
+        }
+    except Exception as e:
+        print(f"[EDUCATION-ETABLISSEMENT] Erreur: {e}")
+        return {"erreur": "Service Education nationale temporairement indisponible."}
+
+
+@app.post("/education/resultats")
+async def education_resultats(body: dict):
+    """Resultats DNB (brevet) ou Bac par etablissement ou departement."""
+    token       = body.get("token", "")
+    type_examen = body.get("type_examen", "dnb").lower()
+    etab_id     = body.get("etablissement_id", "").strip()
+    code_dept   = body.get("code_departement", "").strip()
+    commune     = body.get("commune", "").strip()
+
+    autorise, msg_err, forfait = await verifier_forfait(token)
+    if not autorise:
+        return {"erreur": msg_err or "Token invalide."}
+    if forfait not in ("kids_solo", "kids_famille", "facility", "forgedis", "tous",
+                       "industrial", "dev", "erreur", "press_demo"):
+        return {"erreur": "Forfait Kids requis."}
+
+    try:
+        conditions = []
+        if etab_id:
+            conditions.append(f'numero_d_etablissement like "{etab_id}"')
+        if code_dept:
+            conditions.append(f'code_departement like "{code_dept}"')
+        if commune:
+            conditions.append(f'libelle_commune like "{commune}"')
+
+        params = {"limit": 20, "lang": "fr", "order_by": "session desc"}
+        if conditions:
+            params["where"] = " and ".join(conditions)
+
+        dataset = ("fr-en-dnb-par-etablissement" if type_examen == "dnb"
+                   else "fr-en-baccalaureat-par-departement")
+
+        async with httpx.AsyncClient(timeout=10.0) as hx:
+            r = await hx.get(
+                f"{EDUCATION_API}/catalog/datasets/{dataset}/records",
+                params=params
+            )
+
+        if r.status_code != 200:
+            return {"erreur": "Impossible de joindre les donnees Education Nationale."}
+
+        data = r.json()
+        resultats = []
+        for res in data.get("results", []):
+            if type_examen == "dnb":
+                resultats.append({
+                    "session":           res.get("session"),
+                    "etablissement":     res.get("patronyme"),
+                    "type":              res.get("type_d_etablissement"),
+                    "commune":           res.get("libelle_commune"),
+                    "departement":       res.get("libelle_departement"),
+                    "academie":          res.get("libelle_academie"),
+                    "inscrits":          res.get("inscrits"),
+                    "admis":             res.get("admis"),
+                    "taux_reussite":     res.get("taux_de_reussite"),
+                    "mention_ab":        res.get("nombre_d_admis_mention_ab"),
+                    "mention_bien":      res.get("admis_mention_bien"),
+                    "mention_tres_bien": res.get("admis_mention_tres_bien"),
+                })
+            else:
+                resultats.append({
+                    "session":       res.get("session"),
+                    "departement":   res.get("libelle_departement"),
+                    "academie":      res.get("libelle_academie"),
+                    "serie":         res.get("serie_ou_formation", res.get("serie", "")),
+                    "inscrits":      res.get("inscrits"),
+                    "admis":         res.get("admis"),
+                    "taux_reussite": res.get("taux_de_reussite",
+                                             res.get("taux_brut_de_reussite_total_series", "")),
+                })
+
+        return {
+            "resultats": resultats,
+            "total": data.get("total_count", len(resultats)),
+            "examen": type_examen.upper(),
+            "source": "Ministere de l Education Nationale — data.education.gouv.fr"
+        }
+    except Exception as e:
+        print(f"[EDUCATION-RESULTATS] Erreur: {e}")
+        return {"erreur": "Service Education nationale temporairement indisponible."}
+
+
+
 @app.post("/jumelage/attente")
 async def jumelage_attente(body: dict):
     """Salle d attente. Tente matching immediat. Si match -> codes email aux parents."""
