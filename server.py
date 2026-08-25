@@ -2847,10 +2847,20 @@ async def safety_signalement(body: dict):
             "raison": "Configuration de sécurité indisponible"
         }
 
-    # 3. Valider catégorie
+    # 3. Valider catégorie — fail-closed strict
+    # Catégorie inconnue → FALLBACK immédiat, jamais de redirection implicite
     categories_valides = set(cfg.get("incident_categories", {}).keys())
     if categorie not in categories_valides:
-        categorie = "autre_illicite"
+        return {
+            "fallback": True,
+            "message": cfg.get("global_rules", {}).get("message_neutral",
+                "Merci de l'avoir signale. Ta securite est prioritaire. "
+                "Contacte un adulte de confiance et les autorites locales."),
+            "emergency": cfg.get("fallback", {}).get("emergency_eu", "112"),
+            "authorities": [],
+            "alerte_envoyee": False,
+            "raison": f"Categorie non reconnue : {categorie!r}"
+        }
 
     # 4. Router
     route = _router_safety(cfg, pays_code, categorie)
