@@ -2148,6 +2148,70 @@ async def checkout_kids(body: dict):
         return {"erreur": "Service indisponible."}
 
 
+
+
+# ─── INSCRIPTION FACILITY — activation essai 14 jours ──────────────────────
+@app.post("/inscription-facility")
+async def inscription_facility(body: dict):
+    email   = (body.get("email") or "").strip().lower()
+    forfait = "facility_essai"
+    if not email or "@" not in email:
+        return {"ok": False, "erreur": "Email invalide."}
+    try:
+        expiration = (datetime.utcnow() + timedelta(days=14)).isoformat()
+        async with httpx.AsyncClient(timeout=5.0) as hx:
+            await hx.post(
+                f"{SUPABASE_URL}/rest/v1/comptes",
+                headers={
+                    "apikey": SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                    "Content-Type": "application/json",
+                    "Prefer": "resolution=merge-duplicates,return=minimal"
+                },
+                json={
+                    "email": email,
+                    "forfait": forfait,
+                    "expires_at": expiration,
+                    "essai": True,
+                    "actif": True,
+                }
+            )
+        return {"ok": True, "forfait": forfait, "expires_at": expiration}
+    except Exception as e:
+        return {"ok": False, "erreur": str(e)}
+
+
+# ─── INSCRIPTION INDUSTRIAL — activation essai 14 jours ─────────────────────
+@app.post("/inscription-industrial")
+async def inscription_industrial(body: dict):
+    email   = (body.get("email") or "").strip().lower()
+    forfait = "industrial_essai"
+    if not email or "@" not in email:
+        return {"ok": False, "erreur": "Email invalide."}
+    try:
+        expiration = (datetime.utcnow() + timedelta(days=14)).isoformat()
+        async with httpx.AsyncClient(timeout=5.0) as hx:
+            await hx.post(
+                f"{SUPABASE_URL}/rest/v1/entreprises",
+                headers={
+                    "apikey": SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                    "Content-Type": "application/json",
+                    "Prefer": "resolution=merge-duplicates,return=minimal"
+                },
+                json={
+                    "email_admin": email,
+                    "forfait": forfait,
+                    "expires_at": expiration,
+                    "essai": True,
+                    "actif": True,
+                    "nom": f"Essai {email.split('@')[0]}",
+                }
+            )
+        return {"ok": True, "forfait": forfait, "expires_at": expiration}
+    except Exception as e:
+        return {"ok": False, "erreur": str(e)}
+
 @app.post("/inscription-kids")
 async def inscription_kids(body: dict):
     """
@@ -4045,6 +4109,190 @@ async def ticket_cloturer(body: dict):
         "updated_at":datetime.utcnow().isoformat()
     })
     return {"ok":True}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INDUSTRIAL — Base clients entreprise
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.get("/industrial/clients-entreprise")
+async def get_clients_entreprise(token: str = "", entreprise_id: str = ""):
+    autorise, msg, _ = await verifier_forfait(token)
+    if not autorise: return {"erreur": msg}
+    if not entreprise_id: return {"erreur": "entreprise_id requis"}
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as hx:
+            r = await hx.get(
+                f"{SUPABASE_URL}/rest/v1/clients_entreprise",
+                params={"entreprise_id": f"eq.{entreprise_id}", "order": "nom.asc"},
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+            )
+        return {"clients": r.json() if r.status_code == 200 else []}
+    except Exception as e:
+        return {"erreur": str(e)}
+
+
+@app.post("/industrial/client/creer")
+async def creer_client_entreprise(body: dict):
+    token = body.get("token", "")
+    autorise, msg, _ = await verifier_forfait(token)
+    if not autorise: return {"erreur": msg}
+    eid = body.get("entreprise_id", "")
+    nom = body.get("nom", "").strip()
+    if not eid or not nom: return {"erreur": "entreprise_id et nom requis"}
+    data = {
+        "entreprise_id": eid,
+        "nom":       nom,
+        "contact":   body.get("contact", ""),
+        "email":     body.get("email", ""),
+        "telephone": body.get("telephone", ""),
+        "adresse":   body.get("adresse", ""),
+        "secteur":   body.get("secteur", ""),
+        "notes":     body.get("notes", ""),
+        "statut":    body.get("statut", "actif"),
+    }
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as hx:
+            r = await hx.post(
+                f"{SUPABASE_URL}/rest/v1/clients_entreprise",
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                         "Content-Type": "application/json", "Prefer": "return=representation"},
+                json=data
+            )
+        res = r.json()
+        client = res[0] if isinstance(res, list) and res else res
+        return {"ok": True, "client": client}
+    except Exception as e:
+        return {"erreur": str(e)}
+
+
+@app.post("/industrial/client/modifier")
+async def modifier_client_entreprise(body: dict):
+    token = body.get("token", "")
+    autorise, msg, _ = await verifier_forfait(token)
+    if not autorise: return {"erreur": msg}
+    client_id = body.get("client_id", "")
+    if not client_id: return {"erreur": "client_id requis"}
+    champs_autorises = {"nom","contact","email","telephone","adresse","secteur","notes","statut"}
+    data = {k: v for k, v in body.items() if k in champs_autorises}
+    if not data: return {"erreur": "Aucun champ à modifier"}
+    import datetime
+    data["updated_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as hx:
+            r = await hx.patch(
+                f"{SUPABASE_URL}/rest/v1/clients_entreprise",
+                params={"id": f"eq.{client_id}"},
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                         "Content-Type": "application/json"},
+                json=data
+            )
+        return {"ok": r.status_code in (200, 204)}
+    except Exception as e:
+        return {"erreur": str(e)}
+
+
+@app.post("/industrial/client/supprimer")
+async def supprimer_client_entreprise(body: dict):
+    token = body.get("token", "")
+    autorise, msg, _ = await verifier_forfait(token)
+    if not autorise: return {"erreur": msg}
+    client_id = body.get("client_id", "")
+    if not client_id: return {"erreur": "client_id requis"}
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as hx:
+            r = await hx.delete(
+                f"{SUPABASE_URL}/rest/v1/clients_entreprise",
+                params={"id": f"eq.{client_id}"},
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+            )
+        return {"ok": r.status_code in (200, 204)}
+    except Exception as e:
+        return {"erreur": str(e)}
+
+
+@app.post("/industrial/client/creer-tache")
+async def creer_tache_depuis_client(body: dict):
+    """
+    Crée une tâche liée à un client, assignée à un poste spécifique.
+    Utilisable depuis n'importe quelle fiche client.
+    """
+    token = body.get("token", "")
+    autorise, msg, _ = await verifier_forfait(token)
+    if not autorise: return {"erreur": msg}
+
+    entreprise_id  = body.get("entreprise_id", "")
+    client_id      = body.get("client_id", "")
+    client_nom     = body.get("client_nom", "")
+    titre          = body.get("titre", "").strip()
+    description    = body.get("description", "")
+    poste_demandeur = body.get("poste_demandeur", "")  # ex: "service_client", "comptabilite"
+    destinataire_id = body.get("destinataire_id")      # UUID salarié optionnel
+    priorite       = int(body.get("priorite", 2))
+    echeance       = body.get("echeance")
+
+    if not all([entreprise_id, client_id, titre, poste_demandeur]):
+        return {"erreur": "entreprise_id, client_id, titre et poste_demandeur requis"}
+
+    # Préfixer le titre avec le poste demandeur pour visibilité
+    POSTES_LABELS = {
+        "service_client": "SAV",
+        "comptabilite": "Compta",
+        "logistique": "Logistique",
+        "achats": "Achats",
+        "rh": "RH",
+        "dirigeant": "Direction",
+        "technicien_sav": "Technicien",
+    }
+    prefix = POSTES_LABELS.get(poste_demandeur, poste_demandeur.upper())
+    titre_final = f"[{prefix}] {titre} — Client: {client_nom}"
+
+    data = {
+        "entreprise_id":   entreprise_id,
+        "titre":           titre_final,
+        "description":     description,
+        "statut":          "en_attente",
+        "priorite":        priorite,
+        "type":            "client",
+        "client_id":       client_id,
+        "client_nom":      client_nom,
+        "poste_demandeur": poste_demandeur,
+    }
+    if destinataire_id: data["destinataire_id"] = destinataire_id
+    if echeance: data["echeance"] = echeance
+
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as hx:
+            r = await hx.post(
+                f"{SUPABASE_URL}/rest/v1/taches",
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                         "Content-Type": "application/json", "Prefer": "return=representation"},
+                json=data
+            )
+        res = r.json()
+        tache = res[0] if isinstance(res, list) and res else res
+        return {"ok": True, "tache": tache}
+    except Exception as e:
+        return {"erreur": str(e)}
+
+
+@app.get("/industrial/taches-client")
+async def get_taches_client(token: str = "", client_id: str = ""):
+    """Retourne toutes les tâches liées à un client spécifique."""
+    autorise, msg, _ = await verifier_forfait(token)
+    if not autorise: return {"erreur": msg}
+    if not client_id: return {"erreur": "client_id requis"}
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as hx:
+            r = await hx.get(
+                f"{SUPABASE_URL}/rest/v1/taches",
+                params={"client_id": f"eq.{client_id}", "order": "created_at.desc"},
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+            )
+        return {"taches": r.json() if r.status_code == 200 else []}
+    except Exception as e:
+        return {"erreur": str(e)}
+
 
 @app.get("/industrial/tickets")
 async def tickets_liste(token: str="", entreprise_id: str="", statut: str=""):
