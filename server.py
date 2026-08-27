@@ -2176,6 +2176,15 @@ async def inscription_facility(body: dict):
                     "actif": True,
                 }
             )
+        # Declencher la sequence onboarding J+0..J+13
+        try:
+            await hx.post(
+                "https://aria-forgelis.onrender.com/onboarding/declencher",
+                headers={"Content-Type": "application/json"},
+                json={"email": email, "forfait": forfait},
+            )
+        except Exception:
+            pass
         return {"ok": True, "forfait": forfait, "expires_at": expiration}
     except Exception as e:
         return {"ok": False, "erreur": str(e)}
@@ -2208,6 +2217,15 @@ async def inscription_industrial(body: dict):
                     "nom": f"Essai {email.split('@')[0]}",
                 }
             )
+        # Declencher la sequence onboarding
+        try:
+            await hx.post(
+                "https://aria-forgelis.onrender.com/onboarding/declencher",
+                headers={"Content-Type": "application/json"},
+                json={"email": email, "forfait": forfait},
+            )
+        except Exception:
+            pass
         return {"ok": True, "forfait": forfait, "expires_at": expiration}
     except Exception as e:
         return {"ok": False, "erreur": str(e)}
@@ -5707,3 +5725,431 @@ async def admin_reset_password(request: Request):
     if r.status_code != 200:
         return {"erreur": r.text}
     return {"ok": True}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AGENT A — ONBOARDING
+# Séquence emails automatique J+0/J+3/J+7/J+13
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _email_facility_j0(email: str) -> tuple:
+    s = "Aria Facility est prête — voici comment démarrer"
+    h = (
+        '<div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;'
+        'background:#070B18;color:#F0F3FB;padding:40px 32px;border-radius:16px">'
+        '<div style="font-size:22px;font-weight:800;margin-bottom:4px">FORGE'
+        '<span style="color:#FF7A59">DIS</span></div>'
+        '<div style="font-size:12px;color:#6D7799;margin-bottom:32px">L\'IA française qui n\'oublie personne</div>'
+        '<h1 style="font-size:20px;font-weight:800;margin-bottom:12px">Bienvenue sur Aria Facility \U0001f389</h1>'
+        '<p style="color:#A6B0CC;font-size:14px;line-height:1.7;margin-bottom:24px">'
+        'Votre essai de 14 jours démarre maintenant. Aria va piloter le PC de votre proche par la voix, depuis votre téléphone.'
+        '</p>'
+        '<div style="background:#111934;border-radius:12px;padding:20px;margin-bottom:24px">'
+        '<div style="font-size:13px;font-weight:700;margin-bottom:12px;color:#FF7A59">4 étapes pour démarrer</div>'
+        '<div style="font-size:13px;color:#A6B0CC;line-height:2">'
+        '1\ufe0f\u20e3 <strong style="color:#F0F3FB">Installer l\'agent PC</strong> — téléchargez le logiciel sur le PC Windows<br>'
+        '2\ufe0f\u20e3 <strong style="color:#F0F3FB">Télécharger l\'app</strong> — installez Aria Facility sur votre smartphone<br>'
+        '3\ufe0f\u20e3 <strong style="color:#F0F3FB">Connecter les deux</strong> — suivez les 3 étapes de couplage<br>'
+        '4\ufe0f\u20e3 <strong style="color:#F0F3FB">Premier test vocal</strong> — dites "Aria, ouvre le navigateur"'
+        '</div></div>'
+        '<a href="https://forgedis.fr/enroler.html" style="display:inline-block;background:#FF7A59;'
+        'color:#fff;font-weight:700;padding:13px 24px;border-radius:10px;text-decoration:none;font-size:14px">'
+        'Démarrer l\'installation \u2192</a>'
+        '<div style="margin-top:32px;font-size:12px;color:#6D7799;border-top:1px solid rgba(255,255,255,0.08);padding-top:20px">'
+        'Une question ? Répondez directement à cet email — contact@forgedis.fr</div>'
+        '</div>'
+    )
+    return s, h
+
+
+def _email_facility_j3(email: str) -> tuple:
+    s = "Aria est installée — et votre proche ?"
+    h = (
+        '<div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;'
+        'background:#070B18;color:#F0F3FB;padding:40px 32px;border-radius:16px">'
+        '<div style="font-size:22px;font-weight:800;margin-bottom:32px">FORGE<span style="color:#FF7A59">DIS</span></div>'
+        '<h1 style="font-size:18px;font-weight:800;margin-bottom:12px">Comment ça se passe avec Aria ? \U0001f44b</h1>'
+        '<p style="color:#A6B0CC;font-size:14px;line-height:1.7;margin-bottom:20px">'
+        'Votre essai a 3 jours. Avez-vous réussi à connecter Aria au PC de votre proche ?</p>'
+        '<div style="background:#111934;border-radius:12px;padding:20px;margin-bottom:24px">'
+        '<div style="font-size:13px;font-weight:700;color:#FF7A59;margin-bottom:10px">Commandes vocales à essayer</div>'
+        '<div style="font-size:13px;color:#A6B0CC;line-height:2">'
+        '\U0001f5e3\ufe0f "Aria, ouvre YouTube et lance une vidéo de cuisine"<br>'
+        '\U0001f5e3\ufe0f "Aria, envoie un message à ma fille"<br>'
+        '\U0001f5e3\ufe0f "Aria, lis-moi les actualités du jour"<br>'
+        '\U0001f5e3\ufe0f "Aria, règle le volume plus fort"'
+        '</div></div>'
+        '<p style="color:#A6B0CC;font-size:13px;margin-bottom:20px">'
+        'Bloqué quelque part ? Répondez à cet email — je vous aide personnellement.</p>'
+        '<a href="https://forgedis.fr/enroler.html" style="display:inline-block;background:#FF7A59;'
+        'color:#fff;font-weight:700;padding:13px 24px;border-radius:10px;text-decoration:none;font-size:14px">'
+        'Reprendre l\'installation \u2192</a>'
+        '<div style="margin-top:32px;font-size:12px;color:#6D7799;border-top:1px solid rgba(255,255,255,0.08);padding-top:20px">'
+        'Victor — Fondateur FORGEDIS</div></div>'
+    )
+    return s, h
+
+
+def _email_facility_j7(email: str) -> tuple:
+    s = "7 jours avec Aria — rapport de mi-parcours"
+    h = (
+        '<div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;'
+        'background:#070B18;color:#F0F3FB;padding:40px 32px;border-radius:16px">'
+        '<div style="font-size:22px;font-weight:800;margin-bottom:32px">FORGE<span style="color:#FF7A59">DIS</span></div>'
+        '<h1 style="font-size:18px;font-weight:800;margin-bottom:12px">7 jours avec Aria \U0001f4ac</h1>'
+        '<p style="color:#A6B0CC;font-size:14px;line-height:1.7;margin-bottom:20px">'
+        'Votre essai est à mi-parcours. Voici ce que vous n\'avez peut-être pas encore testé.</p>'
+        '<div style="background:#111934;border-radius:12px;padding:20px;margin-bottom:24px">'
+        '<div style="font-size:13px;font-weight:700;color:#FF7A59;margin-bottom:10px">Fonctionnalités à découvrir</div>'
+        '<div style="font-size:13px;color:#A6B0CC;line-height:2">'
+        '\U0001f6e1\ufe0f Protection anti-arnaques en temps réel<br>'
+        '\U0001f4cb Description de documents et photos<br>'
+        '\U0001f4e7 Dictée d\'emails par la voix<br>'
+        '\u23f0 Rappels médicaments automatiques'
+        '</div></div>'
+        '<p style="color:#A6B0CC;font-size:13px;margin-bottom:20px">'
+        'Il reste 7 jours. Continuer avec Aria : <strong style="color:#FF7A59">12,99\u20ac/mois</strong> — '
+        'moins qu\'une heure d\'aide à domicile.</p>'
+        '<a href="https://forgedis.fr/aria-facility.html" style="display:inline-block;background:#FF7A59;'
+        'color:#fff;font-weight:700;padding:13px 24px;border-radius:10px;text-decoration:none;font-size:14px">'
+        'Voir les offres \u2192</a>'
+        '<div style="margin-top:32px;font-size:12px;color:#6D7799;border-top:1px solid rgba(255,255,255,0.08);padding-top:20px">'
+        'Victor — Fondateur FORGEDIS · contact@forgedis.fr</div></div>'
+    )
+    return s, h
+
+
+def _email_facility_j13(email: str) -> tuple:
+    s = "Votre essai Facility se termine demain — que choisissez-vous ?"
+    h = (
+        '<div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;'
+        'background:#070B18;color:#F0F3FB;padding:40px 32px;border-radius:16px">'
+        '<div style="font-size:22px;font-weight:800;margin-bottom:32px">FORGE<span style="color:#FF7A59">DIS</span></div>'
+        '<h1 style="font-size:18px;font-weight:800;margin-bottom:12px">Votre essai se termine demain \u23f0</h1>'
+        '<p style="color:#A6B0CC;font-size:14px;line-height:1.7;margin-bottom:20px">'
+        'Aria Facility vous a accompagné pendant 14 jours. Pour continuer :</p>'
+        '<div style="background:#111934;border-radius:12px;padding:20px;margin-bottom:24px">'
+        '<div style="font-size:18px;font-weight:800;color:#FF7A59;margin-bottom:4px">12,99\u20ac/mois</div>'
+        '<div style="font-size:13px;color:#A6B0CC;margin-bottom:12px">Sans engagement — résiliable à tout moment</div>'
+        '<div style="font-size:12px;color:#6D7799;line-height:1.8">'
+        '\u2713 Contrôle vocal illimité du PC<br>\u2713 Rapports quotidiens famille<br>'
+        '\u2713 Protection anti-arnaques<br>\u2713 Support prioritaire'
+        '</div></div>'
+        '<a href="https://forgedis.fr/aria-facility.html#tarifs" style="display:inline-block;background:#FF7A59;'
+        'color:#fff;font-weight:700;padding:13px 24px;border-radius:10px;text-decoration:none;font-size:14px">'
+        'S\'abonner maintenant \u2192</a>'
+        '<div style="margin-top:32px;font-size:12px;color:#6D7799;border-top:1px solid rgba(255,255,255,0.08);padding-top:20px">'
+        'Si vous ne souhaitez pas continuer, rien à faire — accès arrêté demain automatiquement.<br>'
+        'Victor — contact@forgedis.fr</div></div>'
+    )
+    return s, h
+
+
+def _email_industrial_j0(email: str) -> tuple:
+    s = "Aria Industrial est prête — accédez à votre espace"
+    h = (
+        '<div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;'
+        'background:#070B18;color:#F0F3FB;padding:40px 32px;border-radius:16px">'
+        '<div style="font-size:22px;font-weight:800;margin-bottom:32px">FORGE<span style="color:#F4A259">DIS</span></div>'
+        '<h1 style="font-size:20px;font-weight:800;margin-bottom:12px">Bienvenue sur Aria Industrial \U0001f3ed</h1>'
+        '<p style="color:#A6B0CC;font-size:14px;line-height:1.7;margin-bottom:24px">'
+        'Votre essai 14 jours est actif. Chaque poste de votre entreprise dispose maintenant d\'un assistant IA dédié.</p>'
+        '<div style="background:#111934;border-radius:12px;padding:20px;margin-bottom:24px">'
+        '<div style="font-size:13px;font-weight:700;color:#F4A259;margin-bottom:10px">Postes disponibles</div>'
+        '<div style="font-size:13px;color:#A6B0CC;line-height:2">'
+        '\U0001f454 <strong style="color:#F0F3FB">Dirigeant</strong> — Synthèse terrain, stratégie, alertes<br>'
+        '\U0001f465 <strong style="color:#F0F3FB">RH</strong> — Absences, contrats, congés, recrutement<br>'
+        '\U0001f4e6 <strong style="color:#F0F3FB">Logistique</strong> — Stock, expéditions, retours<br>'
+        '\U0001f4b0 <strong style="color:#F0F3FB">Comptabilité</strong> — Factures, trésorerie, TVA<br>'
+        '\U0001f3a7 <strong style="color:#F0F3FB">Service client</strong> — Tickets, SAV, satisfaction'
+        '</div></div>'
+        '<a href="https://forgedis.fr/connexion-industrial.html" style="display:inline-block;background:#F4A259;'
+        'color:#fff;font-weight:700;padding:13px 24px;border-radius:10px;text-decoration:none;font-size:14px">'
+        'Accéder à mon espace \u2192</a>'
+        '<div style="margin-top:32px;font-size:12px;color:#6D7799;border-top:1px solid rgba(255,255,255,0.08);padding-top:20px">'
+        'Victor — Fondateur FORGEDIS · contact@forgedis.fr</div></div>'
+    )
+    return s, h
+
+
+def _email_industrial_j3(email: str) -> tuple:
+    s = "Aria Industrial — avez-vous testé la synthèse stratégique ?"
+    h = (
+        '<div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;'
+        'background:#070B18;color:#F0F3FB;padding:40px 32px;border-radius:16px">'
+        '<div style="font-size:22px;font-weight:800;margin-bottom:32px">FORGE<span style="color:#F4A259">DIS</span></div>'
+        '<h1 style="font-size:18px;font-weight:800;margin-bottom:12px">3 jours d\'essai — une fonctionnalité à tester \U0001f3af</h1>'
+        '<p style="color:#A6B0CC;font-size:14px;line-height:1.7;margin-bottom:20px">'
+        'Dans le poste Dirigeant, cliquez sur <strong style="color:#F4A259">"Générer la synthèse stratégique"</strong>.</p>'
+        '<div style="background:#111934;border-radius:12px;padding:20px;margin-bottom:24px">'
+        '<div style="font-size:13px;color:#A6B0CC;line-height:1.8">'
+        'Aria collecte en temps réel les données de tous vos postes : présences, absences, tâches ouvertes, '
+        'tickets SAV, bons de commande, solde trésorerie — et génère un diagnostic + 3 priorités pour la semaine.'
+        '</div></div>'
+        '<a href="https://forgedis.fr/connexion-industrial.html" style="display:inline-block;background:#F4A259;'
+        'color:#fff;font-weight:700;padding:13px 24px;border-radius:10px;text-decoration:none;font-size:14px">'
+        'Accéder au poste dirigeant \u2192</a>'
+        '<div style="margin-top:32px;font-size:12px;color:#6D7799;border-top:1px solid rgba(255,255,255,0.08);padding-top:20px">'
+        'Victor — Fondateur FORGEDIS</div></div>'
+    )
+    return s, h
+
+
+def _email_industrial_j7(email: str) -> tuple:
+    s = "Aria Industrial — bilan mi-parcours"
+    h = (
+        '<div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;'
+        'background:#070B18;color:#F0F3FB;padding:40px 32px;border-radius:16px">'
+        '<div style="font-size:22px;font-weight:800;margin-bottom:32px">FORGE<span style="color:#F4A259">DIS</span></div>'
+        '<h1 style="font-size:18px;font-weight:800;margin-bottom:12px">7 jours d\'essai — votre retour compte \U0001f4ac</h1>'
+        '<p style="color:#A6B0CC;font-size:14px;line-height:1.7;margin-bottom:20px">'
+        'Il reste 7 jours pour tester les postes que vous n\'avez pas encore explorés.</p>'
+        '<div style="background:#111934;border-radius:12px;padding:20px;margin-bottom:24px">'
+        '<div style="font-size:13px;font-weight:700;color:#F4A259;margin-bottom:10px">À tester cette semaine</div>'
+        '<div style="font-size:13px;color:#A6B0CC;line-height:2">'
+        '\U0001f4ca Base clients — référencez vos clients, créez des tâches par poste<br>'
+        '\U0001f4cb Briefing matinal dirigeant — situation globale en 30 secondes<br>'
+        '\U0001f527 Poste technicien SAV — suivi des interventions terrain<br>'
+        '\U0001f6d2 Poste achats — bons de commande, fournisseurs, négociations'
+        '</div></div>'
+        '<p style="color:#A6B0CC;font-size:13px;margin-bottom:20px">'
+        'Abonnement à partir de <strong style="color:#F4A259">64\u20ac/mois</strong> (49\u20ac base + 15\u20ac/salarié).</p>'
+        '<a href="https://forgedis.fr/industrial.html#tarifs" style="display:inline-block;background:#F4A259;'
+        'color:#fff;font-weight:700;padding:13px 24px;border-radius:10px;text-decoration:none;font-size:14px">'
+        'Voir les tarifs \u2192</a></div>'
+    )
+    return s, h
+
+
+def _email_industrial_j13(email: str) -> tuple:
+    s = "Aria Industrial — votre essai se termine demain"
+    h = (
+        '<div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;'
+        'background:#070B18;color:#F0F3FB;padding:40px 32px;border-radius:16px">'
+        '<div style="font-size:22px;font-weight:800;margin-bottom:32px">FORGE<span style="color:#F4A259">DIS</span></div>'
+        '<h1 style="font-size:18px;font-weight:800;margin-bottom:12px">Dernier jour d\'essai demain \u23f0</h1>'
+        '<p style="color:#A6B0CC;font-size:14px;line-height:1.7;margin-bottom:20px">'
+        'Votre essai Aria Industrial se termine demain.</p>'
+        '<div style="background:#111934;border-radius:12px;padding:20px;margin-bottom:24px">'
+        '<div style="font-size:18px;font-weight:800;color:#F4A259;margin-bottom:4px">À partir de 64\u20ac/mois</div>'
+        '<div style="font-size:12px;color:#6D7799;margin-bottom:12px">49\u20ac base + 15\u20ac/salarié (dégressif)</div>'
+        '<div style="font-size:12px;color:#6D7799;line-height:1.8">'
+        '\u2713 Tous les postes métier<br>\u2713 Base clients illimitée<br>'
+        '\u2713 Sauvegarde cloud optionnelle<br>\u2713 Sans engagement'
+        '</div></div>'
+        '<a href="https://forgedis.fr/industrial.html#tarifs" style="display:inline-block;background:#F4A259;'
+        'color:#fff;font-weight:700;padding:13px 24px;border-radius:10px;text-decoration:none;font-size:14px">'
+        'Continuer avec Aria Industrial \u2192</a>'
+        '<div style="margin-top:32px;font-size:12px;color:#6D7799;border-top:1px solid rgba(255,255,255,0.08);padding-top:20px">'
+        'Si vous ne souhaitez pas continuer, rien à faire — accès arrêté demain automatiquement.<br>'
+        'Victor — contact@forgedis.fr</div></div>'
+    )
+    return s, h
+
+
+_ONBOARDING_EMAILS = {
+    "facility_essai": [
+        (0,  _email_facility_j0),
+        (3,  _email_facility_j3),
+        (7,  _email_facility_j7),
+        (13, _email_facility_j13),
+    ],
+    "industrial_essai": [
+        (0,  _email_industrial_j0),
+        (3,  _email_industrial_j3),
+        (7,  _email_industrial_j7),
+        (13, _email_industrial_j13),
+    ],
+}
+
+
+@app.post("/onboarding/declencher")
+async def onboarding_declencher(body: dict):
+    """Déclenche la séquence onboarding. Envoie J+0, planifie J+3/J+7/J+13."""
+    email   = (body.get("email") or "").strip().lower()
+    forfait = (body.get("forfait") or "").strip()
+    if not email or "@" not in email:
+        return {"ok": False, "erreur": "email invalide"}
+    if forfait not in _ONBOARDING_EMAILS:
+        return {"ok": False, "erreur": "forfait non supporté"}
+    templates = _ONBOARDING_EMAILS[forfait]
+    subj, html = templates[0][1](email)
+    await envoyer_email(email, subj, html)
+    now = datetime.utcnow()
+    sequences = []
+    for j, fn in templates[1:]:
+        sequences.append({
+            "email": email, "forfait": forfait, "step": j,
+            "send_at": (now + timedelta(days=j)).isoformat(),
+            "sent": False, "fn_name": fn.__name__,
+        })
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as hx:
+            await hx.post(
+                SUPABASE_URL + "/rest/v1/onboarding_sequences",
+                headers={
+                    "apikey": SUPABASE_SERVICE_KEY,
+                    "Authorization": "Bearer " + SUPABASE_SERVICE_KEY,
+                    "Content-Type": "application/json",
+                    "Prefer": "return=minimal",
+                },
+                json=sequences,
+            )
+    except Exception as e:
+        print("[ONBOARDING] Supabase: " + str(e))
+    print("[ONBOARDING] Déclenché: " + email + " / " + forfait)
+    return {"ok": True, "j0_envoye": True, "planifies": [s["step"] for s in sequences]}
+
+
+@app.post("/onboarding/traiter")
+async def onboarding_traiter(body: dict = {}):
+    """Envoie les emails planifiés dont l'heure est venue. Cron 9h00 UTC."""
+    now = datetime.utcnow().isoformat()
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as hx:
+            r = await hx.get(
+                SUPABASE_URL + "/rest/v1/onboarding_sequences",
+                params={"send_at": "lte." + now, "sent": "eq.false", "select": "*", "limit": "50"},
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": "Bearer " + SUPABASE_SERVICE_KEY},
+            )
+            sequences = r.json() if isinstance(r.json(), list) else []
+    except Exception as e:
+        return {"ok": False, "erreur": str(e)}
+    envoyes = 0
+    for seq in sequences:
+        email   = seq.get("email", "")
+        forfait = seq.get("forfait", "")
+        fn_name = seq.get("fn_name", "")
+        seq_id  = seq.get("id")
+        fn = None
+        for j, f in _ONBOARDING_EMAILS.get(forfait, []):
+            if f.__name__ == fn_name:
+                fn = f
+                break
+        if not fn or not email:
+            continue
+        subj, html = fn(email)
+        ok = await envoyer_email(email, subj, html)
+        if ok and seq_id:
+            try:
+                async with httpx.AsyncClient(timeout=5.0) as hx:
+                    await hx.patch(
+                        SUPABASE_URL + "/rest/v1/onboarding_sequences?id=eq." + str(seq_id),
+                        headers={
+                            "apikey": SUPABASE_SERVICE_KEY,
+                            "Authorization": "Bearer " + SUPABASE_SERVICE_KEY,
+                            "Content-Type": "application/json",
+                        },
+                        json={"sent": True, "sent_at": datetime.utcnow().isoformat()},
+                    )
+            except Exception as e:
+                print("[ONBOARDING] Update: " + str(e))
+            envoyes += 1
+    print("[ONBOARDING] " + str(envoyes) + "/" + str(len(sequences)) + " envoyés")
+    return {"ok": True, "envoyes": envoyes, "total": len(sequences)}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AGENT B — MAINTENANCE SITE
+# Audit nocturne 13 pages + rapport email hebdo
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.post("/maintenance/audit")
+async def maintenance_audit(body: dict = {}):
+    """Audit complet forgedis.fr. Cron 3h00 UTC. Rapport si erreurs ou lundi."""
+    import re as _re
+    base_url = "https://forgedis.fr"
+    pages = [
+        "/", "/kids.html", "/aria-facility.html", "/industrial.html",
+        "/inscription-facility.html", "/inscription-industrial.html", "/inscription-kids.html",
+        "/connexion.html", "/connexion-kids.html", "/connexion-industrial.html",
+        "/mentions-legales.html", "/confidentialite.html", "/cgv.html",
+    ]
+    errors, warnings, ok_list = [], [], []
+    now_str = datetime.utcnow().strftime("%d/%m/%Y %H:%M UTC")
+    async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as hx:
+        for page in pages:
+            try:
+                r = await hx.get(base_url + page)
+                c = r.text
+                if r.status_code != 200:
+                    errors.append("HTTP " + str(r.status_code) + " : " + page)
+                    continue
+                if c.count("\u00e2\u0082\u00ac") > 0:
+                    warnings.append("Encodage cassé : " + page)
+                titles = _re.findall(r'<title>([^<]+)</title>', c)
+                if not titles:
+                    warnings.append("Title manquant : " + page)
+                if page in ["/", "/kids.html", "/aria-facility.html", "/industrial.html"]:
+                    descs = _re.findall(r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']+)', c, _re.I)
+                    if not descs:
+                        warnings.append("Meta desc manquante : " + page)
+                if page in ["/kids.html", "/aria-facility.html", "/industrial.html"]:
+                    if "canonical" not in c:
+                        warnings.append("Canonical manquant : " + page)
+                if page == "/industrial.html" and ("75\u20ac" in c or "75 \u20ac" in c):
+                    errors.append("Prix 75\u20ac dans " + page + " (doit être 64\u20ac)")
+                if "fonts.googleapis.com" in c:
+                    errors.append("Google Fonts US dans " + page)
+                if "Nous sommes sur Product Hunt" in c:
+                    errors.append("Bandeau Product Hunt dans " + page)
+                for kw in ["AVC en 20", "arthrose s\u00e9v\u00e8re"]:
+                    if kw in c:
+                        errors.append("Donnée médicale dans " + page + " : " + kw)
+                if page == "/":
+                    for lien in ["inscription-facility.html", "inscription-kids.html", "inscription-industrial.html"]:
+                        if lien not in c:
+                            warnings.append("CTA manquant sur / : " + lien)
+                if page in ["/", "/kids.html", "/aria-facility.html", "/industrial.html"]:
+                    if "plausible.io" not in c:
+                        warnings.append("Plausible absent : " + page)
+                ok_list.append(page + " \u2705")
+            except Exception as e:
+                errors.append("Erreur réseau " + page + " : " + str(e)[:50])
+    total_err  = len(errors)
+    total_warn = len(warnings)
+    total_ok   = len(ok_list)
+    is_monday  = datetime.utcnow().weekday() == 0
+    send_mail  = total_err > 0 or total_warn > 0 or is_monday
+    if send_mail:
+        def li_items(items, color):
+            return "".join('<li style="margin-bottom:5px;color:' + color + '">' + i + '</li>' for i in items)
+        err_h  = li_items(errors,   "#f87171") if errors   else ""
+        warn_h = li_items(warnings, "#F4A259") if warnings else ""
+        ok_h   = li_items(ok_list,  "#6D7799") if ok_list  else ""
+        lbl    = ("\U0001f534 " + str(total_err) + " erreur(s)") if total_err else ("\U0001f7e1 " + str(total_warn) + " avert.") if total_warn else "\u2705 Tout OK"
+        body_h = (
+            '<div style="font-family:system-ui,sans-serif;max-width:620px;margin:0 auto;background:#070B18;color:#F0F3FB;padding:36px 28px;border-radius:16px">'
+            '<div style="font-size:19px;font-weight:800;margin-bottom:4px">FORGE<span style="color:#FF7A59">DIS</span></div>'
+            '<div style="font-size:11px;color:#6D7799;margin-bottom:24px">Rapport maintenance — ' + now_str + '</div>'
+            '<div style="display:flex;gap:10px;margin-bottom:20px">'
+            '<div style="background:#111934;border-radius:9px;padding:12px;flex:1;text-align:center"><div style="font-size:20px;font-weight:800;color:#f87171">' + str(total_err) + '</div><div style="font-size:10px;color:#6D7799">Erreurs</div></div>'
+            '<div style="background:#111934;border-radius:9px;padding:12px;flex:1;text-align:center"><div style="font-size:20px;font-weight:800;color:#F4A259">' + str(total_warn) + '</div><div style="font-size:10px;color:#6D7799">Warnings</div></div>'
+            '<div style="background:#111934;border-radius:9px;padding:12px;flex:1;text-align:center"><div style="font-size:20px;font-weight:800;color:#2ECC71">' + str(total_ok) + '</div><div style="font-size:10px;color:#6D7799">OK</div></div></div>'
+            + ('<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:9px;padding:14px;margin-bottom:12px"><div style="font-size:11px;font-weight:700;color:#f87171;margin-bottom:8px">ERREURS</div><ul style="padding-left:14px;font-size:12px">' + err_h + '</ul></div>' if errors else "")
+            + ('<div style="background:rgba(244,162,89,.06);border:1px solid rgba(244,162,89,.2);border-radius:9px;padding:14px;margin-bottom:12px"><div style="font-size:11px;font-weight:700;color:#F4A259;margin-bottom:8px">WARNINGS</div><ul style="padding-left:14px;font-size:12px">' + warn_h + '</ul></div>' if warnings else "")
+            + '<div style="background:#111934;border-radius:9px;padding:14px"><div style="font-size:11px;font-weight:700;color:#2ECC71;margin-bottom:8px">PAGES OK</div><ul style="padding-left:14px;font-size:11px;list-style:none">' + ok_h + '</ul></div>'
+            + '<div style="margin-top:20px;font-size:10px;color:#6D7799">Agent maintenance FORGEDIS — automatique.</div></div>'
+        )
+        await envoyer_email(EMAIL_ADMIN, "[FORGEDIS] " + lbl + " — " + now_str, body_h)
+    print("[MAINTENANCE] err=" + str(total_err) + " warn=" + str(total_warn) + " ok=" + str(total_ok))
+    return {"ok": True, "errors": total_err, "warnings": total_warn, "pages_ok": total_ok, "rapport_envoye": send_mail}
+
+
+@app.get("/maintenance/status")
+async def maintenance_status():
+    """Status des agents — visible dans admin.html"""
+    return {
+        "agents": {
+            "onboarding": {
+                "endpoints": ["/onboarding/declencher", "/onboarding/traiter"],
+                "cron": "09h00 UTC quotidien",
+                "forfaits": list(_ONBOARDING_EMAILS.keys()),
+            },
+            "maintenance": {
+                "endpoint": "/maintenance/audit",
+                "cron": "03h00 UTC quotidien",
+                "pages_auditees": 13,
+            },
+        }
+    }
