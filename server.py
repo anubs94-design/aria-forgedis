@@ -6153,3 +6153,48 @@ async def maintenance_status():
             },
         }
     }
+
+@app.post("/admin-create-coupon")
+async def admin_create_coupon(request: Request):
+    """Endpoint temporaire - creer coupon Stripe depuis Render"""
+    import os
+    body = await request.json()
+    secret = body.get("secret")
+    if secret != os.environ.get("ARIA_PROXY_TOKEN", ""):
+        raise HTTPException(status_code=403, detail="Interdit")
+    
+    stripe_key = os.environ.get("STRIPE_SECRET_KEY", "")
+    if not stripe_key:
+        return {"erreur": "STRIPE_SECRET_KEY non definie"}
+    
+    # Creer le coupon 100% off
+    async with httpx.AsyncClient() as client:
+        coupon_r = await client.post(
+            "https://api.stripe.com/v1/coupons",
+            headers={"Authorization": f"Bearer {stripe_key}"},
+            data={
+                "percent_off": "100",
+                "duration": "forever",
+                "name": "Beta Testeur Industrial",
+            }
+        )
+        if coupon_r.status_code != 200:
+            return {"erreur": "coupon: " + coupon_r.text}
+        coupon_id = coupon_r.json()["id"]
+        
+        # Creer le code promo
+        promo_r = await client.post(
+            "https://api.stripe.com/v1/promotion_codes",
+            headers={"Authorization": f"Bearer {stripe_key}"},
+            data={
+                "coupon": coupon_id,
+                "code": body.get("code", "BETA_INDUSTRIAL"),
+                "max_redemptions": str(body.get("max", 1)),
+            }
+        )
+        if promo_r.status_code != 200:
+            return {"erreur": "promo: " + promo_r.text}
+        
+        promo = promo_r.json()
+        return {"ok": True, "coupon_id": coupon_id, "promo_id": promo["id"], "code": promo["code"]}
+
