@@ -6182,7 +6182,11 @@ async def admin_create_coupon(request: Request):
         
         # Creer le code promo
         import urllib.parse as _up
-        promo_data = {"coupon": coupon_id, "code": body.get("code", "BETA_INDUSTRIAL")}
+        promo_data = {
+            "promotion[type]": "coupon",
+            "promotion[coupon]": coupon_id,
+            "code": body.get("code", "BETA_INDUSTRIAL")
+        }
         max_r = body.get("max")
         if max_r:
             promo_data["max_redemptions"] = str(max_r)
