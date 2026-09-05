@@ -6181,14 +6181,18 @@ async def admin_create_coupon(request: Request):
             coupon_id = coupon_r.json()["id"]
         
         # Creer le code promo
+        import urllib.parse as _up
         promo_data = {"coupon": coupon_id, "code": body.get("code", "BETA_INDUSTRIAL")}
         max_r = body.get("max")
         if max_r:
             promo_data["max_redemptions"] = str(max_r)
         promo_r = await client.post(
             "https://api.stripe.com/v1/promotion_codes",
-            headers={"Authorization": f"Bearer {stripe_key}"},
-            data=promo_data
+            headers={
+                "Authorization": f"Bearer {stripe_key}",
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            content=_up.urlencode(promo_data).encode()
         )
         if promo_r.status_code != 200:
             return {"erreur": "promo: " + promo_r.text}
