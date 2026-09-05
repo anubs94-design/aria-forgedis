@@ -6161,7 +6161,7 @@ async def admin_create_coupon(request: Request):
     body = await request.json()
     secret = body.get("secret")
     if secret != os.environ.get("ARIA_PROXY_TOKEN", ""):
-        raise HTTPException(status_code=403, detail="Interdit")
+        return {"erreur": "Interdit", "status": 403}
     
     stripe_key = os.environ.get("STRIPE_SECRET_KEY", "")
     if not stripe_key:
