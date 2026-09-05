@@ -6167,27 +6167,22 @@ async def admin_create_coupon(request: Request):
     if not stripe_key:
         return {"erreur": "STRIPE_SECRET_KEY non definie"}
     
-    # Creer le coupon 100% off
     async with httpx.AsyncClient() as client:
-        coupon_r = await client.post(
-            "https://api.stripe.com/v1/coupons",
-            headers={"Authorization": f"Bearer {stripe_key}"},
-            data={
-                "percent_off": "100",
-                "duration": "forever",
-                "name": "Beta Testeur Industrial",
-            }
-        )
-        if coupon_r.status_code != 200:
-            return {"erreur": "coupon: " + coupon_r.text}
-        coupon_id = coupon_r.json()["id"]
+        # Utiliser coupon existant ou en creer un nouveau
+        coupon_id = body.get("coupon_id_existant")
+        if not coupon_id:
+            coupon_r = await client.post(
+                "https://api.stripe.com/v1/coupons",
+                headers={"Authorization": f"Bearer {stripe_key}"},
+                data={"percent_off": "100", "duration": "forever", "name": "Beta Testeur Industrial"}
+            )
+            if coupon_r.status_code != 200:
+                return {"erreur": "coupon: " + coupon_r.text}
+            coupon_id = coupon_r.json()["id"]
         
         # Creer le code promo
-        promo_data = {
-            "coupon": coupon_id,
-            "code": body.get("code", "BETA_INDUSTRIAL"),
-        }
-        max_r = body.get("max", 1)
+        promo_data = {"coupon": coupon_id, "code": body.get("code", "BETA_INDUSTRIAL")}
+        max_r = body.get("max")
         if max_r:
             promo_data["max_redemptions"] = str(max_r)
         promo_r = await client.post(
@@ -6197,7 +6192,6 @@ async def admin_create_coupon(request: Request):
         )
         if promo_r.status_code != 200:
             return {"erreur": "promo: " + promo_r.text}
-        
         promo = promo_r.json()
         return {"ok": True, "coupon_id": coupon_id, "promo_id": promo["id"], "code": promo["code"]}
 
