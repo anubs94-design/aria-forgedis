@@ -1,0 +1,57 @@
+/* FORGEDIS ART DIRECTION LAYER — Precision × Engineering */
+body{position:relative;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-3;background-image:linear-gradient(to right,var(--line) 1px,transparent 1px),linear-gradient(to bottom,var(--line) 1px,transparent 1px);background-size:96px 96px;opacity:.12;mask-image:linear-gradient(to bottom,#000 0%,transparent 76%)}
+.hero,.page-hero{position:relative;isolation:isolate;overflow:hidden}
+.hero::before,.page-hero::before{content:"";position:absolute;inset:0;z-index:-3;background:radial-gradient(circle at 82% 18%,color-mix(in srgb,var(--action) 13%,transparent),transparent 26%),linear-gradient(116deg,transparent 0 58%,color-mix(in srgb,var(--paper) 70%,transparent) 58% 100%)}
+.hero::after,.page-hero::after{content:"";position:absolute;width:min(900px,72vw);aspect-ratio:1;right:-24vw;top:-34%;border:1px solid var(--line);border-radius:50%;z-index:-2;box-shadow:-120px 110px 0 -119px var(--line),-240px 220px 0 -239px var(--line)}
+html[data-theme='dark'] .hero::before,html[data-theme='dark'] .page-hero::before{background:radial-gradient(circle at 82% 18%,rgba(232,93,50,.13),transparent 27%),linear-gradient(116deg,transparent 0 58%,rgba(255,255,255,.025) 58% 100%)}
+
+/* Home graphic — engineered object, not generic AI glow */
+.architectural{min-height:540px;box-shadow:0 34px 100px rgba(13,17,23,.14);background:linear-gradient(145deg,color-mix(in srgb,var(--paper) 92%,var(--action) 2%),var(--paper))}
+.architectural::before{inset:9% 15% 8% 18%;transform:skewY(-8deg);background:linear-gradient(180deg,transparent 0 73%,color-mix(in srgb,var(--action) 11%,transparent) 73% 100%)}
+.architectural::after{width:67%;height:80%;right:-13%;bottom:-11%;transform:rotate(8deg);background:linear-gradient(145deg,transparent 0 54%,color-mix(in srgb,var(--action) 10%,transparent) 54% 100%)}
+.architectural .arch-line{height:1px;background:var(--line-strong,var(--line));left:8%;bottom:14%;width:76%}
+.architectural .arch-line::before{content:"NEED   →   ANALYSE   →   DECISION   →   ACTION";position:absolute;left:0;bottom:14px;font-size:.61rem;letter-spacing:.13em;color:var(--muted);white-space:nowrap}
+.architectural .arch-line::after{content:"FORGEDIS / 01";position:absolute;right:0;top:-390px;font-size:.62rem;letter-spacing:.18em;color:var(--muted)}
+.architectural .arch-dot{left:56%;bottom:calc(14% - 4px);box-shadow:0 0 0 8px color-mix(in srgb,var(--action) 12%,transparent)}
+.architectural span:last-child::after{content:"ACTION";position:absolute;right:-250px;bottom:-30px;font-family:var(--serif);font-size:9rem;font-weight:400;color:transparent;-webkit-text-stroke:1px var(--line);letter-spacing:-.04em;white-space:nowrap}
+
+/* Public product pages: turn the simple price column into a real art-directed scene */
+.page-hero-grid>div:last-child{min-height:520px;position:relative;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;padding:28px;border:1px solid var(--line);overflow:hidden;box-shadow:0 30px 90px rgba(13,17,23,.12);background:linear-gradient(145deg,color-mix(in srgb,var(--paper) 90%,var(--action) 2%),var(--paper))}
+.page-hero-grid>div:last-child>*{position:relative;z-index:3}
+.page-hero-grid>div:last-child::before{content:"";position:absolute;inset:10% 13% 11% 18%;border:1px solid var(--line);transform:skewY(-7deg);background:linear-gradient(180deg,transparent 0 72%,color-mix(in srgb,var(--action) 10%,transparent) 72% 100%);z-index:1}
+.page-hero-grid>div:last-child::after{content:"";position:absolute;width:66%;height:77%;right:-12%;bottom:-10%;border:1px solid color-mix(in srgb,var(--action) 55%,var(--line));transform:rotate(8deg);background:linear-gradient(145deg,transparent 0 55%,color-mix(in srgb,var(--action) 9%,transparent) 55% 100%);z-index:1}
+.page-hero-grid>div:last-child .tag{background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(9px)}
+.page-hero-grid>div:last-child .price-line,.page-hero-grid>div:last-child .muted{background:color-mix(in srgb,var(--paper) 86%,transparent);margin-right:-2px;padding-left:12px;padding-right:12px;backdrop-filter:blur(9px)}
+.page-hero-grid>div:last-child .price-line{padding-top:9px;margin-bottom:0}
+.page-hero-grid>div:last-child .muted{padding-bottom:9px;margin-top:0;max-width:300px}
+
+/* page signatures — same designer, different context */
+body:has(.nav-links a[aria-current='page'][href='consulting.html']) .page-hero-grid>div:last-child{background:linear-gradient(145deg,color-mix(in srgb,var(--paper) 92%,#8e857a 8%),var(--paper))}
+body:has(.nav-links a[aria-current='page'][href='consulting.html']) .page-hero-grid>div:last-child::before{clip-path:polygon(0 0,69% 0,100% 100%,16% 100%);transform:none}
+body:has(.nav-links a[aria-current='page'][href='consulting.html']) .page-hero-grid>div:last-child>.tag::before{content:"STRATEGY / PRIORITY / DEPLOY";position:absolute;left:0;top:-320px;font-size:.61rem;letter-spacing:.16em;color:var(--muted);white-space:nowrap}
+body:has(.nav-links a[aria-current='page'][href='consulting.html']) .page-hero-grid>div:last-child>.tag::after{content:"CONSULTING";position:absolute;left:0;top:-250px;font-family:var(--serif);font-size:5.8rem;color:transparent;-webkit-text-stroke:1px var(--line);letter-spacing:-.04em}
+
+body:has(.nav-links a[aria-current='page'][href='facility.html']) .page-hero-grid>div:last-child{background:linear-gradient(145deg,color-mix(in srgb,var(--paper) 90%,#aaa493 10%),var(--paper))}
+body:has(.nav-links a[aria-current='page'][href='facility.html']) .page-hero-grid>div:last-child::before{border-radius:46% 46% 10% 10%;transform:none;inset:12% 18% 12%}
+body:has(.nav-links a[aria-current='page'][href='facility.html']) .page-hero-grid>div:last-child>.tag::before{content:"PARLER   →   COMPRENDRE   →   AGIR";position:absolute;left:0;top:-320px;font-size:.61rem;letter-spacing:.16em;color:var(--muted);white-space:nowrap}
+body:has(.nav-links a[aria-current='page'][href='facility.html']) .page-hero-grid>div:last-child>.tag::after{content:"VOICE";position:absolute;left:0;top:-250px;font-family:var(--serif);font-size:6.4rem;color:transparent;-webkit-text-stroke:1px var(--line);letter-spacing:-.04em}
+
+body:has(.nav-links a[aria-current='page'][href='kids.html']) .page-hero-grid>div:last-child{background:linear-gradient(145deg,color-mix(in srgb,var(--paper) 88%,#d7bf8e 12%),var(--paper))}
+body:has(.nav-links a[aria-current='page'][href='kids.html']) .page-hero-grid>div:last-child::before{transform:rotate(-10deg);inset:13% 14% 12% 18%}
+body:has(.nav-links a[aria-current='page'][href='kids.html']) .page-hero-grid>div:last-child::after{transform:rotate(18deg)}
+body:has(.nav-links a[aria-current='page'][href='kids.html']) .page-hero-grid>div:last-child>.tag::before{content:"QUESTION   →   COMPRENDRE   →   APPRENDRE";position:absolute;left:0;top:-320px;font-size:.61rem;letter-spacing:.16em;color:var(--muted);white-space:nowrap}
+body:has(.nav-links a[aria-current='page'][href='kids.html']) .page-hero-grid>div:last-child>.tag::after{content:"LEARN";position:absolute;left:0;top:-250px;font-family:var(--serif);font-size:6.4rem;color:transparent;-webkit-text-stroke:1px var(--line);letter-spacing:-.04em}
+
+body:has(.nav-links a[aria-current='page'][href='industrial.html']) .page-hero-grid>div:last-child{background:linear-gradient(145deg,color-mix(in srgb,var(--paper) 91%,#7d8588 9%),var(--paper))}
+body:has(.nav-links a[aria-current='page'][href='industrial.html']) .page-hero-grid>div:last-child::before{clip-path:polygon(0 18%,68% 0,100% 80%,35% 100%);transform:none}
+body:has(.nav-links a[aria-current='page'][href='industrial.html']) .page-hero-grid>div:last-child>.tag::before{content:"DONNEE   →   DECISION   →   ACTION";position:absolute;left:0;top:-320px;font-size:.61rem;letter-spacing:.16em;color:var(--muted);white-space:nowrap}
+body:has(.nav-links a[aria-current='page'][href='industrial.html']) .page-hero-grid>div:last-child>.tag::after{content:"OPS";position:absolute;left:0;top:-250px;font-family:var(--serif);font-size:7rem;color:transparent;-webkit-text-stroke:1px var(--line);letter-spacing:-.04em}
+
+/* stronger editorial rhythm through the page */
+.section:nth-of-type(even){background:color-mix(in srgb,var(--paper) 36%,transparent)}
+.service{position:relative;overflow:hidden}.service::after{content:"";position:absolute;width:120px;height:120px;border:1px solid var(--line);right:-64px;bottom:-64px;transform:rotate(45deg);transition:.25s}.service:hover::after{border-color:var(--action);right:-50px;bottom:-50px}.product-row:hover{background:linear-gradient(90deg,color-mix(in srgb,var(--action) 10%,transparent),transparent 45%)}
+.quote{position:relative;overflow:hidden}.quote::after{content:"“";position:absolute;right:18px;top:-55px;font-family:var(--serif);font-size:15rem;color:var(--line);pointer-events:none}.quote p{position:relative;z-index:1}.band{position:relative;overflow:hidden}.band::after{content:"";position:absolute;width:480px;height:480px;border:1px solid currentColor;opacity:.1;border-radius:50%;right:-180px;top:-220px}.feature{position:relative}.feature::after{content:"";position:absolute;right:0;top:50%;width:0;height:1px;background:var(--action);transition:.25s}.feature:hover::after{width:16%}
+
+@media(max-width:900px){.page-hero-grid>div:last-child{min-height:430px}.architectural{min-height:430px}.architectural span:last-child::after{font-size:7rem;right:-180px}.page-hero-grid>div:last-child>.tag::after{font-size:5rem!important}}
+@media(max-width:600px){body::before{background-size:64px 64px}.page-hero-grid>div:last-child{min-height:360px;padding:20px}.architectural{min-height:360px}.architectural .arch-line::before{font-size:.52rem;letter-spacing:.08em}.architectural span:last-child::after{font-size:5.2rem;right:-115px}.page-hero-grid>div:last-child>.tag::before{top:-225px!important;font-size:.5rem!important;letter-spacing:.1em!important}.page-hero-grid>div:last-child>.tag::after{top:-185px!important;font-size:4rem!important}.page-hero-grid>div:last-child .muted{max-width:250px}}
