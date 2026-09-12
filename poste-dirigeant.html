@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aria Industrial — Dirigeant</title>
+<style>
+:root{
+  --bg:#14161C;--panel:#1B1E27;--panel2:#22252F;--panel3:#282C38;
+  --line:#2E3240;--line2:#3A3F4E;
+  --ink:#EDEFF3;--ink-dim:#9096A8;--ink-faint:#5E6479;
+  --amber:#E8873A;--amber-dim:#3A2E20;
+  --ok:#4FBF8B;--ok-dim:#1C2E27;
+  --wait:#E0B23C;--wait-dim:#332C1A;
+  --err:#E15B5B;--err-dim:#331E1E;
+  --blue:#4A86E8;--radius:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;min-height:100vh;display:flex;flex-direction:column}
+.app-shell{display:flex;flex:1}
+/* Sidebar */
+.sidebar{width:236px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;position:sticky;top:0;height:100vh}
+.brand{padding:16px;border-bottom:1px solid var(--line)}
+.brand-logo{font-size:16px;font-weight:800;color:var(--amber)}
+.brand-sub{font-size:10.5px;color:var(--ink-dim);margin-top:2px}
+.nav-group-label{padding:8px 14px 4px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-faint)}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 14px;cursor:pointer;color:var(--ink-dim);font-size:12.5px;border:none;background:none;width:100%;text-align:left;transition:background .12s,color .12s}
+.nav-item:hover{background:var(--panel2);color:var(--ink)}
+.nav-item.active{background:var(--amber-dim);color:var(--amber);font-weight:600}
+.nav-item-ico{font-size:13px;width:17px;text-align:center}
+.nav-sep{height:1px;background:var(--line);margin:3px 0}
+/* Topbar */
+.topbar{background:var(--panel);border-bottom:1px solid var(--line);height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0}
+.poste-tag{background:var(--amber-dim);color:var(--amber);border-radius:8px;padding:4px 12px;font-size:12px;font-weight:700}
+.btn-icon{background:none;border:1px solid var(--line);border-radius:8px;color:var(--ink-dim);padding:5px 10px;cursor:pointer;font-size:13px}
+.btn-icon:hover{border-color:var(--amber);color:var(--amber)}
+/* Main */
+.main-content{flex:1;padding:22px;overflow-y:auto;max-width:1080px}
+.view{display:none}
+.view.active{display:block}
+.view-head{margin-bottom:18px}
+.view-head h1{font-size:20px;font-weight:700;margin-bottom:4px}
+.view-head p{color:var(--ink-dim);font-size:13px}
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.stat-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:13px;text-align:center}
+.stat-val{font-size:22px;font-weight:800;color:var(--amber);margin-bottom:3px}
+.stat-val.ok{color:var(--ok)}.stat-val.warn{color:var(--wait)}.stat-val.err{color:var(--err)}
+.stat-lbl{font-size:10px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.04em}
+/* Cards */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap}
+.section-head h2{font-size:14px;font-weight:700}
+/* Rows */
+.row-item{background:var(--panel2);border-radius:10px;padding:11px 13px;margin-bottom:7px;display:flex;align-items:flex-start;gap:11px}
+.ri-main{flex:1;min-width:0}
+.ri-title{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:3px}
+.ri-sub{font-size:11.5px;color:var(--ink-dim)}
+.ri-actions{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;align-items:flex-start}
+.ri-amount{font-family:monospace;font-size:14px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.ri-amount.ok{color:var(--ok)}.ri-amount.err{color:var(--err)}.ri-amount.warn{color:var(--wait)}
+/* Badges */
+.badge{display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;white-space:nowrap}
+.badge-ok{background:rgba(79,191,139,.15);color:var(--ok)}
+.badge-warn{background:rgba(224,178,60,.15);color:var(--wait)}
+.badge-err{background:rgba(225,91,91,.15);color:var(--err)}
+.badge-amber{background:var(--amber-dim);color:var(--amber)}
+.badge-blue{background:rgba(74,134,232,.15);color:var(--blue)}
+.badge-grey{background:var(--panel2);color:var(--ink-dim);border:1px solid var(--line)}
+/* Buttons */
+.btn-act{border:none;border-radius:8px;padding:7px 13px;cursor:pointer;font-size:12.5px;font-weight:600;transition:opacity .15s;white-space:nowrap;font-family:inherit}
+.btn-act:hover{opacity:.85}
+.btn-amber{background:var(--amber);color:#fff}
+.btn-ok{background:var(--ok);color:#fff}
+.btn-err{background:var(--err);color:#fff}
+.btn-ghost{background:transparent;border:1px solid var(--line2);color:var(--ink-dim)}
+.btn-sm{padding:4px 10px;font-size:11.5px}
+/* Form */
+.input-field{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-size:13px;padding:8px 12px;outline:none;transition:border-color .15s;font-family:inherit}
+.input-field:focus{border-color:var(--amber)}
+.input-field option{background:var(--panel)}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:11px;margin-bottom:13px}
+.form-group label{display:block;font-size:10.5px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+/* Modales */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-box{background:var(--panel);border-radius:16px;padding:24px;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;border:1px solid var(--line)}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-head h3{font-size:17px;font-weight:700}
+.modal-close{background:none;border:none;font-size:20px;color:var(--ink-dim);cursor:pointer}
+/* Modale Aria */
+.aria-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .18s}
+.aria-modal-overlay.open{opacity:1;pointer-events:all}
+.aria-modal{background:var(--panel2);border:1px solid var(--line2);border-radius:var(--radius);padding:26px;width:min(420px,90vw);box-shadow:0 20px 60px rgba(0,0,0,.5);transform:translateY(8px);transition:transform .18s}
+.aria-modal-overlay.open .aria-modal{transform:translateY(0)}
+.aria-modal-ico{font-size:24px;text-align:center;margin-bottom:10px}
+.aria-modal-title{font-size:15px;font-weight:700;color:var(--ink);text-align:center;margin-bottom:5px}
+.aria-modal-msg{font-size:12.5px;color:var(--ink-dim);text-align:center;margin-bottom:14px;line-height:1.5}
+.aria-modal-input{width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-size:14px;padding:9px 13px;outline:none;transition:border-color .15s;box-sizing:border-box;margin-bottom:14px;font-family:inherit}
+.aria-modal-input:focus{border-color:var(--amber)}
+.aria-modal-actions{display:flex;gap:10px;justify-content:flex-end}
+.aria-modal-cancel{background:transparent;border:1px solid var(--line2);color:var(--ink-dim);border-radius:8px;padding:7px 16px;cursor:pointer;font-size:13px;font-family:inherit}
+.aria-modal-confirm{border:none;border-radius:8px;padding:7px 16px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit}
+.aria-modal-confirm.danger{background:var(--err);color:#fff}
+.aria-modal-confirm.primary{background:var(--amber);color:#fff}
+/* Misc */
+.aria-zone{background:var(--panel3);border-radius:10px;padding:14px;font-size:13px;line-height:1.7;color:var(--ink-dim);white-space:pre-wrap;min-height:48px}
+.empty-state{text-align:center;padding:36px 20px;color:var(--ink-dim)}
+.es-ic{font-size:30px;margin-bottom:8px}
+.alert-item{border-left:3px solid var(--wait);background:var(--wait-dim);border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:8px}
+.alert-item.crit{border-color:var(--err)!important;background:var(--err-dim)!important}
+.alert-item.ok-item{border-color:var(--ok)!important;background:var(--ok-dim)!important}
+.alert-title{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px}
+.alert-desc{font-size:11.5px;color:var(--ink-dim)}
+.checklist-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.checklist-item:last-child{border-bottom:none}
+.check-box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--line2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;transition:background .15s}
+.check-box.done{background:var(--ok);border-color:var(--ok);color:#fff}
+.check-label{font-size:13px;color:var(--ink)}
+.check-label.done{text-decoration:line-through;color:var(--ink-faint)}
+.table-wrap{overflow-x:auto}
+table.dt{width:100%;border-collapse:collapse;font-size:12.5px}
+table.dt th{background:var(--panel2);color:var(--ink-dim);font-size:10px;font-weight:700;text-transform:uppercase;padding:8px 11px;text-align:left;border-bottom:1px solid var(--line)}
+table.dt td{padding:9px 11px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:middle}
+table.dt tr:last-child td{border-bottom:none}
+@media(max-width:768px){.sidebar{display:none}.main-content{padding:14px}.stats-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<!-- Modale Aria -->
+<div class="aria-modal-overlay" id="aria-modal-overlay" onclick="if(event.target===this)_ariaModalCancel()">
+  <div class="aria-modal">
+    <div class="aria-modal-ico" id="aria-modal-ico">❓</div>
+    <div class="aria-modal-title" id="aria-modal-title"></div>
+    <div class="aria-modal-msg" id="aria-modal-msg"></div>
+    <input class="aria-modal-input" id="aria-modal-input" type="text" style="display:none">
+    <div class="aria-modal-actions">
+      <button class="aria-modal-cancel" onclick="_ariaModalCancel()">Annuler</button>
+      <button class="aria-modal-confirm primary" id="aria-modal-confirm" onclick="_ariaModalConfirm()">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Topbar -->
+<div class="topbar" id="topbar">
+  <div style="display:flex;align-items:center;gap:12px">
+    <button class="btn-icon" onclick="toggleSidebar()">☰</button>
+    <span style="font-size:14px;font-weight:700">Aria Industrial</span>
+    <select id="lang-sel" style="display:none;background:var(--panel2);color:var(--ink-dim);border:1px solid var(--line);border-radius:8px;padding:3px 6px;font-size:11px;cursor:pointer;outline:none" onchange="AriaI18n&&AriaI18n.set(this.value)"></select>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span class="poste-tag" id="poste-tag">👑 Dirigeant</span>
+    <button class="btn-icon" onclick="deconnexion()" data-i18n="ind_deconnexion">Déconnexion</button>
+  </div>
+</div>
+
+<div class="app-shell">
+<!-- Sidebar -->
+<div class="sidebar" id="app-sidebar">
+  <div class="brand"><div class="brand-logo">Aria</div><div class="brand-sub" data-i18n="ind_brand_sub">Poste Dirigeant</div></div>
+
+  <div class="nav-group-label" data-i18n="ind_nav_vue_ensemble">Vue d'ensemble</div>
+  <button class="nav-item active" data-view="v-global" onclick="goToView('v-global',this)"><span class="nav-item-ico">🧭</span><span data-i18n="ind_tableau_bord">Tableau de bord</span></button>
+
+  <div class="nav-sep"></div>
+  <div class="nav-group-label">Équipe</div>
+  <button class="nav-item" data-view="v-salaries" onclick="goToView('v-salaries',this)"><span class="nav-item-ico">👥</span><span data-i18n="ind_salaries">Salariés</span></button>
+  <button class="nav-item" data-view="v-presences" onclick="goToView('v-presences',this)"><span class="nav-item-ico">⏱️</span><span data-i18n="ind_presences">Présences</span></button>
+  <button class="nav-item" data-view="v-absences" onclick="goToView('v-absences',this)"><span class="nav-item-ico">🏖️</span><span data-i18n="ind_absences">Absences</span></button>
+  <button class="nav-item" data-view="v-equipes" onclick="goToView('v-equipes',this)"><span class="nav-item-ico">🗂️</span><span data-i18n="ind_equipes">Équipes &amp; organigramme</span></button>
+  <button class="nav-item" data-view="v-permissions" onclick="goToView('v-permissions',this)"><span class="nav-item-ico">🔑</span><span data-i18n="ind_permissions">Permissions salariés</span></button>
+
+  <div class="nav-sep"></div>
+  <div class="nav-group-label" data-i18n="ind_nav_pilotage">Pilotage financier</div>
+  <button class="nav-item" data-view="v-facturation" onclick="goToView('v-facturation',this)"><span class="nav-item-ico">🧾</span><span data-i18n="ind_facturation">Facturation</span></button>
+  <button class="nav-item" data-view="v-tresorerie" onclick="goToView('v-tresorerie',this)"><span class="nav-item-ico">💧</span><span data-i18n="ind_tresorerie">Trésorerie</span></button>
+  <button class="nav-item" data-view="v-bc" onclick="goToView('v-bc',this)"><span class="nav-item-ico">📦</span><span data-i18n="ind_bc">Bons de commande</span></button>
+
+  <div class="nav-sep"></div>
+  <div class="nav-group-label" data-i18n="ind_nav_operations">Opérations</div>
+  <button class="nav-item" data-view="v-taches" onclick="goToView('v-taches',this)"><span class="nav-item-ico">✅</span><span data-i18n="ind_taches">Tâches entreprise</span></button>
+  <button class="nav-item" data-view="v-tickets" onclick="goToView('v-tickets',this)"><span class="nav-item-ico">🎧</span><span data-i18n="ind_tickets">Service client</span></button>
+  <button class="nav-item" data-view="v-stock" onclick="goToView('v-stock',this)"><span class="nav-item-ico">📦</span><span data-i18n="ind_stock">Stock</span></button>
+
+  <div class="nav-sep"></div>
+  <div class="nav-group-label" data-i18n="ind_nav_ia">IA &amp; Pilotage</div>
+  <button class="nav-item" data-view="v-consulting" onclick="goToView('v-consulting',this)"><span class="nav-item-ico">🧠</span><span data-i18n="ind_consulting">Consulting Aria</span></button>
+  <button class="nav-item" data-view="v-reunions" onclick="goToView('v-reunions',this)"><span class="nav-item-ico">📽️</span><span data-i18n="ind_reunions">Réunions &amp; CR</span></button>
+  <button class="nav-item" data-view="v-briefing" onclick="goToView('v-briefing',this)"><span class="nav-item-ico">☀️</span><span data-i18n="ind_briefing">Briefing matinal</span></button>
+
+  <div class="nav-sep"></div>
+  <div class="nav-group-label" data-i18n="ind_nav_config">Configuration</div>
+  <button class="nav-item" data-view="v-config" onclick="goToView('v-config',this)"><span class="nav-item-ico">⚙️</span><span data-i18n="ind_config">Entreprise &amp; config</span></button>
+  <button class="nav-item" data-view="v-securite" onclick="goToView('v-securite',this)"><span class="nav-item-ico">🔐</span><span data-i18n="ind_securite">Sécurité &amp; accès</span></button>
+
+  <div class="nav-sep"></div>
+  <div class="nav-group-label" data-i18n="ind_nav_mon_espace">Mon espace</div>
+  <button class="nav-item" data-view="v-pointage" onclick="goToView('v-pointage',this)"><span class="nav-item-ico">🕐</span><span data-i18n="ind_pointage">Pointage</span></button>
+  <button class="nav-item" data-view="v-mes-conges" onclick="goToView('v-mes-conges',this)"><span class="nav-item-ico">🏖️</span><span data-i18n="ind_mes_conges">Mes congés</span></button>
+  <button class="nav-item" data-view="v-droits" onclick="goToView('v-droits',this)"><span class="nav-item-ico">⚖️</span><span data-i18n="ind_droits">Mes droits</span></button>
+  <button class="nav-item" data-view="v-qcm" onclick="goToView('v-qcm',this)"><span class="nav-item-ico">🎓</span><span data-i18n="ind_formation">Formation</span></button>
+  <button class="nav-item" data-view="v-journal" onclick="goToView('v-journal',this)"><span class="nav-item-ico">📜</span><span data-i18n="ind_journal">Journal</span></button>
+<button class="nav-item" data-view="v-clients" onclick="goToView('v-clients',this)"><span class="nav-icon">&#128101;</span>Clients</button>
+</div>
+
+<!-- Contenu principal -->
+<div class="main-content" id="app-content">
+
+<!-- ══ DASHBOARD GLOBAL ══ -->
+<div class="view active" id="v-global">
+  <div class="view-head"><h1>Tableau de bord</h1><p id="dg-nom-entreprise">Chargement...</p></div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val" id="dg-stat-salaries">—</div><div class="stat-lbl">Salariés actifs</div></div>
+    <div class="stat-card"><div class="stat-val ok" id="dg-stat-presences">—</div><div class="stat-lbl">Présents aujourd'hui</div></div>
+    <div class="stat-card"><div class="stat-val warn" id="dg-stat-absences">—</div><div class="stat-lbl">Absences en attente</div></div>
+    <div class="stat-card"><div class="stat-val warn" id="dg-stat-taches">—</div><div class="stat-lbl">Tâches ouvertes</div></div>
+    <div class="stat-card"><div class="stat-val" id="dg-stat-tickets">—</div><div class="stat-lbl">Tickets ouverts</div></div>
+    <div class="stat-card"><div class="stat-val warn" id="dg-stat-bc">—</div><div class="stat-lbl">BC à approuver</div></div>
+    <div class="stat-card"><div class="stat-val warn" id="dg-stat-factures-retard">—</div><div class="stat-lbl">Factures en retard</div></div>
+    <div class="stat-card"><div class="stat-val" id="dg-stat-solde">—</div><div class="stat-lbl">Solde estimé (€)</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>⚠️ Alertes prioritaires</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerDashDG()">↺</button></div>
+    <div id="dg-alertes"><div class="empty-state"><div class="es-ic">✅</div>Aucune alerte.</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="card">
+      <div class="section-head"><h2>🏖️ Absences à approuver</h2></div>
+      <div id="dg-absences-attente"><div class="empty-state"><div class="es-ic">📭</div>Aucune demande.</div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>📦 BC à approuver</h2></div>
+      <div id="dg-bc-attente"><div class="empty-state"><div class="es-ic">📭</div>Aucun BC.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SALARIÉS ══ -->
+<div class="view" id="v-salaries">
+  <div class="view-head"><h1>Salariés</h1><p data-i18n="ind_vh_salaries">Gérez les comptes, rôles et accès de votre équipe.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Équipe</h2><button class="btn-act btn-amber" onclick="ouvrirModal('modal-creer-sal')">+ Nouveau salarié</button></div>
+    <input type="text" id="dg-search-sal" placeholder="Rechercher nom, poste..." class="input-field" style="margin-bottom:12px" oninput="filtrerSalariesDG(this.value)">
+    <div id="dg-liste-salaries"><div class="empty-state"><div class="es-ic">👥</div>Aucun salarié.</div></div>
+  </div>
+</div>
+
+<!-- ══ PRÉSENCES ══ -->
+<div class="view" id="v-presences">
+  <div class="view-head"><h1>Présences</h1><p data-i18n="ind_vh_presences">Pointages de l'équipe en temps réel.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Aujourd'hui</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerPresences()">↺</button></div>
+    <div id="dg-pointages"><div class="empty-state"><div class="es-ic">⏱️</div>Aucun pointage.</div></div>
+  </div>
+</div>
+
+<!-- ══ ABSENCES ══ -->
+<div class="view" id="v-absences">
+  <div class="view-head"><h1>Absences</h1><p data-i18n="ind_vh_absences">Approuvez ou refusez les demandes.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>En attente</h2></div>
+    <div id="dg-abs-attente2"><div class="empty-state"><div class="es-ic">📭</div>Aucune demande.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Historique</h2></div>
+    <div id="dg-abs-historique"><div class="empty-state"><div class="es-ic">📂</div>Aucun historique.</div></div>
+  </div>
+</div>
+
+<!-- ══ ÉQUIPES & ORGANIGRAMME ══ -->
+<div class="view" id="v-equipes">
+  <div class="view-head"><h1>Équipes &amp; Organigramme</h1><p data-i18n="ind_vh_equipes">Répartition de l'équipe par poste et responsable.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Répartition par poste</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerEquipesDG()">↺</button></div>
+    <div id="dg-equipes-liste"><div class="empty-state"><div class="es-ic">🗂️</div>Chargement...</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>🧠 Analyse organisationnelle</h2></div>
+    <button class="btn-act btn-amber" onclick="analyseOrgDG()">🧠 Demander à Aria</button>
+    <div class="aria-zone" id="org-analyse" style="margin-top:12px;display:none"></div>
+  </div>
+</div>
+
+<!-- ══ PERMISSIONS ══ -->
+<div class="view" id="v-permissions">
+  <div class="view-head"><h1>Permissions salariés</h1><p data-i18n="ind_vh_permissions">Gérez les rôles et accès individuels.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Salariés &amp; rôles</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerPermissionsDG()">↺</button></div>
+    <div id="dg-permissions-liste"><div class="empty-state"><div class="es-ic">🔑</div>Chargement...</div></div>
+  </div>
+</div>
+
+<!-- ══ FACTURATION ══ -->
+<div class="view" id="v-facturation">
+  <div class="view-head"><h1>Facturation</h1><p data-i18n="ind_vh_facturation">Vue globale des factures clients et fournisseurs.</p></div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val ok" id="dg-fc-encaisse">—</div><div class="stat-lbl">Encaissé (€)</div></div>
+    <div class="stat-card"><div class="stat-val warn" id="dg-fc-attente">—</div><div class="stat-lbl">À encaisser (€)</div></div>
+    <div class="stat-card"><div class="stat-val err" id="dg-fc-retard">—</div><div class="stat-lbl">En retard (€)</div></div>
+    <div class="stat-card"><div class="stat-val err" id="dg-ff-payer">—</div><div class="stat-lbl">À payer fourn. (€)</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Factures clients</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerFacturationDG()">↺</button></div>
+    <div id="dg-factures-client"><div class="empty-state"><div class="es-ic">📄</div>Aucune facture.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Factures fournisseurs</h2></div>
+    <div id="dg-factures-fourn"><div class="empty-state"><div class="es-ic">📄</div>Aucune facture.</div></div>
+  </div>
+</div>
+
+<!-- ══ TRÉSORERIE ══ -->
+<div class="view" id="v-tresorerie">
+  <div class="view-head"><h1>Trésorerie</h1><p data-i18n="ind_vh_tresorerie">Vue consolidée des flux financiers.</p></div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val ok" id="dg-treso-entrees">—</div><div class="stat-lbl">Entrées (€)</div></div>
+    <div class="stat-card"><div class="stat-val err" id="dg-treso-sorties">—</div><div class="stat-lbl">Sorties (€)</div></div>
+    <div class="stat-card"><div class="stat-val" id="dg-treso-solde">—</div><div class="stat-lbl">Solde estimé (€)</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Analyse Aria</h2><button class="btn-act btn-ghost btn-sm" onclick="calculerTresoDG()">↺ Calculer</button></div>
+    <textarea id="dg-treso-question" class="input-field" rows="2" placeholder="Ex : Quelles factures arrivent à échéance cette semaine ?" style="margin-bottom:10px"></textarea>
+    <button class="btn-act btn-amber" onclick="analyseTresoDG()">🧠 Analyser</button>
+    <div class="aria-zone" id="dg-treso-reponse" style="margin-top:12px;display:none"></div>
+  </div>
+</div>
+
+<!-- ══ BONS DE COMMANDE ══ -->
+<div class="view" id="v-bc">
+  <div class="view-head"><h1>Bons de commande</h1><p data-i18n="ind_vh_bc">Approuvez ou refusez les bons de commande en attente.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>En attente d'approbation</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerBCDG()">↺</button></div>
+    <div id="dg-bc-liste"><div class="empty-state"><div class="es-ic">📦</div>Aucun BC en attente.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Historique</h2></div>
+    <div id="dg-bc-historique"><div class="empty-state"><div class="es-ic">📂</div>Aucun historique.</div></div>
+  </div>
+</div>
+
+<!-- ══ TÂCHES ══ -->
+<div class="view" id="v-taches">
+  <div class="view-head"><h1>Tâches entreprise</h1><p data-i18n="ind_vh_taches">Toutes les tâches, tous les postes.</p></div>
+  <div class="card">
+    <div class="section-head">
+      <h2>Tâches</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select id="dg-tache-filtre" class="input-field" style="width:140px" onchange="filtrerTachesDG(this.value)">
+          <option value="">Tous statuts</option>
+          <option value="a_faire">À faire</option>
+          <option value="en_cours">En cours</option>
+          <option value="termine">Terminées</option>
+        </select>
+        <button class="btn-act btn-amber" onclick="ouvrirModal('modal-tache-dg')">+ Nouvelle tâche</button>
+      </div>
+    </div>
+    <div id="dg-liste-taches"><div class="empty-state"><div class="es-ic">📋</div>Aucune tâche.</div></div>
+  </div>
+</div>
+
+<!-- ══ SERVICE CLIENT ══ -->
+<div class="view" id="v-tickets">
+  <div class="view-head"><h1>Service client</h1><p data-i18n="ind_vh_tickets">Vue globale des tickets de l'entreprise.</p></div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val warn" id="dg-tickets-ouverts">—</div><div class="stat-lbl">Tickets ouverts</div></div>
+    <div class="stat-card"><div class="stat-val" id="dg-tickets-cours">—</div><div class="stat-lbl">En cours</div></div>
+    <div class="stat-card"><div class="stat-val ok" id="dg-tickets-resolus">—</div><div class="stat-lbl">Résolus</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Tickets</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerTicketsDG()">↺</button></div>
+    <div id="dg-liste-tickets"><div class="empty-state"><div class="es-ic">🎧</div>Aucun ticket.</div></div>
+  </div>
+</div>
+
+<!-- ══ STOCK ══ -->
+<div class="view" id="v-stock">
+  <div class="view-head"><h1>Stock</h1><p data-i18n="ind_vh_stock">Vue consolidée des niveaux de stock.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Articles</h2></div>
+    <input type="text" id="dg-search-stock" placeholder="Rechercher..." class="input-field" style="margin-bottom:12px" oninput="filtrerStockDG(this.value)">
+    <div id="dg-liste-stock"><div class="empty-state"><div class="es-ic">📦</div>Aucun article.</div></div>
+  </div>
+</div>
+
+<!-- ══ CONSULTING ARIA ══ -->
+<div class="view" id="v-consulting">
+  <div class="view-head"><h1>Consulting Aria</h1><p data-i18n="ind_vh_consulting">Questions stratégiques, analyse d'entreprise, recommandations.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Synthèse terrain → Stratégie</h2></div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Aria consolide les données réelles de tous vos postes et génère une analyse stratégique.</p>
+    <button class="btn-act btn-amber" onclick="syntheseTerrainStrategie()" id="btn-synthese-terrain">Synthèse stratégique</button>
+    <div class="aria-zone" id="dg-synthese-terrain" style="margin-top:12px;display:none"></div>
+  </div><div class="card"><div class="section-head"><h2>Analyse rapide</h2></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn-act btn-ghost btn-sm" onclick="ariaRapideDG('performance')">📊 Performance équipe</button>
+      <button class="btn-act btn-ghost btn-sm" onclick="ariaRapideDG('tresorerie')">💧 Situation tréso</button>
+      <button class="btn-act btn-ghost btn-sm" onclick="ariaRapideDG('risques')">⚠️ Risques du mois</button>
+      <button class="btn-act btn-ghost btn-sm" onclick="ariaRapideDG('priorites')">🎯 Mes priorités</button>
+      <button class="btn-act btn-ghost btn-sm" onclick="ariaRapideDG('clients')">🎧 Satisfaction client</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="form-group" style="margin-bottom:10px"><label>Question libre</label>
+      <textarea id="dg-aria-question" class="input-field" rows="3" placeholder="Ex : Quelle est la rentabilité par poste ce trimestre ? Comment réduire l'absentéisme ?"></textarea>
+    </div>
+    <button class="btn-act btn-amber" onclick="demanderAriaDG()">🧠 Demander à Aria</button>
+    <div class="aria-zone" id="dg-aria-reponse" style="margin-top:12px;display:none"></div>
+  </div>
+</div>
+
+<!-- ══ RÉUNIONS & CR ══ -->
+<div class="view" id="v-reunions">
+  <div class="view-head"><h1>Réunions &amp; Compte-rendus</h1><p data-i18n="ind_vh_reunions">Préparez vos réunions et générez des comptes-rendus avec Aria.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Préparer une réunion</h2></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Type de réunion</label>
+        <select id="reunion-type" class="input-field">
+          <option value="comex">COMEX mensuel</option>
+          <option value="codir">CODIR</option>
+          <option value="equipe">Réunion d'équipe</option>
+          <option value="client">Réunion client</option>
+          <option value="bilan">Bilan trimestriel</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Date</label><input type="date" id="reunion-date" class="input-field"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Participants</label><input type="text" id="reunion-participants" class="input-field" placeholder="DG, RH, Comptabilité, Achats..."></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Points à l'ordre du jour</label>
+        <textarea id="reunion-odj" class="input-field" rows="3" placeholder="1. Bilan activité&#10;2. Points RH&#10;3. Trésorerie&#10;4. Projets en cours"></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-act btn-amber" onclick="preparerReunionDG()">🧠 Préparer avec Aria</button>
+      <button class="btn-act btn-ghost" onclick="genererCRDG()">📄 Générer un CR vide</button>
+    </div>
+    <div class="aria-zone" id="reunion-resultat" style="margin-top:12px;display:none"></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Saisir un compte-rendu</h2></div>
+    <textarea id="cr-contenu" class="input-field" rows="4" placeholder="Collez ou saisissez les notes de réunion — Aria les reformatera en CR structuré..."></textarea>
+    <button class="btn-act btn-amber btn-sm" style="margin-top:8px" onclick="reformaterCRDG()">🧠 Reformater en CR</button>
+    <div class="aria-zone" id="cr-reformate" style="margin-top:10px;display:none"></div>
+  </div>
+</div>
+
+<!-- ══ BRIEFING MATINAL ══ -->
+<div class="view" id="v-briefing">
+  <div class="view-head"><h1>Briefing matinal</h1><p data-i18n="ind_vh_briefing">Synthèse de la situation de l'entreprise générée par Aria.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Briefing du jour</h2><button class="btn-act btn-amber" onclick="genererBriefingDG()">🧠 Générer</button></div>
+    <div class="aria-zone" id="briefing-contenu" style="min-height:100px">Cliquez sur Générer pour obtenir votre briefing matinal.</div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>📋 Checklist matinale</h2></div>
+    <div id="briefing-checklist">
+      <div class="checklist-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-label">Vérifier les absences en attente</div></div>
+      <div class="checklist-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-label">Consulter les BC en attente d'approbation</div></div>
+      <div class="checklist-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-label">Vérifier les alertes trésorerie</div></div>
+      <div class="checklist-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-label">Lire les tickets urgents service client</div></div>
+      <div class="checklist-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-label">Passer en revue les tâches de l'équipe</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CONFIGURATION ══ -->
+<div class="view" id="v-config">
+  <div class="view-head"><h1>Configuration</h1><p data-i18n="ind_vh_config">Paramètres de l'entreprise et de l'interface.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Informations entreprise</h2></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Nom de l'entreprise</label><input type="text" id="cfg-nom" class="input-field" placeholder="ACME SAS"></div>
+      <div class="form-group"><label>SIRET</label><input type="text" id="cfg-siret" class="input-field" placeholder="123 456 789 00010"></div>
+      <div class="form-group"><label>Secteur d'activité</label><input type="text" id="cfg-secteur" class="input-field" placeholder="BTP, Commerce..."></div>
+      <div class="form-group"><label>Email contact</label><input type="email" id="cfg-email" class="input-field"></div>
+    </div>
+    <button class="btn-act btn-amber" onclick="sauvegarderConfigDG()">💾 Enregistrer</button>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Modules actifs</h2></div>
+    <div id="cfg-modules">
+      <div class="row-item"><div class="ri-main"><div class="ri-title">🧾 Comptabilité</div></div><span class="badge badge-ok">Actif</span></div>
+      <div class="row-item"><div class="ri-main"><div class="ri-title">👥 RH</div></div><span class="badge badge-ok">Actif</span></div>
+      <div class="row-item"><div class="ri-main"><div class="ri-title">📦 Achats</div></div><span class="badge badge-ok">Actif</span></div>
+      <div class="row-item"><div class="ri-main"><div class="ri-title">🎧 Service client</div></div><span class="badge badge-ok">Actif</span></div>
+      <div class="row-item"><div class="ri-main"><div class="ri-title">🏭 Logistique</div></div><span class="badge badge-ok">Actif</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SÉCURITÉ ══ -->
+<div class="view" id="v-securite">
+  <div class="view-head"><h1>Sécurité &amp; Accès</h1><p data-i18n="ind_vh_securite">Historique des connexions, activité anormale, gestion des tokens.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Activité récente</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerSecuriteDG()">↺</button></div>
+    <div id="dg-securite-activite"><div class="empty-state"><div class="es-ic">🔐</div>Chargement...</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>🧠 Analyse sécurité</h2></div>
+    <button class="btn-act btn-amber" onclick="analyseSecuriteDG()">🧠 Analyser avec Aria</button>
+    <div class="aria-zone" id="securite-analyse" style="margin-top:12px;display:none"></div>
+  </div>
+</div>
+
+<!-- ══ POINTAGE PERSO ══ -->
+<div class="view" id="v-pointage">
+  <div class="view-head"><h1>Mon pointage</h1></div>
+  <div class="card">
+    <div class="section-head"><h2 id="dg-heure-actuelle">--:--</h2></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="btn-act btn-ok" onclick="pointerWeb('arrivee')">✅ Arrivée</button>
+      <button class="btn-act btn-ghost" onclick="pointerWeb('pause_debut')">⏸ Début pause</button>
+      <button class="btn-act btn-ghost" onclick="pointerWeb('pause_fin')">▶️ Fin pause</button>
+      <button class="btn-act btn-err" onclick="pointerWeb('depart')">🚪 Départ</button>
+    </div>
+    <div id="pointage-msg" style="font-size:13px;color:var(--ok)"></div>
+  </div>
+</div>
+
+<!-- ══ MES CONGÉS ══ -->
+<div class="view" id="v-mes-conges">
+  <div class="view-head"><h1>Mes congés</h1></div>
+  <div class="card">
+    <div class="section-head"><h2>Nouvelle demande</h2></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Type</label>
+        <select id="dg-cg-type" class="input-field">
+          <option value="conges_payes">Congés payés</option>
+          <option value="sans_solde">Sans solde</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Début</label><input type="date" id="dg-cg-debut" class="input-field"></div>
+      <div class="form-group"><label>Fin</label><input type="date" id="dg-cg-fin" class="input-field"></div>
+    </div>
+    <button class="btn-act btn-amber" onclick="soumettreCongesDG()">Envoyer</button>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Mes demandes</h2></div>
+    <div id="dg-mes-absences"><div class="empty-state"><div class="es-ic">🏖️</div>Aucune demande.</div></div>
+  </div>
+</div>
+
+<!-- ══ MES DROITS ══ -->
+<div class="view" id="v-droits">
+  <div class="view-head"><h1>Mes droits &amp; devoirs</h1></div>
+  <div class="card">
+    <textarea id="dg-droits-q" class="input-field" rows="2" placeholder="Ex : Quelles sont mes obligations légales en tant que dirigeant ? Responsabilité civile ?"></textarea>
+    <button class="btn-act btn-amber btn-sm" style="margin-top:8px" onclick="demanderDroitsDG()">⚖️ Demander à Aria</button>
+    <div class="aria-zone" id="dg-droits-rep" style="margin-top:10px;display:none"></div>
+  </div>
+</div>
+
+<!-- ══ FORMATION QCM ══ -->
+<div class="view" id="v-qcm">
+  <div class="view-head"><h1>Formation</h1><p data-i18n="ind_vh_formation">Questions management et droit des affaires.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>QCM dirigeant</h2><button class="btn-act btn-amber" onclick="lancerQCMDG()">▶ Démarrer</button></div>
+    <div id="qcm-zone-dg"><div class="empty-state"><div class="es-ic">🎓</div>Cliquez sur Démarrer.</div></div>
+  </div>
+</div>
+
+<!-- ══ JOURNAL ══ -->
+
+<!-- CLIENTS -->
+<div class="view" id="v-clients">
+  <div class="view-head"><h1>Base clients</h1><p>Referencez vos clients et creez des taches directement depuis leur fiche.</p></div>
+  <div class="card" id="clients-liste-panel">
+    <div class="section-head"><h2>Clients</h2>
+      <button class="btn-act btn-amber btn-sm" onclick="afficherFormulaireClient()">+ Nouveau client</button>
+    </div>
+    <input type="text" class="input-field" placeholder="Rechercher un client..." oninput="rechercherClients(this.value)" style="margin-bottom:10px">
+    <div id="clients-liste"><div style="color:var(--muted);font-size:13px">Chargement...</div></div>
+  </div>
+  <div class="card" id="client-fiche-panel" style="display:none">
+    <div style="margin-bottom:10px">
+      <button class="btn-act btn-ghost btn-sm" onclick="fermerFicheClient()">&larr; Retour</button>
+    </div>
+    <div id="client-fiche-contenu"></div>
+  </div>
+  <div class="card" id="client-form-panel" style="display:none">
+    <div class="section-head"><h2>Nouveau client</h2></div>
+    <div id="client-form-contenu"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn-act btn-amber" onclick="sauvegarderClient()">Enregistrer</button>
+      <button class="btn-act btn-ghost" onclick="annulerFormClient()">Annuler</button>
+    </div>
+  </div>
+</div>
+<div class="view" id="v-journal">
+  <div class="view-head"><h1>Journal d'activité</h1></div>
+  <div class="card">
+    <div id="journal-empty" class="empty-state"><div class="es-ic">📜</div>Journal vide.</div>
+    <div id="journal-list"></div>
+  </div>
+</div>
+
+</div><!-- fin main-content -->
+</div><!-- fin app-shell -->
+
+<!-- ══ MODALES ══ -->
+<div class="modal-overlay" id="modal-creer-sal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Nouveau salarié</h3><button class="modal-close" onclick="fermerModal('modal-creer-sal')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Nom complet *</label><input type="text" id="ns-nom" class="input-field"></div>
+      <div class="form-group"><label>Email entreprise *</label><input type="email" id="ns-email" class="input-field"></div>
+      <div class="form-group"><label>Mot de passe *</label><input type="text" id="ns-mdp" class="input-field" placeholder="Mot de passe initial"></div>
+      <div class="form-group"><label>Poste *</label>
+        <select id="ns-poste" class="input-field">
+          <option value="rh">RH</option><option value="comptabilite">Comptabilité</option>
+          <option value="achats">Achats</option><option value="service-client">Service client</option>
+          <option value="logistique">Logistique</option><option value="technicien-sav">Technicien SAV</option>
+          <option value="dirigeant">Dirigeant</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Rôle</label>
+        <select id="ns-role" class="input-field"><option value="salarie">Salarié</option><option value="responsable">Responsable</option></select>
+      </div>
+      <div class="form-group"><label>Langue</label>
+        <select id="ns-langue" class="input-field">
+          <option value="fr">Français</option><option value="ar">Arabe</option>
+          <option value="en">Anglais</option><option value="es">Espagnol</option>
+          <option value="pt">Portugais</option><option value="de">Allemand</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;text-transform:none;letter-spacing:0;font-weight:600;color:var(--ink)">
+          <input type="checkbox" id="ns-terrain" style="width:16px;height:16px;accent-color:var(--amber);cursor:pointer">
+          📱 Salarié terrain (app mobile uniquement)
+        </label>
+      </div>
+    </div>
+    <div id="ns-erreur" style="color:var(--err);font-size:13px;margin-top:8px;display:none"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-act btn-ghost" onclick="fermerModal('modal-creer-sal')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="creerSalarieDG()" id="btn-creer-sal">Créer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-tache-dg" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Nouvelle tâche</h3><button class="modal-close" onclick="fermerModal('modal-tache-dg')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Titre *</label><input type="text" id="tdg-titre" class="input-field"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Description</label><textarea id="tdg-desc" class="input-field" style="height:60px;resize:vertical"></textarea></div>
+      <div class="form-group"><label>Poste cible</label>
+        <select id="tdg-poste" class="input-field">
+          <option value="rh">RH</option><option value="comptabilite">Comptabilité</option>
+          <option value="achats">Achats</option><option value="service-client">Service client</option>
+          <option value="logistique">Logistique</option><option value="technicien-sav">Technicien SAV</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Priorité</label>
+        <select id="tdg-priorite" class="input-field"><option value="normale">Normale</option><option value="haute">Haute</option><option value="urgente">Urgente</option><option value="basse">Basse</option></select>
+      </div>
+      <div class="form-group"><label>Assigner à</label>
+        <select id="tdg-assignee" class="input-field"><option value="">— Poste entier —</option></select>
+      </div>
+      <div class="form-group"><label>Deadline</label><input type="date" id="tdg-deadline" class="input-field"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-act btn-ghost" onclick="fermerModal('modal-tache-dg')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="creerTacheDG()">Créer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-mdp-sal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="mdp-modal-titre">Changer le mot de passe</h3><button class="modal-close" onclick="fermerModal('modal-mdp-sal')">✕</button></div>
+    <input type="hidden" id="mdp-sal-id">
+    <input type="hidden" id="mdp-sal-email">
+    <input type="hidden" id="mdp-sal-nom">
+    <div class="form-group" style="margin-bottom:14px"><label>Nouveau mot de passe *</label><input type="text" id="mdp-sal-valeur" class="input-field" placeholder="Nouveau mot de passe"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-act btn-ghost" onclick="fermerModal('modal-mdp-sal')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="confirmerChangeMdpDG()">Changer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-role-sal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="role-modal-titre">Changer le rôle</h3><button class="modal-close" onclick="fermerModal('modal-role-sal')">✕</button></div>
+    <input type="hidden" id="role-sal-id">
+    <div class="form-group" style="margin-bottom:14px"><label>Nouveau rôle</label>
+      <select id="role-sal-valeur" class="input-field">
+        <option value="salarie">Salarié</option>
+        <option value="responsable">Responsable</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-act btn-ghost" onclick="fermerModal('modal-role-sal')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="confirmerChangeRoleDG()">Mettre à jour</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// ARIA INDUSTRIAL — POSTE DIRIGEANT
+// ════════════════════════════════════════════════════════════
+
+var RELAY = 'https://aria-forgelis.onrender.com';
+var SESSION = {};
+var POSTE_COURANT = 'dirigeant';
+var _salaries = []; var _taches = []; var _stock = [];
+var _terrain = { salaries:0, presences:0, absences_attente:0, taches_ouvertes:0, tickets_ouverts:0, bc_attente:0, factures_retard:0, solde:null, updated:null };
+
+// ── Session ──
+function getSession() { try { SESSION = JSON.parse(localStorage.getItem('aria_industrial_session') || '{}'); return SESSION; } catch(e) { return {}; } }
+function getToken() { return SESSION.salarie_id || ''; }
+function getEntrepriseId() { return SESSION.entreprise_id || ''; }
+function getNom() { return SESSION.nom || ''; }
+
+// ── API ──
+async function api(endpoint, body, method) {
+  method = method || (body ? 'POST' : 'GET');
+  var url = RELAY + endpoint;
+  if (method === 'GET' && body) { url += '?' + new URLSearchParams(body).toString(); body = null; }
+  try {
+    var r = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : null });
+    return await r.json();
+  } catch(e) { return { ok: false, erreur: 'Erreur réseau' }; }
+}
+
+async function apiAsk(prompt, contexte) {
+  try {
+    var r = await fetch(RELAY + '/ask-industrial', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: getToken(), message: (contexte ? '[CONTEXTE] ' + contexte + '\n\n' : '') + prompt, poste: 'dirigeant', max_tokens: 2500 })
+    });
+    var d = await r.json(); return d.reponse || d.message || '';
+  } catch(e) { return 'Erreur de connexion à Aria.'; }
+}
+
+function contexteRiche() {
+  var s = getSession();
+  var b = 'Poste: Dirigeant | Entreprise: '+(s.entreprise_nom||getEntrepriseId());
+  if (_terrain.updated) {
+    var sol = _terrain.solde!==null?(_terrain.solde>=0?'+':'')+Math.round(_terrain.solde)+'€':'N/D';
+    b+=' | Effectif: '+_terrain.salaries+' salariés | Présences: '+_terrain.presences+' | Absences attente: '+_terrain.absences_attente+' | Tâches ouvertes: '+_terrain.taches_ouvertes+' | Tickets SAV: '+_terrain.tickets_ouverts+' | BC attente: '+_terrain.bc_attente+' | Factures retard: '+_terrain.factures_retard+' | Solde: '+sol;
+  } else { b+=' | Salariés: '+_salaries.length; }
+  return b;
+}
+
+// ── Modale Aria ──
+var _ariaRes = null;
+function ariaConfirm(msg, titre, danger) {
+  return new Promise(function(resolve) {
+    _ariaRes = resolve;
+    document.getElementById('aria-modal-ico').textContent = danger ? '⚠️' : '❓';
+    document.getElementById('aria-modal-title').textContent = titre || 'Confirmation';
+    document.getElementById('aria-modal-msg').textContent = msg;
+    document.getElementById('aria-modal-input').style.display = 'none';
+    document.getElementById('aria-modal-confirm').className = 'aria-modal-confirm ' + (danger ? 'danger' : 'primary');
+    document.getElementById('aria-modal-overlay').classList.add('open');
+  });
+}
+function ariaPrompt(msg, titre, placeholder) {
+  return new Promise(function(resolve) {
+    _ariaRes = resolve;
+    document.getElementById('aria-modal-ico').textContent = '✏️';
+    document.getElementById('aria-modal-title').textContent = titre || 'Saisie';
+    document.getElementById('aria-modal-msg').textContent = msg;
+    var inp = document.getElementById('aria-modal-input');
+    inp.style.display = 'block'; inp.value = ''; inp.placeholder = placeholder || ''; inp.focus();
+    document.getElementById('aria-modal-confirm').className = 'aria-modal-confirm primary';
+    document.getElementById('aria-modal-overlay').classList.add('open');
+  });
+}
+function _ariaModalConfirm() {
+  var inp = document.getElementById('aria-modal-input');
+  var v = inp.style.display !== 'none' ? inp.value : true;
+  document.getElementById('aria-modal-overlay').classList.remove('open');
+  if (_ariaRes) { _ariaRes(v); _ariaRes = null; }
+}
+function _ariaModalCancel() {
+  document.getElementById('aria-modal-overlay').classList.remove('open');
+  if (_ariaRes) { _ariaRes(null); _ariaRes = null; }
+}
+
+// ── Navigation ──
+function goToView(viewId, tabEl) {
+  document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+  var v = document.getElementById(viewId); if (v) v.classList.add('active');
+  var n = tabEl || document.querySelector('.nav-item[data-view="' + viewId + '"]');
+  if (n) n.classList.add('active');
+  chargerVue(viewId);
+}
+function toggleSidebar() {
+  var sb = document.getElementById('app-sidebar');
+  if (sb) sb.style.display = sb.style.display === 'none' ? 'flex' : 'none';
+}
+
+function chargerVue(id) {
+  var map = {
+    'v-clients': chargerClients,
+    'v-global': chargerDashDG,
+    'v-salaries': chargerSalariesDG,
+    'v-presences': chargerPresences,
+    'v-absences': chargerAbsencesDG,
+    'v-equipes': chargerEquipesDG,
+    'v-permissions': chargerPermissionsDG,
+    'v-facturation': chargerFacturationDG,
+    'v-tresorerie': calculerTresoDG,
+    'v-bc': chargerBCDG,
+    'v-taches': chargerTachesDG,
+    'v-tickets': chargerTicketsDG,
+    'v-stock': chargerStockDG,
+    'v-securite': chargerSecuriteDG,
+    'v-mes-conges': chargerMesCongesDG,
+    'v-pointage': function() {
+      setInterval(function() {
+        var el = document.getElementById('dg-heure-actuelle');
+        if (el) el.textContent = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      }, 1000);
+    },
+  };
+  if (map[id]) map[id]();
+}
+
+// ── Session ──
+function verifierSession() {
+  var s = getSession();
+  if (!s.salarie_id || !s.entreprise_id || s.poste !== 'dirigeant') {
+    window.location.href = 'connexion-industrial.html'; return;
+  }
+  var tag = document.getElementById('poste-tag');
+  if (tag) tag.textContent = '👑 ' + (s.nom || 'Dirigeant');
+  if (s.entreprise_nom) {
+    var desc = document.getElementById('dg-nom-entreprise');
+    if (desc) desc.textContent = s.entreprise_nom + ' — Vue dirigeant';
+  }
+  initPoste();
+}
+function deconnexion() {
+  ['aria_industrial_session', 'aria_industrial_token', 'aria_industrial_entreprise_id', 'aria_industrial_nom', 'aria_session_active', 'aria_industrial_email', 'aria_industrial_poste', 'aria_industrial_role']
+    .forEach(function(k) { try { localStorage.removeItem(k); } catch(e) {} });
+  window.location.href = 'connexion-industrial.html';
+}
+function initPoste() { chargerDashDG(); chargerSalariesDG(); }
+
+// ════════════════════════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════════════════════════
+async function chargerDashDG() {
+  var results = await Promise.all([
+    api('/industrial/salaries', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET'),
+    api('/industrial/pointages', { token: getToken(), entreprise_id: getEntrepriseId(), date: new Date().toISOString().slice(0, 10) }, 'GET'),
+    api('/industrial/absences', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET'),
+    api('/industrial/taches', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET'),
+    api('/industrial/tickets', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET'),
+    api('/industrial/bons-commande', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET'),
+    api('/industrial/factures', { token: getToken(), entreprise_id: getEntrepriseId(), type: 'client' }, 'GET'),
+    api('/industrial/transactions', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET'),
+  ]);
+  var sals  = results[0].salaries || [];
+  var pts   = results[1].pointages || [];
+  var abs   = results[2].absences || [];
+  var tach  = results[3].taches || [];
+  var tick  = results[4].tickets || [];
+  var bcs   = results[5].bons_commande || [];
+  var fc    = results[6].factures || [];
+  var tr    = results[7].transactions || [];
+
+  _salaries = sals;
+  remplirSelectSalariesDG();
+
+  var attente = abs.filter(function(a) { return a.statut === 'en_attente'; });
+  var bcAttente = bcs.filter(function(b) { return b.statut === 'en_attente'; });
+  var retard = fc.filter(function(f) { return f.statut === 'en_retard'; });
+  var entrees = tr.filter(function(t) { return t.type === 'credit'; }).reduce(function(s, t) { return s + parseFloat(t.montant || 0); }, 0);
+  var sorties = tr.filter(function(t) { return t.type === 'debit'; }).reduce(function(s, t) { return s + parseFloat(t.montant || 0); }, 0);
+
+  _terrain = { salaries:sals.length, presences:pts.filter(function(p){return p.type==='arrivee';}).length, absences_attente:attente.length, taches_ouvertes:tach.filter(function(t){return t.statut!=='termine';}).length, tickets_ouverts:tick.filter(function(t){return ['ouvert','en_cours'].includes(t.statut);}).length, bc_attente:bcAttente.length, factures_retard:retard.length, solde:entrees-sorties, updated:new Date().toISOString() };
+  setStat('dg-stat-salaries', sals.length);
+  setStat('dg-stat-presences', pts.filter(function(p) { return p.type === 'arrivee'; }).length, 'ok');
+  setStat('dg-stat-absences', attente.length, attente.length > 0 ? 'warn' : '');
+  setStat('dg-stat-taches', tach.filter(function(t) { return t.statut !== 'termine'; }).length, 'warn');
+  setStat('dg-stat-tickets', tick.filter(function(t) { return ['ouvert', 'en_cours'].includes(t.statut); }).length);
+  setStat('dg-stat-bc', bcAttente.length, bcAttente.length > 0 ? 'warn' : '');
+  setStat('dg-stat-factures-retard', retard.length, retard.length > 0 ? 'err' : 'ok');
+  setStat('dg-stat-solde', fmtMontant(entrees - sorties), (entrees - sorties) >= 0 ? 'ok' : 'err');
+
+  // Alertes
+  var alertes = [];
+  if (retard.length > 0) alertes.push({ type: 'crit', m: retard.length + ' facture(s) client en retard de paiement' });
+  if (attente.length > 0) alertes.push({ type: 'warn', m: attente.length + ' demande(s) d\'absence en attente d\'approbation' });
+  if (bcAttente.length > 0) alertes.push({ type: 'warn', m: bcAttente.length + ' bon(s) de commande à approuver' });
+  if ((entrees - sorties) < 0) alertes.push({ type: 'crit', m: 'Solde trésorerie négatif : ' + fmtMontant(entrees - sorties) });
+  var elA = document.getElementById('dg-alertes');
+  if (elA) elA.innerHTML = alertes.length ? alertes.map(function(a) {
+    return '<div class="alert-item ' + (a.type === 'crit' ? 'crit' : '') + '"><div class="alert-title">' + esc(a.m) + '</div></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">✅</div>Aucune alerte.</div>';
+
+  // Absences à approuver
+  var elAbs = document.getElementById('dg-absences-attente');
+  if (elAbs) elAbs.innerHTML = attente.length ? attente.map(function(a) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(a.nom_salarie || '—') + ' — ' + esc(a.type_absence) + '</div>' +
+      '<div class="ri-sub">' + fmtDate(a.date_debut) + ' → ' + fmtDate(a.date_fin) + '</div></div>' +
+      '<div class="ri-actions"><button class="btn-act btn-ok btn-sm" onclick="approuverAbsDG(\'' + a.id + '\',\'approuve\')">✅</button>' +
+      '<button class="btn-act btn-err btn-sm" onclick="approuverAbsDG(\'' + a.id + '\',\'refuse\')">❌</button></div></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">📭</div>Aucune demande.</div>';
+
+  // BC à approuver
+  var elBC = document.getElementById('dg-bc-attente');
+  if (elBC) elBC.innerHTML = bcAttente.length ? bcAttente.map(function(b) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(b.numero || '—') + ' — ' + esc(b.fournisseur_nom || '—') + '</div>' +
+      '<div class="ri-sub">' + fmtMontant(parseFloat(b.montant_total || 0)) + '</div></div>' +
+      '<div class="ri-actions"><button class="btn-act btn-ok btn-sm" onclick="approuverBCDG(\'' + b.id + '\',\'approuve\')">✅</button>' +
+      '<button class="btn-act btn-err btn-sm" onclick="approuverBCDG(\'' + b.id + '\',\'annule\')">❌</button></div></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">📭</div>Aucun BC.</div>';
+
+  logAction('Dashboard dirigeant chargé');
+}
+
+// ════════════════════════════════════════════════════════════
+// SALARIÉS
+// ════════════════════════════════════════════════════════════
+async function chargerSalariesDG() {
+  var data = await api('/industrial/salaries', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  _salaries = data.salaries || [];
+  afficherSalariesDG(_salaries);
+  remplirSelectSalariesDG();
+}
+function afficherSalariesDG(liste) {
+  var el = document.getElementById('dg-liste-salaries'); if (!el) return;
+  el.innerHTML = liste.length ? liste.map(function(s) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(s.nom) + '</div>' +
+      '<div class="ri-sub">' + esc(s.poste) + ' · ' + (s.role === 'responsable' ? 'Responsable' : 'Salarié') + ' · ' + esc(s.email_entreprise || '') + '</div></div>' +
+      '<span class="badge badge-' + (s.actif ? 'ok' : 'err') + '">' + (s.actif ? 'Actif' : 'Inactif') + '</span>' +
+      '<div class="ri-actions">' +
+        '<button class="btn-act btn-ghost btn-sm" onclick="ouvrirChangeMdp(\'' + s.id + '\',\'' + esc(s.nom) + '\',\'' + esc(s.email_entreprise || '') + '\')">🔑</button>' +
+        '<button class="btn-act btn-ghost btn-sm" onclick="ouvrirChangeRole(\'' + s.id + '\',\'' + esc(s.nom) + '\',\'' + esc(s.role || 'salarie') + '\')">👔</button>' +
+        '<button class="btn-act btn-err btn-sm" onclick="desactiverSalarieDG(\'' + s.id + '\',\'' + esc(s.nom) + '\')">🗑️</button>' +
+      '</div></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">👥</div>Aucun salarié.</div>';
+}
+function filtrerSalariesDG(q) {
+  afficherSalariesDG(_salaries.filter(function(s) {
+    return (s.nom || '').toLowerCase().includes(q.toLowerCase()) || (s.poste || '').toLowerCase().includes(q.toLowerCase());
+  }));
+}
+function remplirSelectSalariesDG() {
+  var sel = document.getElementById('tdg-assignee'); if (!sel) return;
+  sel.innerHTML = '<option value="">— Poste entier —</option>' + _salaries.map(function(s) {
+    return '<option value="' + s.id + '">' + esc(s.nom) + ' (' + esc(s.poste) + ')</option>';
+  }).join('');
+}
+async function creerSalarieDG() {
+  var nom = document.getElementById('ns-nom').value.trim();
+  var email = document.getElementById('ns-email').value.trim().toLowerCase();
+  var mdp = document.getElementById('ns-mdp').value.trim();
+  var poste = document.getElementById('ns-poste').value;
+  var errEl = document.getElementById('ns-erreur');
+  if (!nom || !email || !mdp || !poste) { errEl.textContent = 'Tous les champs obligatoires'; errEl.style.display = 'block'; return; }
+  var btn = document.getElementById('btn-creer-sal'); btn.textContent = '⏳...'; btn.disabled = true;
+  var data = await api('/industrial/salarie/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    nom: nom, email: email, mot_de_passe: mdp, poste: poste,
+    role: document.getElementById('ns-role').value,
+    langue: document.getElementById('ns-langue').value,
+    terrain: document.getElementById('ns-terrain').checked
+  });
+  btn.textContent = 'Créer'; btn.disabled = false;
+  if (data.ok) { fermerModal('modal-creer-sal'); notifOk('Salarié créé : ' + nom); logAction('Salarié créé : ' + nom); chargerSalariesDG(); }
+  else { errEl.textContent = data.erreur || 'Erreur'; errEl.style.display = 'block'; }
+}
+async function desactiverSalarieDG(id, nom) {
+  var ok = await ariaConfirm('Désactiver ' + nom + ' ? Le compte sera suspendu.', 'Désactiver salarié', true);
+  if (!ok) return;
+  var data = await api('/industrial/salarie/supprimer', { token: getToken(), entreprise_id: getEntrepriseId(), salarie_id: id }, 'DELETE');
+  if (data.ok) { notifOk(nom + ' désactivé'); chargerSalariesDG(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+function ouvrirChangeMdp(id, nom, email) {
+  document.getElementById('mdp-sal-id').value = id;
+  document.getElementById('mdp-sal-email').value = email;
+  document.getElementById('mdp-sal-nom').value = nom;
+  document.getElementById('mdp-modal-titre').textContent = 'Changer MDP — ' + nom;
+  document.getElementById('mdp-sal-valeur').value = '';
+  ouvrirModal('modal-mdp-sal');
+}
+async function confirmerChangeMdpDG() {
+  var mdp = document.getElementById('mdp-sal-valeur').value.trim();
+  var email = document.getElementById('mdp-sal-email').value;
+  var nom = document.getElementById('mdp-sal-nom').value;
+  if (!mdp) { notifErr('Mot de passe obligatoire'); return; }
+  var data = await api('/industrial/salarie/mdp', { token: getToken(), entreprise_id: getEntrepriseId(), email: email, nom: nom, mot_de_passe: mdp });
+  if (data.ok) { fermerModal('modal-mdp-sal'); notifOk('MDP modifié pour ' + nom); logAction('MDP changé : ' + nom); }
+  else notifErr(data.erreur || 'Erreur');
+}
+function ouvrirChangeRole(id, nom, roleActuel) {
+  document.getElementById('role-sal-id').value = id;
+  document.getElementById('role-modal-titre').textContent = 'Rôle — ' + nom;
+  document.getElementById('role-sal-valeur').value = roleActuel;
+  ouvrirModal('modal-role-sal');
+}
+async function confirmerChangeRoleDG() {
+  var id = document.getElementById('role-sal-id').value;
+  var role = document.getElementById('role-sal-valeur').value;
+  var data = await api('/industrial/salarie/role', { token: getToken(), entreprise_id: getEntrepriseId(), salarie_id: id, role: role });
+  if (data.ok) { fermerModal('modal-role-sal'); notifOk('Rôle mis à jour'); chargerSalariesDG(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+// ════════════════════════════════════════════════════════════
+// PRÉSENCES
+// ════════════════════════════════════════════════════════════
+async function chargerPresences() {
+  var today = new Date().toISOString().slice(0, 10);
+  var data = await api('/industrial/pointages', { token: getToken(), entreprise_id: getEntrepriseId(), date: today }, 'GET');
+  var el = document.getElementById('dg-pointages'); if (!el) return;
+  var pts = data.pointages || [];
+  var types = { arrivee: '✅ Arrivée', depart: '🚪 Départ', pause_debut: '⏸ Pause', pause_fin: '▶️ Reprise' };
+  el.innerHTML = pts.length ? pts.map(function(p) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(p.nom_salarie || '—') + ' — ' + (types[p.type] || p.type) + '</div>' +
+      '<div class="ri-sub">' + new Date(p.horodatage).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + ' · ' + esc(p.poste || '') + '</div></div></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">⏱️</div>Aucun pointage aujourd\'hui.</div>';
+}
+
+// ════════════════════════════════════════════════════════════
+// ABSENCES
+// ════════════════════════════════════════════════════════════
+async function chargerAbsencesDG() {
+  var data = await api('/industrial/absences', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var abs = data.absences || [];
+  var attente = abs.filter(function(a) { return a.statut === 'en_attente'; });
+  var autres = abs.filter(function(a) { return a.statut !== 'en_attente'; });
+  var labels = { conges_payes: 'CP', maladie: 'Maladie', sans_solde: 'Sans solde', formation: 'Formation', autre: 'Autre' };
+  var statuts = { en_attente: '⏳', approuve: '✅', refuse: '❌', annule: 'Annulé' };
+  var render = function(liste, elId, showActions) {
+    var el = document.getElementById(elId); if (!el) return;
+    el.innerHTML = liste.length ? liste.map(function(a) {
+      return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(a.nom_salarie || '—') + ' — ' + (labels[a.type_absence] || a.type_absence) + '</div>' +
+        '<div class="ri-sub">' + fmtDate(a.date_debut) + ' → ' + fmtDate(a.date_fin) + (a.nb_jours ? ' (' + a.nb_jours + ' j)' : '') + '</div></div>' +
+        (showActions
+          ? '<div class="ri-actions"><button class="btn-act btn-ok btn-sm" onclick="approuverAbsDG(\'' + a.id + '\',\'approuve\')">✅ Approuver</button><button class="btn-act btn-err btn-sm" onclick="approuverAbsDG(\'' + a.id + '\',\'refuse\')">❌ Refuser</button></div>'
+          : '<span class="badge badge-' + (a.statut === 'approuve' ? 'ok' : a.statut === 'refuse' ? 'err' : 'warn') + '">' + (statuts[a.statut] || a.statut) + '</span>') +
+        '</div>';
+    }).join('') : '<div class="empty-state"><div class="es-ic">📭</div>Aucune absence.</div>';
+  };
+  render(attente, 'dg-abs-attente2', true);
+  render(autres, 'dg-abs-historique', false);
+}
+async function approuverAbsDG(id, statut) {
+  var data = await api('/industrial/absence/approuver', { token: getToken(), entreprise_id: getEntrepriseId(), absence_id: id, statut: statut });
+  if (data.ok) { notifOk(statut === 'approuve' ? 'Absence approuvée' : 'Absence refusée'); logAction('Absence ' + statut); chargerDashDG(); chargerAbsencesDG(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+// ════════════════════════════════════════════════════════════
+// ÉQUIPES & PERMISSIONS
+// ════════════════════════════════════════════════════════════
+async function chargerEquipesDG() {
+  if (!_salaries.length) { var d = await api('/industrial/salaries', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET'); _salaries = d.salaries || []; }
+  var par_poste = {};
+  _salaries.forEach(function(s) {
+    var p = s.poste || 'autre';
+    if (!par_poste[p]) par_poste[p] = [];
+    par_poste[p].push(s);
+  });
+  var el = document.getElementById('dg-equipes-liste'); if (!el) return;
+  var icons = { rh: '👥', comptabilite: '🧾', achats: '📦', 'service-client': '🎧', logistique: '🏭', 'technicien-sav': '🔧', dirigeant: '👑' };
+  el.innerHTML = Object.entries(par_poste).map(function(kv) {
+    var poste = kv[0]; var membres = kv[1];
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + (icons[poste] || '👤') + ' ' + poste.charAt(0).toUpperCase() + poste.slice(1) + '</div>' +
+      '<div class="ri-sub">' + membres.map(function(m) { return esc(m.nom) + (m.role === 'responsable' ? ' (Resp.)' : ''); }).join(' · ') + '</div></div>' +
+      '<span class="badge badge-amber">' + membres.length + ' membre(s)</span></div>';
+  }).join('') || '<div class="empty-state"><div class="es-ic">🗂️</div>Aucune équipe.</div>';
+}
+
+async function analyseOrgDG() {
+  var zone = document.getElementById('org-analyse');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria analyse...';
+  var rep = await apiAsk('Analyse l\'organisation de l\'entreprise — répartition des équipes, risques organisationnels, recommandations de structure.', contexteRiche() + ' | Équipes: ' + JSON.stringify(_salaries.map(function(s) { return { nom: s.nom, poste: s.poste, role: s.role }; })));
+  zone.textContent = rep;
+}
+
+async function chargerPermissionsDG() {
+  if (!_salaries.length) { var d = await api('/industrial/salaries', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET'); _salaries = d.salaries || []; }
+  var el = document.getElementById('dg-permissions-liste'); if (!el) return;
+  el.innerHTML = _salaries.length ? _salaries.map(function(s) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(s.nom) + '</div>' +
+      '<div class="ri-sub">' + esc(s.poste) + ' · ' + esc(s.email_entreprise || '') + (s.terrain ? ' · 📱 Terrain' : '') + '</div></div>' +
+      '<span class="badge badge-' + (s.role === 'responsable' ? 'blue' : 'grey') + '">' + (s.role === 'responsable' ? 'Responsable' : 'Salarié') + '</span>' +
+      '<button class="btn-act btn-ghost btn-sm" onclick="ouvrirChangeRole(\'' + s.id + '\',\'' + esc(s.nom) + '\',\'' + esc(s.role || 'salarie') + '\')">✏️</button></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">🔑</div>Aucun salarié.</div>';
+}
+
+// ════════════════════════════════════════════════════════════
+// FACTURATION
+// ════════════════════════════════════════════════════════════
+async function chargerFacturationDG() {
+  var results = await Promise.all([
+    api('/industrial/factures', { token: getToken(), entreprise_id: getEntrepriseId(), type: 'client' }, 'GET'),
+    api('/industrial/factures', { token: getToken(), entreprise_id: getEntrepriseId(), type: 'fournisseur' }, 'GET'),
+  ]);
+  var fc = results[0].factures || [];
+  var ff = results[1].factures || [];
+  var encaisse = fc.filter(function(f) { return f.statut === 'payee'; }).reduce(function(s, f) { return s + parseFloat(f.montant_ttc || 0); }, 0);
+  var aEncaisser = fc.filter(function(f) { return f.statut === 'envoyee'; }).reduce(function(s, f) { return s + parseFloat(f.montant_ttc || 0); }, 0);
+  var enRetard = fc.filter(function(f) { return f.statut === 'en_retard'; }).reduce(function(s, f) { return s + parseFloat(f.montant_ttc || 0); }, 0);
+  var aPayer = ff.filter(function(f) { return ['saisie', 'en_attente_paiement'].includes(f.statut); }).reduce(function(s, f) { return s + parseFloat(f.montant_ttc || 0); }, 0);
+  setStat('dg-fc-encaisse', fmtMontant(encaisse), 'ok');
+  setStat('dg-fc-attente', fmtMontant(aEncaisser), 'warn');
+  setStat('dg-fc-retard', fmtMontant(enRetard), 'err');
+  setStat('dg-ff-payer', fmtMontant(aPayer), 'err');
+  var renderFact = function(liste, elId) {
+    var el = document.getElementById(elId); if (!el) return;
+    el.innerHTML = liste.slice(0, 10).map(function(f) {
+      return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(f.tiers_nom || '—') + '</div>' +
+        '<div class="ri-sub">' + esc(f.numero || '—') + ' · Éch. ' + fmtDate(f.date_echeance) + '</div></div>' +
+        '<span class="badge badge-' + statBadge(f.statut) + '">' + esc(f.statut) + '</span>' +
+        '<span class="ri-amount ' + (f.statut === 'payee' ? 'ok' : f.statut === 'en_retard' ? 'err' : 'warn') + '">' + fmtMontant(parseFloat(f.montant_ttc || 0)) + '</span>' +
+        (f.statut === 'brouillon' ? '<button class="btn-act btn-ok btn-sm" onclick="validerFactureDG(\'' + f.id + '\')">✓</button>' : '') +
+        '</div>';
+    }).join('') || '<div class="empty-state"><div class="es-ic">📄</div>Aucune facture.</div>';
+  };
+  renderFact(fc, 'dg-factures-client');
+  renderFact(ff, 'dg-factures-fourn');
+}
+async function validerFactureDG(id) {
+  var data = await api('/industrial/facture/modifier', { token: getToken(), entreprise_id: getEntrepriseId(), facture_id: id, valider: true });
+  if (data.ok) { notifOk('Facture validée'); chargerFacturationDG(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+// ════════════════════════════════════════════════════════════
+// TRÉSORERIE
+// ════════════════════════════════════════════════════════════
+async function calculerTresoDG() {
+  var data = await api('/industrial/transactions', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var tr = data.transactions || [];
+  var entrees = tr.filter(function(t) { return t.type === 'credit'; }).reduce(function(s, t) { return s + parseFloat(t.montant || 0); }, 0);
+  var sorties = tr.filter(function(t) { return t.type === 'debit'; }).reduce(function(s, t) { return s + parseFloat(t.montant || 0); }, 0);
+  setStat('dg-treso-entrees', fmtMontant(entrees), 'ok');
+  setStat('dg-treso-sorties', fmtMontant(sorties), 'err');
+  setStat('dg-treso-solde', fmtMontant(entrees - sorties), (entrees - sorties) >= 0 ? 'ok' : 'err');
+}
+async function analyseTresoDG() {
+  var q = document.getElementById('dg-treso-question').value.trim() || 'Donne-moi un diagnostic de la trésorerie actuelle.';
+  var zone = document.getElementById('dg-treso-reponse');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria analyse...';
+  var rep = await apiAsk(q, contexteRiche());
+  zone.textContent = rep;
+}
+
+// ════════════════════════════════════════════════════════════
+// BONS DE COMMANDE
+// ════════════════════════════════════════════════════════════
+async function chargerBCDG() {
+  var data = await api('/industrial/bons-commande', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var bcs = data.bons_commande || [];
+  var attente = bcs.filter(function(b) { return b.statut === 'en_attente'; });
+  var autres = bcs.filter(function(b) { return b.statut !== 'en_attente'; });
+  var renderBC = function(liste, elId, actions) {
+    var el = document.getElementById(elId); if (!el) return;
+    el.innerHTML = liste.length ? liste.map(function(b) {
+      return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(b.numero || '—') + ' — ' + esc(b.fournisseur_nom || '—') + '</div>' +
+        '<div class="ri-sub">' + fmtDate(b.created_at) + ' · ' + esc(b.statut) + '</div></div>' +
+        '<span class="ri-amount warn">' + fmtMontant(parseFloat(b.montant_total || 0)) + '</span>' +
+        (actions ? '<div class="ri-actions"><button class="btn-act btn-ok btn-sm" onclick="approuverBCDG(\'' + b.id + '\',\'approuve\')">✅</button><button class="btn-act btn-err btn-sm" onclick="approuverBCDG(\'' + b.id + '\',\'annule\')">❌</button></div>' : '') +
+        '</div>';
+    }).join('') : '<div class="empty-state"><div class="es-ic">📦</div>Aucun BC.</div>';
+  };
+  renderBC(attente, 'dg-bc-liste', true);
+  renderBC(autres, 'dg-bc-historique', false);
+}
+async function approuverBCDG(id, statut) {
+  var data = await api('/industrial/bon-commande/approuver', { token: getToken(), entreprise_id: getEntrepriseId(), bc_id: id, statut: statut });
+  if (data.ok) { notifOk(statut === 'approuve' ? 'BC approuvé' : 'BC refusé'); logAction('BC ' + statut); chargerDashDG(); chargerBCDG(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+// ════════════════════════════════════════════════════════════
+// TÂCHES
+// ════════════════════════════════════════════════════════════
+async function chargerTachesDG() {
+  var data = await api('/industrial/taches', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  _taches = data.taches || [];
+  filtrerTachesDG('');
+}
+function filtrerTachesDG(statut) {
+  var liste = statut ? _taches.filter(function(t) { return t.statut === statut; }) : _taches;
+  var el = document.getElementById('dg-liste-taches'); if (!el) return;
+  var prior = { urgente: '🔴', haute: '🟠', normale: '🟡', basse: '🟢' };
+  var statuts = { a_faire: 'À faire', en_cours: 'En cours', bloque: 'Bloqué', termine: 'Terminé ✅', annule: 'Annulé' };
+  el.innerHTML = liste.length ? liste.map(function(t) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + (prior[t.priorite] || '🟡') + ' ' + esc(t.titre) +
+      (t.poste_cible ? ' <span class="badge badge-grey">' + esc(t.poste_cible) + '</span>' : '') + '</div>' +
+      '<div class="ri-sub">' + (statuts[t.statut] || t.statut) + (t.deadline ? ' · ' + fmtDate(t.deadline) : '') + '</div></div>' +
+      (t.statut !== 'termine' ? '<button class="btn-act btn-ok btn-sm" onclick="terminerTacheDG(\'' + t.id + '\')">✓</button>' : '<span class="badge badge-ok">✓ Terminé</span>') +
+      '</div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">📋</div>Aucune tâche.</div>';
+}
+async function creerTacheDG() {
+  var titre = document.getElementById('tdg-titre').value.trim();
+  if (!titre) { notifErr('Titre obligatoire'); return; }
+  var data = await api('/industrial/tache/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    titre: titre, description: document.getElementById('tdg-desc').value,
+    priorite: document.getElementById('tdg-priorite').value,
+    poste_cible: document.getElementById('tdg-poste').value,
+    assignee_id: document.getElementById('tdg-assignee').value || null,
+    deadline: document.getElementById('tdg-deadline').value || null
+  });
+  if (data.ok) { fermerModal('modal-tache-dg'); notifOk('Tâche créée'); logAction('Tâche : ' + titre); chargerTachesDG(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+async function terminerTacheDG(id) {
+  await api('/industrial/tache/modifier', { token: getToken(), entreprise_id: getEntrepriseId(), tache_id: id, statut: 'termine' });
+  notifOk('Tâche terminée'); chargerTachesDG();
+}
+
+// ════════════════════════════════════════════════════════════
+// TICKETS
+// ════════════════════════════════════════════════════════════
+async function chargerTicketsDG() {
+  var data = await api('/industrial/tickets', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var tickets = data.tickets || [];
+  setStat('dg-tickets-ouverts', tickets.filter(function(t) { return t.statut === 'ouvert'; }).length, 'warn');
+  setStat('dg-tickets-cours', tickets.filter(function(t) { return t.statut === 'en_cours'; }).length);
+  setStat('dg-tickets-resolus', tickets.filter(function(t) { return t.statut === 'resolu'; }).length, 'ok');
+  var el = document.getElementById('dg-liste-tickets'); if (!el) return;
+  var pc = { basse: 'grey', normale: 'amber', haute: 'warn', urgente: 'err' };
+  el.innerHTML = tickets.length ? tickets.slice(0, 20).map(function(t) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(t.sujet || '—') + '</div>' +
+      '<div class="ri-sub">' + esc(t.client_nom || 'Anonyme') + ' · ' + esc(t.canal || '') + ' · ' + fmtDate(t.created_at) + '</div></div>' +
+      '<span class="badge badge-' + (pc[t.priorite] || 'grey') + '">' + esc(t.priorite || 'normale') + '</span>' +
+      '<span class="badge badge-' + (t.statut === 'resolu' ? 'ok' : t.statut === 'en_cours' ? 'blue' : 'warn') + '">' + esc(t.statut) + '</span>' +
+      '</div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">🎧</div>Aucun ticket.</div>';
+}
+
+// ════════════════════════════════════════════════════════════
+// STOCK
+// ════════════════════════════════════════════════════════════
+async function chargerStockDG() {
+  var data = await api('/industrial/stock', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  _stock = data.stock || [];
+  afficherStockDG(_stock);
+}
+function afficherStockDG(liste) {
+  var el = document.getElementById('dg-liste-stock'); if (!el) return;
+  el.innerHTML = liste.length ? liste.map(function(a) {
+    var alerte = parseFloat(a.quantite || 0) <= parseFloat(a.seuil_alerte || 0);
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + (alerte ? '🚨 ' : '') + esc(a.designation || '—') + '</div>' +
+      '<div class="ri-sub">Qté : <strong style="color:' + (alerte ? 'var(--err)' : 'var(--ok)') + '">' + (a.quantite || 0) + ' ' + esc(a.unite || '') + '</strong> · Seuil : ' + (a.seuil_alerte || 0) + '</div></div>' +
+      '<span class="badge badge-' + (alerte ? 'err' : 'ok') + '">' + (alerte ? '⚠️ Alerte' : '✓ OK') + '</span></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">📦</div>Aucun article.</div>';
+}
+function filtrerStockDG(q) { afficherStockDG(_stock.filter(function(a) { return (a.designation || '').toLowerCase().includes(q.toLowerCase()); })); }
+
+// ════════════════════════════════════════════════════════════
+// CONSULTING ARIA
+// ════════════════════════════════════════════════════════════
+var _rapideMapDG = {
+  performance: 'Analyse la performance globale de l\'équipe : présences, tâches, productivité par poste.',
+  tresorerie: 'Donne un diagnostic de la situation de trésorerie : solde, risques, recommandations.',
+  risques: 'Identifie les principaux risques du mois : RH, financiers, opérationnels, client.',
+  priorites: 'Quelles sont les 5 priorités que le dirigeant devrait traiter aujourd\'hui ?',
+  clients: 'Analyse la satisfaction client : tickets, délais de résolution, points à améliorer.'
+};
+async function syntheseTerrainStrategie() {
+  var zone=document.getElementById('dg-synthese-terrain');
+  var btn=document.getElementById('btn-synthese-terrain');
+  if(!zone) return;
+  if(!_terrain.updated||(new Date()-new Date(_terrain.updated))>300000){
+    zone.style.display='block'; zone.textContent='Collecte des données terrain...';
+    if(btn) btn.disabled=true;
+    try{await chargerDashDG();}catch(e){}
+    if(btn) btn.disabled=false;
+  }
+  zone.style.display='block';
+  zone.textContent='Aria analyse votre situation stratégique...';
+  var sol=_terrain.solde!==null?(_terrain.solde>=0?'+':'')+Math.round(_terrain.solde)+'€':'non disponible';
+  var prompt='Tu es consultant senior en stratégie. Données terrain réelles: Effectif='+_terrain.salaries+' | Présences='+_terrain.presences+' | Absences attente='+_terrain.absences_attente+' | Tâches ouvertes='+_terrain.taches_ouvertes+' | Tickets SAV='+_terrain.tickets_ouverts+' | BC attente='+_terrain.bc_attente+' | Factures retard='+_terrain.factures_retard+' | Solde='+sol+'. Fournis: 1) Diagnostic opérationnel synthétique 3-4 lignes 2) 3 points d attention prioritaires avec action concr?te 3) Recommandation court terme cette semaine et moyen terme ce trimestre 4) Indicateur Excellent/Bon/Attention/Critique justifié. Direct et factuel.';
+  var rep=await apiAsk(prompt,contexteRiche());
+  zone.innerHTML=rep.split('\n').map(function(l){return l.trim()?'<p style="margin:4px 0">'+esc(l)+'</p>':'<br>';}).join('');
+  logAction('Synthèse stratégique terrain');
+}
+async function ariaRapideDG(type) {
+  var q = _rapideMapDG[type] || type;
+  document.getElementById('dg-aria-question').value = q;
+  await demanderAriaDG();
+  logAction('Aria rapide : ' + type);
+}
+async function demanderAriaDG() {
+  var q = document.getElementById('dg-aria-question').value.trim(); if (!q) return;
+  var zone = document.getElementById('dg-aria-reponse');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria analyse...';
+  var rep = await apiAsk('Tu es consultant senior en management d\'entreprise. ' + q, contexteRiche());
+  zone.textContent = rep;
+  logAction('Aria consulté : ' + q.slice(0, 60));
+}
+
+// ════════════════════════════════════════════════════════════
+// RÉUNIONS
+// ════════════════════════════════════════════════════════════
+async function preparerReunionDG() {
+  var type = document.getElementById('reunion-type').value;
+  var date = document.getElementById('reunion-date').value;
+  var participants = document.getElementById('reunion-participants').value;
+  var odj = document.getElementById('reunion-odj').value;
+  var zone = document.getElementById('reunion-resultat');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria prépare...';
+  var rep = await apiAsk(
+    'Prépare les éléments clés pour une réunion de type ' + type + ', date ' + (date || 'non précisée') +
+    ', participants : ' + (participants || 'non précisés') +
+    '. Ordre du jour : ' + (odj || 'non précisé') +
+    '. Fournis : 1) rappel des chiffres clés à présenter 2) points critiques à aborder 3) décisions à prendre.',
+    contexteRiche()
+  );
+  zone.textContent = rep;
+  logAction('Réunion préparée : ' + type);
+}
+async function genererCRDG() {
+  var type = document.getElementById('reunion-type').value;
+  var zone = document.getElementById('reunion-resultat');
+  zone.style.display = 'block'; zone.textContent = '⏳ Génération...';
+  var rep = await apiAsk('Génère un modèle de compte-rendu vide pour une réunion de type ' + type + '. Format structuré avec sections : présents, absents, ordre du jour, décisions, actions, prochaine réunion.', contexteRiche());
+  zone.textContent = rep;
+}
+async function reformaterCRDG() {
+  var contenu = document.getElementById('cr-contenu').value.trim();
+  if (!contenu) { notifErr('Saisissez les notes de réunion'); return; }
+  var zone = document.getElementById('cr-reformate');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria reformate...';
+  var rep = await apiAsk('Reformate ces notes de réunion en compte-rendu structuré et professionnel : décisions prises, actions assignées, points ouverts, prochaines étapes.\n\n' + contenu, contexteRiche());
+  zone.textContent = rep;
+  logAction('CR reformaté');
+}
+
+// ════════════════════════════════════════════════════════════
+// BRIEFING
+// ════════════════════════════════════════════════════════════
+async function genererBriefingDG() {
+  var zone = document.getElementById('briefing-contenu');
+  zone.textContent = '⏳ Aria prépare votre briefing...';
+  var rep = await apiAsk(
+    'Génère un briefing matinal concis pour le dirigeant. Format : situation globale en 3 lignes, points critiques du jour (RH, finance, opérations), recommandation principale. Sois direct et actionnable.',
+    contexteRiche()
+  );
+  zone.textContent = rep;
+  logAction('Briefing matinal généré');
+}
+function toggleCheck(el) {
+  var box = el.querySelector('.check-box');
+  var lbl = el.querySelector('.check-label');
+  var done = box.classList.toggle('done');
+  lbl.classList.toggle('done', done);
+  box.textContent = done ? '✓' : '';
+}
+
+// ════════════════════════════════════════════════════════════
+// CONFIGURATION
+// ════════════════════════════════════════════════════════════
+function sauvegarderConfigDG() {
+  var s = getSession();
+  s.entreprise_nom = document.getElementById('cfg-nom').value;
+  s.siret = document.getElementById('cfg-siret').value;
+  localStorage.setItem('aria_industrial_session', JSON.stringify(s));
+  notifOk('Configuration enregistrée');
+  logAction('Config entreprise mise à jour');
+}
+
+// ════════════════════════════════════════════════════════════
+// SÉCURITÉ
+// ════════════════════════════════════════════════════════════
+async function chargerSecuriteDG() {
+  var data = await api('/industrial/pointages', { token: getToken(), entreprise_id: getEntrepriseId(), date: new Date().toISOString().slice(0, 10) }, 'GET');
+  var el = document.getElementById('dg-securite-activite'); if (!el) return;
+  var pts = data.pointages || [];
+  el.innerHTML = pts.length ? pts.map(function(p) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(p.nom_salarie || '—') + ' — ' + esc(p.type) + '</div>' +
+      '<div class="ri-sub">' + new Date(p.horodatage).toLocaleString('fr-FR') + ' · ' + esc(p.adresse || 'IP non enregistrée') + '</div></div></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">🔐</div>Aucune activité récente.</div>';
+}
+async function analyseSecuriteDG() {
+  var zone = document.getElementById('securite-analyse');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria analyse...';
+  var rep = await apiAsk('Analyse la sécurité des accès de l\'entreprise : risques liés aux connexions, bonnes pratiques à recommander, points d\'attention.', contexteRiche());
+  zone.textContent = rep;
+}
+
+// ════════════════════════════════════════════════════════════
+// POINTAGE PERSO, CONGÉS, DROITS, QCM
+// ════════════════════════════════════════════════════════════
+async function pointerWeb(type) {
+  var s = getSession();
+  var labels = { arrivee: 'Arrivée', depart: 'Départ', pause_debut: 'Début pause', pause_fin: 'Fin pause' };
+  var data = await api('/industrial/pointer', { salarie_id: getToken(), entreprise_id: getEntrepriseId(), nom_salarie: getNom(), poste: s.poste || 'dirigeant', type: type });
+  var msg = document.getElementById('pointage-msg');
+  var h = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  if (data.ok) {
+    if (msg) { msg.textContent = labels[type] + ' pointé à ' + h; msg.style.color = 'var(--ok)'; }
+    notifOk(labels[type] + ' pointé à ' + h); logAction('Pointage ' + labels[type] + ' à ' + h);
+  } else {
+    if (msg) { msg.textContent = data.erreur || 'Erreur'; msg.style.color = 'var(--err)'; }
+    notifErr(data.erreur || 'Erreur');
+  }
+}
+async function chargerMesCongesDG() {
+  var data = await api('/industrial/absences', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var mes = (data.absences || []).filter(function(a) { return a.salarie_id === getToken(); });
+  var el = document.getElementById('dg-mes-absences'); if (!el) return;
+  el.innerHTML = mes.length ? mes.map(function(a) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(a.type_absence) + '</div>' +
+      '<div class="ri-sub">' + fmtDate(a.date_debut) + ' → ' + fmtDate(a.date_fin) + '</div></div>' +
+      '<span class="badge badge-' + (a.statut === 'approuve' ? 'ok' : a.statut === 'refuse' ? 'err' : 'warn') + '">' + esc(a.statut) + '</span></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">🏖️</div>Aucune demande.</div>';
+}
+async function soumettreCongesDG() {
+  var debut = document.getElementById('dg-cg-debut').value;
+  var fin = document.getElementById('dg-cg-fin').value;
+  if (!debut || !fin) { notifErr('Dates obligatoires'); return; }
+  var data = await api('/industrial/absence/creer', { token: getToken(), entreprise_id: getEntrepriseId(), type_absence: document.getElementById('dg-cg-type').value, date_debut: debut, date_fin: fin });
+  if (data.ok) { notifOk('Demande envoyée'); chargerMesCongesDG(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+async function demanderDroitsDG() {
+  var q = document.getElementById('dg-droits-q').value.trim(); if (!q) return;
+  var zone = document.getElementById('dg-droits-rep');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria consulte...';
+  var rep = await apiAsk('Tu es expert en droit des affaires et droit du travail. Réponds précisément pour un dirigeant : ' + q + '. Cite les textes applicables.', 'Droits dirigeant');
+  zone.textContent = rep;
+}
+async function lancerQCMDG() {
+  var zone = document.getElementById('qcm-zone-dg');
+  zone.innerHTML = '<div class="empty-state"><div class="es-ic">⏳</div>Aria prépare les questions...</div>';
+  var rep = await apiAsk('Génère 3 questions QCM sur le management, le droit des sociétés ou la stratégie d\'entreprise. Format JSON UNIQUEMENT sans markdown : [{"q":"question","options":["A. ...","B. ...","C. ...","D. ..."],"rep":"A"}]');
+  try {
+    var s = rep.indexOf('['); var e = rep.lastIndexOf(']');
+    var questions = JSON.parse(rep.slice(s, e + 1));
+    var html = '';
+    questions.forEach(function(q, i) {
+      html += '<div style="background:var(--panel2);border-radius:10px;padding:14px;margin-bottom:12px">' +
+        '<div style="font-weight:600;margin-bottom:10px">' + (i + 1) + '. ' + esc(q.q) + '</div>' +
+        q.options.map(function(opt, j) {
+          var l = ['A', 'B', 'C', 'D'][j];
+          return '<button onclick="repQCMDG(this,\'' + l + '\',\'' + q.rep + '\')" style="display:block;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--ink);cursor:pointer;margin-bottom:4px;font-size:13px">' + esc(opt) + '</button>';
+        }).join('') + '</div>';
+    });
+    zone.innerHTML = html;
+  } catch(err) {
+    zone.innerHTML = '<div class="empty-state"><div class="es-ic">❌</div>Erreur. <button class="btn-act btn-amber btn-sm" onclick="lancerQCMDG()">Réessayer</button></div>';
+  }
+}
+function repQCMDG(btn, rep, bonne) {
+  btn.parentElement.querySelectorAll('button').forEach(function(b) { b.disabled = true; });
+  btn.style.background = rep === bonne ? 'rgba(79,191,139,.2)' : 'rgba(225,91,91,.2)';
+  btn.style.borderColor = rep === bonne ? 'var(--ok)' : 'var(--err)';
+  if (rep !== bonne) {
+    btn.parentElement.querySelectorAll('button').forEach(function(b) {
+      if (b.textContent.trim().startsWith(bonne)) { b.style.background = 'rgba(79,191,139,.2)'; b.style.borderColor = 'var(--ok)'; }
+    });
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// JOURNAL
+// ════════════════════════════════════════════════════════════
+var _journal = [];
+function logAction(msg) {
+  _journal.unshift({ msg: msg, h: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) });
+  if (_journal.length > 100) _journal.pop();
+  var el = document.getElementById('journal-list');
+  var empty = document.getElementById('journal-empty');
+  if (el) el.innerHTML = _journal.map(function(j) {
+    return '<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)"><span style="font-family:monospace;font-size:11px;color:var(--ink-faint);width:44px;flex-shrink:0;padding-top:1px">' + j.h + '</span><span style="font-size:12.5px;color:var(--ink-dim)">' + esc(j.msg) + '</span></div>';
+  }).join('');
+  if (empty) empty.style.display = 'none';
+}
+
+// ════════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════════
+function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function fmtDate(d) { if (!d) return '—'; try { return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch(e) { return d; } }
+function fmtMontant(v) { return (parseFloat(v) || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
+function statBadge(s) { var m = { payee: 'ok', en_retard: 'err', brouillon: 'grey', envoyee: 'warn', avoir: 'err' }; return m[s] || 'grey'; }
+function setStat(id, val, cls) { var el = document.getElementById(id); if (!el) return; el.textContent = val; el.className = 'stat-val' + (cls ? ' ' + cls : ''); }
+function ouvrirModal(id) { var el = document.getElementById(id); if (el) el.style.display = 'flex'; }
+function fermerModal(id) { var el = document.getElementById(id); if (el) el.style.display = 'none'; }
+function notifOk(msg) { _notif(msg, 'var(--ok)'); }
+function notifErr(msg) { _notif(msg, 'var(--err)'); }
+function _notif(msg, color) {
+  var el = document.createElement('div');
+  el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:' + color + ';color:#fff;padding:11px 16px;border-radius:10px;font-size:13px;font-weight:600;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,.3);max-width:320px';
+  el.textContent = msg; document.body.appendChild(el);
+  setTimeout(function() { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(function() { el.remove(); }, 300); }, 3000);
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', function() {
+  verifierSession();
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-overlay').forEach(function(m) { m.style.display = 'none'; });
+      _ariaModalCancel();
+    }
+  });
+});
+</script>
+<script src="/aria-i18n.js"></script>
+<script>
+function initLangSel() {
+  var sel = document.getElementById("lang-sel");
+  if (!sel || !window.AriaI18n) return;
+  sel.innerHTML = "";
+  AriaI18n.getLangs().forEach(function(l) {
+    var o = document.createElement("option");
+    o.value = l.code;
+    o.textContent = l.flag + " " + l.label;
+    if (l.code === AriaI18n.current()) o.selected = true;
+    sel.appendChild(o);
+  });
+  sel.style.display = "inline-block";
+}
+window.addEventListener("load", function() {
+  var tries = 0;
+  var iv = setInterval(function() {
+    tries++;
+    if (window.AriaI18n && window.AriaI18n.getLangs) {
+      initLangSel();
+      clearInterval(iv);
+    }
+    if (tries > 20) clearInterval(iv);
+  }, 150);
+});
+window.addEventListener("aria:langue", function() {
+  var sel = document.getElementById("lang-sel");
+  if (sel && window.AriaI18n) sel.value = AriaI18n.current();
+});
+
+<script src="/clients_module.js"></script>
+</script>
+</body>
+</html>

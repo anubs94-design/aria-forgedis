@@ -1,0 +1,332 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connexion - Aria Industrial</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+:root{
+  --bg:#070B18;--bg2:#0C1226;--panel:#111934;--panel2:#162040;
+  --text:#F0F3FB;--soft:#A6B0CC;--dim:#6D7799;
+  --amber:#E8873A;--amber-dk:#D4772A;--ok:#2ECC71;
+  --line:rgba(255,255,255,0.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:24px;
+  position:relative;overflow:hidden;
+}
+.bg-glow{
+  position:fixed;top:-200px;left:50%;transform:translateX(-50%);
+  width:800px;height:600px;
+  background:radial-gradient(ellipse,rgba(232,135,58,0.07) 0%,transparent 70%);
+  pointer-events:none;z-index:0;
+}
+.logo{font-family:'Sora',sans-serif;font-weight:800;font-size:1.3rem;color:var(--text);text-decoration:none;margin-bottom:6px;position:relative;z-index:1;}
+.logo span{color:var(--amber);}
+.logo-sub{font-size:12px;color:var(--dim);margin-bottom:32px;position:relative;z-index:1;text-align:center;}
+.card{
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:20px;padding:40px;width:100%;max-width:440px;
+  box-shadow:0 24px 64px rgba(0,0,0,0.35);
+  position:relative;z-index:1;
+}
+.card-title{font-family:'Sora',sans-serif;font-size:1.6rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:6px;}
+.card-sub{color:var(--soft);font-size:14px;margin-bottom:28px;line-height:1.5;}
+.poste-badge{
+  display:none;align-items:center;gap:10px;
+  background:rgba(232,135,58,0.08);border:1px solid rgba(232,135,58,0.2);
+  border-radius:10px;padding:10px 14px;margin-bottom:16px;
+  font-size:13px;color:var(--amber);font-weight:600;
+}
+.poste-badge.show{display:flex;}
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:12px;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+.field-wrap{position:relative;}
+.field input{
+  width:100%;background:var(--bg2);border:1px solid var(--line);
+  border-radius:10px;padding:12px 16px;color:var(--text);
+  font-size:15px;font-family:'Inter',sans-serif;
+  outline:none;transition:border .2s;
+}
+.field input:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(232,135,58,0.08);}
+.eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--dim);font-size:16px;background:none;border:none;padding:4px;transition:color .15s;}
+.eye:hover{color:var(--soft);}
+.forgot{text-align:right;margin-top:-8px;margin-bottom:16px;}
+.forgot a{font-size:12px;color:var(--dim);text-decoration:none;}
+.forgot a:hover{color:var(--amber);}
+.btn-main{
+  width:100%;background:var(--amber);color:#fff;
+  font-weight:700;padding:13px;border-radius:12px;
+  border:none;font-size:15px;cursor:pointer;
+  font-family:'Inter',sans-serif;transition:all .15s;min-height:48px;
+}
+.btn-main:hover{background:var(--amber-dk);transform:translateY(-1px);}
+.btn-main:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+.msg-error{display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:#f87171;border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:14px;line-height:1.5;}
+.msg-success{display:none;background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.25);color:var(--ok);border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:14px;line-height:1.5;}
+.msg-loading{display:none;text-align:center;color:var(--soft);font-size:13px;padding:8px 0;}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(232,135,58,0.25);border-top-color:var(--amber);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.divider-link{text-align:center;margin-top:16px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--dim);}
+.divider-link a{color:var(--dim);text-decoration:none;}
+.divider-link a:hover{color:var(--soft);}
+.slogan{text-align:center;margin-top:28px;font-size:12px;color:var(--dim);font-style:italic;position:relative;z-index:1;}
+@media(max-width:480px){
+  body{padding:16px;}
+  .logo{font-size:1.1rem;}
+  .card{padding:28px 20px;border-radius:16px;}
+  .card-title{font-size:1.4rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-glow"></div>
+<a href="/industrial.html" class="logo">FORGE<span>DIS</span></a>
+<div class="logo-sub">Aria Industrial - Espace entreprise</div>
+
+<div class="card">
+  <div class="card-title" id="card-title">Connexion</div>
+  <div class="card-sub" id="card-sub">Email de l'entreprise + votre mot de passe personnel</div>
+
+  <div class="poste-badge" id="poste-badge">
+    <span id="poste-badge-ico">🏢</span>
+    <span id="poste-badge-txt">Accès détecté - redirection...</span>
+  </div>
+
+  <form id="auth-form" onsubmit="event.preventDefault(); valider();">
+    <div class="field">
+      <label>Email de l'entreprise</label>
+      <input type="email" id="f-email" placeholder="entreprise@email.com" autocomplete="email" required>
+    </div>
+    <div class="field" id="field-mdp">
+      <label>Votre mot de passe personnel</label>
+      <div class="field-wrap">
+        <input type="password" id="f-mdp" placeholder="••••••••" autocomplete="current-password">
+        <button type="button" class="eye" onclick="toggleMdp()" id="btn-eye">👁</button>
+      </div>
+    </div>
+    <div class="forgot" id="div-forgot">
+      <a href="#" onclick="modeMdpOublie(); return false;">Mot de passe oublié ?</a>
+    </div>
+    <div class="msg-error" id="msg-error"></div>
+    <div class="msg-success" id="msg-success"></div>
+    <div class="msg-loading" id="msg-loading">
+      <span class="spinner"></span>
+      <span id="loading-text">Connexion en cours...</span>
+    </div>
+    <button type="submit" class="btn-main" id="btn-main">Accéder à mon poste →</button>
+  </form>
+
+  <div class="divider-link">
+    <a href="/connexion.html">← Connexion Aria Facility / Kids</a>
+  </div>
+</div>
+
+<div class="slogan">L'IA française qui n'oublie personne.</div>
+
+<script>
+var SUPABASE_URL = 'https://dvlrilklbspuckbplglz.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2bHJpbGtsYnNwdWNrYnBsZ2x6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNzYyNjIsImV4cCI6MjA5Njk1MjI2Mn0.lC1rt8bvfIpi1c78L8OWGXjjYhXzqzNkIgykHTle6eM';
+
+var POSTES = {
+  'comptabilite':   {html:'poste-comptabilite.html',  ico:'🧾', label:'Comptabilité'},
+  'rh':             {html:'poste-rh.html',             ico:'👥', label:'Ressources humaines'},
+  'achats':         {html:'poste-achats.html',         ico:'📦', label:'Achats'},
+  'service-client': {html:'poste-service-client.html', ico:'🎧', label:'Service client'},
+  'logistique':     {html:'poste-logistique.html',     ico:'🏭', label:'Logistique'},
+  'technicien-sav': {html:'poste-technicien-sav.html', ico:'🔧', label:'Technicien SAV'},
+  'dirigeant':      {html:'poste-dirigeant.html',      ico:'👑', label:'Dirigeant'},
+};
+
+var mode = 'connexion';
+
+function esc(s){var d=document.createElement('div');d.appendChild(document.createTextNode(String(s===null||s===undefined?'':s)));return d.innerHTML;}
+function toggleMdp(){
+  var inp = document.getElementById('f-mdp');
+  var eye = document.getElementById('btn-eye');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  eye.textContent = inp.type === 'password' ? '👁' : '🙈';
+}
+
+function modeMdpOublie(){
+  mode = 'mdp-oublie';
+  document.getElementById('card-title').textContent = 'Mot de passe oublié';
+  document.getElementById('card-sub').textContent = 'Contactez votre administrateur pour réinitialiser votre mot de passe.';
+  document.getElementById('field-mdp').style.display = 'none';
+  document.getElementById('div-forgot').style.display = 'none';
+  document.getElementById('btn-main').textContent = 'Envoyer la demande →';
+  cacherMessages();
+}
+
+function modeConnexion(){
+  mode = 'connexion';
+  document.getElementById('card-title').textContent = 'Connexion';
+  document.getElementById('card-sub').textContent = 'Email de l\'entreprise + votre mot de passe personnel';
+  document.getElementById('field-mdp').style.display = '';
+  document.getElementById('div-forgot').style.display = '';
+  document.getElementById('btn-main').textContent = 'Accéder à mon poste →';
+  cacherMessages();
+}
+
+function cacherMessages(){
+  ['msg-error','msg-success','msg-loading'].forEach(function(id){
+    document.getElementById(id).style.display = 'none';
+  });
+}
+function showError(msg){
+  cacherMessages();
+  var el = document.getElementById('msg-error');
+  el.textContent = msg; el.style.display = 'block';
+}
+function showSuccess(msg){
+  cacherMessages();
+  var el = document.getElementById('msg-success');
+  el.textContent = msg; el.style.display = 'block';
+}
+function showLoading(msg){
+  cacherMessages();
+  document.getElementById('loading-text').textContent = msg || 'Connexion en cours...';
+  document.getElementById('msg-loading').style.display = 'block';
+  document.getElementById('btn-main').disabled = true;
+}
+function stopLoading(){
+  document.getElementById('msg-loading').style.display = 'none';
+  document.getElementById('btn-main').disabled = false;
+}
+
+function redirecterPoste(poste, nom, email, salarie_id, entreprise_id, role){
+  poste = (poste || '').toLowerCase().trim().replace(/ /g, '-');
+  try{
+    localStorage.setItem('aria_industrial_email',        email);
+    localStorage.setItem('aria_industrial_poste',        poste);
+    localStorage.setItem('aria_industrial_nom',          nom || '');
+    localStorage.setItem('aria_session_active',          poste);
+    localStorage.setItem('aria_industrial_token',        salarie_id || '');
+    localStorage.setItem('aria_industrial_entreprise_id', entreprise_id || '');
+    localStorage.setItem('aria_industrial_role',         role || 'salarie');
+    localStorage.setItem('aria_industrial_session', JSON.stringify({
+      salarie_id: salarie_id, entreprise_id: entreprise_id,
+      role: role, nom: nom, poste: poste, email: email,
+      terrain: false
+    }));
+  }catch(e){}
+
+  var config = POSTES[poste];
+  if(!config){
+    showError('Poste non reconnu : ' + poste + '. Contactez votre administrateur.');
+    stopLoading(); return;
+  }
+  var badge = document.getElementById('poste-badge');
+  document.getElementById('poste-badge-ico').textContent = config.ico;
+  document.getElementById('poste-badge-txt').textContent = config.ico + ' Accès ' + config.label + ' - redirection...';
+  badge.classList.add('show');
+  setTimeout(function(){ window.location.href = '/' + config.html; }, 800);
+}
+
+function valider(){
+  var email = document.getElementById('f-email').value.trim().toLowerCase();
+  var mdp   = document.getElementById('f-mdp').value;
+  if(!email || !email.includes('@')){ showError('Veuillez entrer l\'email de votre entreprise.'); return; }
+  if(mode === 'mdp-oublie'){ envoyerReset(email); return; }
+  if(!mdp || mdp.length < 4){ showError('Veuillez entrer votre mot de passe personnel.'); return; }
+  seConnecter(email, mdp);
+}
+
+function seConnecter(email, mdp){
+  showLoading('Vérification en cours...');
+  fetch('https://aria-forgelis.onrender.com/industrial/auth', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email: email, mot_de_passe: mdp})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(resp){
+    stopLoading();
+    if(!resp.ok || !resp.salarie){
+      showError(resp.erreur || 'Email ou mot de passe incorrect.');
+      return;
+    }
+    var result = resp.salarie;
+    if(result.actif === false){
+      showError('Votre accès a été désactivé. Contactez votre administrateur.');
+      return;
+    }
+    // Bloquer les salariés terrain sur le web
+    if(result.terrain) {
+      document.getElementById('form-connexion').style.display = 'none';
+      document.getElementById('login-gate').innerHTML = `
+        <div style="text-align:center;padding:40px 24px;max-width:400px;margin:0 auto">
+          <div style="font-size:48px;margin-bottom:16px">📱</div>
+          <h2 style="font-size:20px;font-weight:800;color:#F0F3FB;margin-bottom:12px">Accès mobile uniquement</h2>
+          <p style="color:#A6B0CC;font-size:14px;line-height:1.7;margin-bottom:24px">
+            Bonjour <strong style="color:#F0F3FB">\${result.nom}</strong>,<br>
+            votre poste est configuré pour l'application mobile.<br>
+            Connectez-vous depuis l'app Aria Industrial sur votre téléphone.
+          </p>
+          <button onclick="window.location.reload()" style="background:rgba(232,135,58,0.15);border:1px solid rgba(232,135,58,0.4);color:#E8873A;border-radius:10px;padding:10px 20px;font-size:14px;cursor:pointer;font-family:inherit">
+            ← Retour à la connexion
+          </button>
+        </div>
+      `;
+      return;
+    }
+    redirecterPoste(result.poste, result.nom, email, result.id, result.entreprise_id, result.role);
+  })
+  .catch(function(){ stopLoading(); showError('Erreur réseau. Réessayez.'); });
+}
+
+function envoyerReset(email){
+  showLoading('Envoi en cours...');
+  fetch(SUPABASE_URL + '/rest/v1/rpc/demande_reset_mdp', {
+    method:'POST',
+    headers:{
+      'apikey':SUPABASE_KEY,
+      'Authorization':'Bearer '+SUPABASE_KEY,
+      'Content-Type':'application/json'
+    },
+    body:JSON.stringify({p_email_entreprise: email})
+  })
+  .then(function(){
+    stopLoading();
+    showSuccess('Demande envoyée. Votre administrateur sera notifié.');
+    setTimeout(modeConnexion, 4000);
+  })
+  .catch(function(){
+    stopLoading();
+    showSuccess('Demande envoyée. Votre administrateur sera notifié.');
+    setTimeout(modeConnexion, 4000);
+  });
+}
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded', function(){
+  // Déjà connecté ?
+  try{
+    var poste   = localStorage.getItem('aria_industrial_poste');
+    var session = localStorage.getItem('aria_session_active');
+    var email   = localStorage.getItem('aria_industrial_email');
+    if(poste && session === poste && email){
+      redirecterPoste(poste,
+        localStorage.getItem('aria_industrial_nom'),
+        email,
+        localStorage.getItem('aria_industrial_token'),
+        localStorage.getItem('aria_industrial_entreprise_id'),
+        localStorage.getItem('aria_industrial_role'));
+      return;
+    }
+  }catch(e){}
+  // Pré-remplir email
+  try{
+    var em = localStorage.getItem('aria_industrial_email');
+    if(em) document.getElementById('f-email').value = em;
+  }catch(e){}
+});
+</script>
+<script src="/aria-i18n.js"></script>
+</body>
+</html>

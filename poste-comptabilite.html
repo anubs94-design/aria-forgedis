@@ -1,0 +1,2448 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aria Industrial — Comptabilité</title>
+<style>
+:root{
+  --bg:#14161C;--panel:#1B1E27;--panel2:#22252F;--panel3:#282C38;
+  --line:#2E3240;--line2:#3A3F4E;
+  --ink:#EDEFF3;--ink-dim:#9096A8;--ink-faint:#5E6479;
+  --amber:#E8873A;--amber-dim:#3A2E20;
+  --ok:#4FBF8B;--ok-dim:#1C2E27;
+  --wait:#E0B23C;--wait-dim:#332C1A;
+  --err:#E15B5B;--err-dim:#331E1E;
+  --blue:#4A86E8;--blue-dim:#1A2A4A;
+  --radius:12px;--err:var(--err);--bg2:var(--panel2);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;min-height:100vh;display:flex;flex-direction:column}
+.app-shell{display:flex;flex:1;min-height:0}
+.sidebar{width:228px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;position:sticky;top:0;height:100vh}
+.brand{padding:18px 16px 12px;border-bottom:1px solid var(--line)}
+.brand-logo{font-size:17px;font-weight:800;color:var(--amber)}
+.brand-sub{font-size:11px;color:var(--ink-dim);margin-top:2px}
+.nav-group{padding:5px 0}
+.nav-group-label{padding:6px 16px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-faint)}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 16px;cursor:pointer;color:var(--ink-dim);font-size:12.5px;transition:background .15s,color .15s;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:var(--panel2);color:var(--ink)}
+.nav-item.active{background:var(--amber-dim);color:var(--amber);font-weight:600}
+.nav-item-ico{font-size:13px;width:18px;text-align:center}
+.nav-sep{height:1px;background:var(--line);margin:4px 0}
+.main-content{flex:1;overflow-y:auto;padding:24px;max-width:1100px}
+.topbar{background:var(--panel);border-bottom:1px solid var(--line);padding:0 20px;height:50px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.poste-tag{background:var(--amber-dim);color:var(--amber);border-radius:8px;padding:4px 12px;font-size:12px;font-weight:700}
+.role-badge{border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700}
+.role-badge.resp{background:rgba(74,134,232,.15);color:var(--blue)}
+.role-badge.sal{background:var(--panel2);color:var(--ink-dim);border:1px solid var(--line)}
+.btn-icon{background:none;border:1px solid var(--line);border-radius:8px;color:var(--ink-dim);padding:5px 10px;cursor:pointer;font-size:13px;transition:border-color .15s,color .15s}
+.btn-icon:hover{border-color:var(--amber);color:var(--amber)}
+.view{display:none;animation:fadeIn .2s}
+.view.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.view-head{margin-bottom:20px}
+.view-head h1{font-size:21px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.view-head p{color:var(--ink-dim);font-size:13px}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;text-align:center}
+.stat-val{font-size:22px;font-weight:800;color:var(--amber);margin-bottom:3px}
+.stat-val.ok{color:var(--ok)}.stat-val.warn{color:var(--wait)}.stat-val.err{color:var(--err)}
+.stat-lbl{font-size:10px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.05em}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:14px}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px;flex-wrap:wrap}
+.section-head h2{font-size:14px;font-weight:700;color:var(--ink)}
+.row-item{background:var(--panel2);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px}
+.ri-main{flex:1;min-width:0}
+.ri-title{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:3px}
+.ri-sub{font-size:11.5px;color:var(--ink-dim)}
+.ri-amount{font-family:monospace;font-size:14px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.ri-amount.ok{color:var(--ok)}.ri-amount.err{color:var(--err)}.ri-amount.warn{color:var(--wait)}
+.ri-actions{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;align-items:flex-start}
+.empty-state{text-align:center;padding:36px 20px;color:var(--ink-dim)}
+.es-ic{font-size:30px;margin-bottom:8px}
+.badge{display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;white-space:nowrap}
+.badge-ok{background:rgba(79,191,139,.15);color:var(--ok)}
+.badge-warn{background:rgba(224,178,60,.15);color:var(--wait)}
+.badge-err{background:rgba(225,91,91,.15);color:var(--err)}
+.badge-amber{background:var(--amber-dim);color:var(--amber)}
+.badge-blue{background:rgba(74,134,232,.15);color:var(--blue)}
+.badge-grey{background:var(--panel2);color:var(--ink-dim);border:1px solid var(--line)}
+.btn-act{border:none;border-radius:8px;padding:7px 13px;cursor:pointer;font-size:12.5px;font-weight:600;transition:opacity .15s;white-space:nowrap;font-family:inherit}
+.btn-act:hover{opacity:.85}
+.btn-amber{background:var(--amber);color:#fff}
+.btn-ok{background:var(--ok);color:#fff}
+.btn-err{background:var(--err);color:#fff}
+.btn-ghost{background:transparent;border:1px solid var(--line2);color:var(--ink-dim)}
+.btn-ghost:hover{border-color:var(--ink-dim)}
+.btn-sm{padding:4px 10px;font-size:11.5px}
+.input-field{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-size:13px;padding:8px 12px;outline:none;transition:border-color .15s;font-family:inherit}
+.input-field:focus{border-color:var(--amber)}
+.input-field option{background:var(--panel)}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:14px}
+.form-group label{display:block;font-size:10.5px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.table-wrap{overflow-x:auto}
+table.dt{width:100%;border-collapse:collapse;font-size:12.5px}
+table.dt th{background:var(--panel2);color:var(--ink-dim);font-size:10px;font-weight:700;text-transform:uppercase;padding:9px 12px;text-align:left;border-bottom:1px solid var(--line)}
+table.dt td{padding:9px 12px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:middle}
+table.dt tr:last-child td{border-bottom:none}
+table.dt tr:hover td{background:rgba(255,255,255,.02)}
+.access-guard{background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius);padding:32px;text-align:center;margin-top:12px}
+.access-guard .ag-ico{font-size:28px;margin-bottom:10px}
+.access-guard p{font-size:13px;color:var(--ink-dim);margin-top:4px}
+.alert-item{border-left:3px solid var(--wait);background:var(--wait-dim);border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:8px}
+.alert-item.crit{border-color:var(--err)!important;background:var(--err-dim)!important}
+.alert-item.ok{border-color:var(--ok)!important;background:var(--ok-dim)!important}
+.alert-title{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px}
+.alert-desc{font-size:11.5px;color:var(--ink-dim)}
+.checklist-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.checklist-item:last-child{border-bottom:none}
+.check-box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--line2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;transition:background .15s}
+.check-box.done{background:var(--ok);border-color:var(--ok);color:#fff}
+.check-label{font-size:13px;color:var(--ink)}
+.check-label.done{text-decoration:line-through;color:var(--ink-faint)}
+.aria-zone{background:var(--panel3);border-radius:10px;padding:14px;font-size:13px;line-height:1.7;color:var(--ink-dim);white-space:pre-wrap;min-height:48px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-box{background:var(--panel);border-radius:16px;padding:26px;width:100%;max-width:580px;max-height:92vh;overflow-y:auto;border:1px solid var(--line)}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.modal-head h3{font-size:17px;font-weight:700;color:var(--ink)}
+.modal-close{background:none;border:none;font-size:20px;color:var(--ink-dim);cursor:pointer}
+/* Modale Aria */
+.aria-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .18s}
+.aria-modal-overlay.open{opacity:1;pointer-events:all}
+.aria-modal{background:var(--panel2);border:1px solid var(--line2);border-radius:var(--radius);padding:26px 26px 20px;width:min(420px,90vw);box-shadow:0 20px 60px rgba(0,0,0,.5);transform:translateY(8px);transition:transform .18s}
+.aria-modal-overlay.open .aria-modal{transform:translateY(0)}
+.aria-modal-ico{font-size:26px;text-align:center;margin-bottom:10px}
+.aria-modal-title{font-size:15px;font-weight:700;color:var(--ink);text-align:center;margin-bottom:5px}
+.aria-modal-msg{font-size:12.5px;color:var(--ink-dim);text-align:center;margin-bottom:16px;line-height:1.5}
+.aria-modal-input{width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-size:14px;padding:9px 13px;outline:none;transition:border-color .15s;box-sizing:border-box;margin-bottom:14px;font-family:inherit}
+.aria-modal-input:focus{border-color:var(--amber)}
+.aria-modal-actions{display:flex;gap:10px;justify-content:flex-end}
+.aria-modal-cancel{background:transparent;border:1px solid var(--line2);color:var(--ink-dim);border-radius:8px;padding:7px 16px;cursor:pointer;font-size:13px;font-family:inherit}
+.aria-modal-confirm{border:none;border-radius:8px;padding:7px 16px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit}
+.aria-modal-confirm.danger{background:var(--err);color:#fff}
+.aria-modal-confirm.primary{background:var(--amber);color:#fff}
+.nav-group-resp{display:none}
+.nav-item-resp{display:none}
+@media(max-width:768px){.sidebar{display:none}.main-content{padding:16px}.stats-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<!-- Modale Aria -->
+<div class="aria-modal-overlay" id="aria-modal-overlay" onclick="if(event.target===this)_ariaModalCancel()">
+  <div class="aria-modal">
+    <div class="aria-modal-ico" id="aria-modal-ico">⚠️</div>
+    <div class="aria-modal-title" id="aria-modal-title"></div>
+    <div class="aria-modal-msg" id="aria-modal-msg"></div>
+    <input class="aria-modal-input" id="aria-modal-input" type="text" style="display:none">
+    <div class="aria-modal-actions">
+      <button class="aria-modal-cancel" onclick="_ariaModalCancel()">Annuler</button>
+      <button class="aria-modal-confirm primary" id="aria-modal-confirm" onclick="_ariaModalConfirm()">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <button class="btn-icon" onclick="toggleSidebar()">☰</button>
+    <span style="font-size:14px;font-weight:700;color:var(--ink)">Aria Industrial</span>
+  </div>
+  <div class="topbar-right">
+    <span class="role-badge sal" id="role-badge-el">🧾 Comptabilité</span>
+    <div class="poste-tag" id="poste-tag">🧾 Comptabilité</div>
+    <button class="btn-icon" onclick="deconnexion()">Déconnexion</button>
+  </div>
+</div>
+
+<div class="app-shell">
+<!-- Sidebar -->
+<div class="sidebar" id="app-sidebar">
+  <div class="brand"><div class="brand-logo">Aria</div><div class="brand-sub">Poste Comptabilité</div></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Vue d'ensemble</div>
+    <button class="nav-item active" data-view="v-dash" onclick="goToView('v-dash',this)"><span class="nav-item-ico">📊</span>Tableau de bord</button>
+  </div>
+  <div class="nav-sep"></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Clients — Ventes</div>
+    <button class="nav-item" data-view="v-factures-client" onclick="goToView('v-factures-client',this)"><span class="nav-item-ico">🧾</span>Factures clients</button>
+    <button class="nav-item" data-view="v-devis" onclick="goToView('v-devis',this)"><span class="nav-item-ico">📄</span>Devis</button>
+    <button class="nav-item" data-view="v-relances" onclick="goToView('v-relances',this)"><span class="nav-item-ico">⏰</span>Relances &amp; encaissements</button>
+  </div>
+  <div class="nav-sep"></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Fournisseurs — Achats</div>
+    <button class="nav-item" data-view="v-factures-fourn" onclick="goToView('v-factures-fourn',this)"><span class="nav-item-ico">📥</span>Factures fournisseurs</button>
+    <button class="nav-item" data-view="v-frais" onclick="goToView('v-frais',this)"><span class="nav-item-ico">🧳</span>Notes de frais</button>
+    <button class="nav-item" data-view="v-rapprochement-achats" onclick="goToView('v-rapprochement-achats',this)"><span class="nav-item-ico">🔗</span>Rappr. BC / Facture</button>
+  </div>
+  <div class="nav-sep"></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Trésorerie &amp; Banque</div>
+    <button class="nav-item" data-view="v-rapprochement-bancaire" onclick="goToView('v-rapprochement-bancaire',this)"><span class="nav-item-ico">🏦</span>Rappr. bancaire</button>
+    <button class="nav-item" data-view="v-tresorerie" onclick="goToView('v-tresorerie',this)"><span class="nav-item-ico">💧</span>Trésorerie</button>
+  </div>
+  <div class="nav-sep"></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Comptabilité</div>
+    <button class="nav-item" data-view="v-ecritures" onclick="goToView('v-ecritures',this)"><span class="nav-item-ico">📒</span>Saisie écritures</button>
+    <button class="nav-item" data-view="v-immo" onclick="goToView('v-immo',this)"><span class="nav-item-ico">🏗️</span>Immobilisations</button>
+    <button class="nav-item" data-view="v-emprunts" onclick="goToView('v-emprunts',this)"><span class="nav-item-ico">💳</span>Emprunts</button>
+    <button class="nav-item" data-view="v-frais-perso" onclick="goToView('v-frais-perso',this)"><span class="nav-item-ico">🧮</span>Notes de frais salariés</button>
+  </div>
+  <div class="nav-sep"></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Fiscal &amp; Obligations</div>
+    <button class="nav-item" data-view="v-tva" onclick="goToView('v-tva',this)"><span class="nav-item-ico">📋</span>TVA</button>
+    <button class="nav-item" data-view="v-echeancier-fiscal" onclick="goToView('v-echeancier-fiscal',this)"><span class="nav-item-ico">📅</span>Échéancier fiscal</button>
+  </div>
+  <div class="nav-sep"></div>
+  <!-- SUPERVISION — Responsable uniquement -->
+  <div class="nav-group nav-group-resp" id="nav-supervision">
+    <div class="nav-group-label" style="color:var(--amber)">Supervision équipe</div>
+    <button class="nav-item nav-item-resp" data-view="v-equipe" onclick="goToView('v-equipe',this)"><span class="nav-item-ico">👥</span>Mon équipe</button>
+    <button class="nav-item nav-item-resp" data-view="v-cloture" onclick="goToView('v-cloture',this)"><span class="nav-item-ico">📆</span>Clôture mensuelle</button>
+    <button class="nav-item nav-item-resp" data-view="v-analytique" onclick="goToView('v-analytique',this)"><span class="nav-item-ico">📊</span>Analytique</button>
+    <button class="nav-item nav-item-resp" data-view="v-bilan" onclick="goToView('v-bilan',this)"><span class="nav-item-ico">📕</span>Bilan &amp; résultat</button>
+    <button class="nav-item nav-item-resp" data-view="v-expert" onclick="goToView('v-expert',this)"><span class="nav-item-ico">🤝</span>Expert-comptable</button>
+  </div>
+  <div class="nav-sep"></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Documents &amp; Export</div>
+    <button class="nav-item" data-view="v-coffre" onclick="goToView('v-coffre',this)"><span class="nav-item-ico">🗄️</span>Coffre documentaire</button>
+    <button class="nav-item" data-view="v-export" onclick="goToView('v-export',this)"><span class="nav-item-ico">⬇️</span>Export comptable</button>
+    <button class="nav-item" data-view="v-consulting" onclick="goToView('v-consulting',this)"><span class="nav-item-ico">🧠</span>Consulting Aria</button>
+    <button class="nav-item" data-view="v-journal" onclick="goToView('v-journal',this)"><span class="nav-item-ico">📜</span>Journal</button>
+  </div>
+  <div class="nav-sep"></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Mon poste</div>
+    <button class="nav-item" data-view="v-pointage" onclick="goToView('v-pointage',this)"><span class="nav-item-ico">🕐</span>Pointage</button>
+    <button class="nav-item" data-view="v-taches" onclick="goToView('v-taches',this)"><span class="nav-item-ico">✅</span>Mes tâches</button>
+    <button class="nav-item" data-view="v-mes-conges" onclick="goToView('v-mes-conges',this)"><span class="nav-item-ico">🏖️</span>Mes congés</button>
+    <button class="nav-item" data-view="v-mes-droits" onclick="goToView('v-mes-droits',this)"><span class="nav-item-ico">⚖️</span>Mes droits</button>
+    <button class="nav-item" data-view="v-clients" onclick="goToView('v-clients',this)"><span class="nav-icon">&#128101;</span>Clients</button>
+<button class="nav-item" data-view="v-formation-qcm" onclick="goToView('v-formation-qcm',this)"><span class="nav-item-ico">🎓</span>Formation</button>
+  </div>
+</div>
+
+<!-- Contenu -->
+<div class="main-content" id="app-content">
+
+<!-- ═══ VUES ═══ -->
+
+<!-- DASHBOARD -->
+<div class="view active" id="v-dash">
+  <div class="view-head"><h1>Comptabilité</h1><p id="dash-desc">Chargement...</p></div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val warn" id="stat-a-encaisser">—</div><div class="stat-lbl">À encaisser (€)</div></div>
+    <div class="stat-card"><div class="stat-val err" id="stat-en-retard">—</div><div class="stat-lbl">Factures en retard</div></div>
+    <div class="stat-card"><div class="stat-val" id="stat-a-rapprocher">—</div><div class="stat-lbl">Transactions non rapprochées</div></div>
+    <div class="stat-card"><div class="stat-val ok" id="stat-ca-mois">—</div><div class="stat-lbl">CA ce mois (€)</div></div>
+    <div class="stat-card"><div class="stat-val warn" id="stat-fourn-attente">—</div><div class="stat-lbl">Factures fourn. à payer</div></div>
+    <div class="stat-card"><div class="stat-val" id="stat-solde">—</div><div class="stat-lbl">Solde estimé (€)</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>⚠️ Alertes comptables</h2></div>
+    <div id="dash-alertes"><div class="empty-state"><div class="es-ic">✅</div>Aucune alerte.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Dernières factures clients</h2><button class="btn-act btn-amber btn-sm" onclick="goToView('v-factures-client')">Voir tout</button></div>
+    <div id="dash-factures-client"><div class="empty-state"><div class="es-ic">🧾</div>Aucune facture récente.</div></div>
+  </div>
+  <div class="card" id="dash-equipe-card" style="display:none">
+    <div class="section-head"><h2>🔗 Supervision équipe</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerDash()">↺</button></div>
+    <div id="dash-equipe-alertes"></div>
+  </div>
+</div>
+
+<!-- FACTURES CLIENTS -->
+<div class="view" id="v-factures-client">
+  <div class="view-head"><h1>Factures clients</h1><p>Créez, envoyez et suivez vos factures clients. Factur-X disponible.</p></div>
+  <div class="card">
+    <div class="section-head">
+      <h2>Factures</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select id="filter-fc-statut" class="input-field" style="width:150px" onchange="afficherFactures('client')">
+          <option value="">Tous statuts</option>
+          <option value="brouillon">Brouillon</option>
+          <option value="envoyee">Envoyée</option>
+          <option value="payee">Payée</option>
+          <option value="en_retard">En retard</option>
+          <option value="avoir">Avoir</option>
+        </select>
+        <button class="btn-act btn-amber" onclick="ouvrirModalFacture('client')">+ Nouvelle facture</button>
+      </div>
+    </div>
+    <input type="text" id="search-fc" class="input-field" placeholder="Rechercher client, numéro..." style="margin-bottom:12px" oninput="afficherFactures('client')">
+    <div id="liste-factures-client"><div class="empty-state"><div class="es-ic">🧾</div>Aucune facture.</div></div>
+  </div>
+</div>
+
+<!-- DEVIS -->
+<div class="view" id="v-devis">
+  <div class="view-head"><h1>Devis</h1><p>Générez des devis avec Aria et convertissez-les en factures.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Nouveau devis avec Aria</h2></div>
+    <div class="form-group" style="margin-bottom:10px"><label>Décrivez la prestation</label>
+      <textarea id="devis-desc" class="input-field" rows="3" placeholder="Ex : Installation électrique 200m², 3 jours main d'oeuvre, fournitures câbles..."></textarea>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Client</label><input id="devis-client" class="input-field" placeholder="Nom du client"></div>
+      <div class="form-group"><label>Taux TVA (%)</label><input id="devis-tva" type="number" class="input-field" value="20"></div>
+    </div>
+    <button class="btn-act btn-amber" onclick="genererDevis()">🧠 Générer le devis</button>
+    <div class="aria-zone" id="devis-resultat" style="margin-top:14px;display:none"></div>
+    <button class="btn-act btn-ok btn-sm" id="btn-devis-to-facture" style="margin-top:10px;display:none" onclick="convertirDevisEnFacture()">→ Convertir en facture</button>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Devis émis</h2></div>
+    <div id="liste-devis"><div class="empty-state"><div class="es-ic">📄</div>Aucun devis.</div></div>
+  </div>
+</div>
+
+<!-- RELANCES & ENCAISSEMENTS -->
+<div class="view" id="v-relances">
+  <div class="view-head"><h1>Relances &amp; Encaissements</h1><p>Factures en retard, relances automatiques, lettrage des encaissements.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Factures impayées</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerRelances()">↺ Actualiser</button></div>
+    <div id="liste-relances"><div class="empty-state"><div class="es-ic">⏰</div>Aucune facture impayée.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>🧠 Rédiger une relance avec Aria</h2></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Client</label><input id="rel-client" class="input-field" placeholder="Nom du client"></div>
+      <div class="form-group"><label>Montant (€)</label><input id="rel-montant" type="number" class="input-field"></div>
+      <div class="form-group"><label>Jours de retard</label><input id="rel-jours" type="number" class="input-field" value="15"></div>
+      <div class="form-group"><label>Niveau</label>
+        <select id="rel-niveau" class="input-field">
+          <option value="1">1ère relance (amiable)</option>
+          <option value="2">2ème relance (formelle)</option>
+          <option value="3">Mise en demeure</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-act btn-amber" onclick="genererRelance()">🧠 Générer la relance</button>
+    <div class="aria-zone" id="relance-resultat" style="margin-top:12px;display:none"></div>
+  </div>
+  <!-- Encaissements -->
+  <div class="card">
+    <div class="section-head"><h2>Enregistrer un encaissement</h2></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Facture</label>
+        <select id="enc-facture" class="input-field"><option value="">Sélectionner</option></select>
+      </div>
+      <div class="form-group"><label>Montant encaissé (€)</label><input id="enc-montant" type="number" step="0.01" class="input-field"></div>
+      <div class="form-group"><label>Date</label><input id="enc-date" type="date" class="input-field"></div>
+      <div class="form-group"><label>Mode</label>
+        <select id="enc-mode" class="input-field">
+          <option value="virement">Virement</option><option value="cheque">Chèque</option>
+          <option value="cb">CB</option><option value="especes">Espèces</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-act btn-amber" onclick="enregistrerEncaissement()">💰 Enregistrer</button>
+  </div>
+</div>
+
+<!-- FACTURES FOURNISSEURS -->
+<div class="view" id="v-factures-fourn">
+  <div class="view-head"><h1>Factures fournisseurs</h1><p>Saisie, échéances, paiements, détection de doublons.</p></div>
+  <div class="card">
+    <div class="section-head">
+      <h2>Factures</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select id="filter-ff-statut" class="input-field" style="width:150px" onchange="afficherFactures('fournisseur')">
+          <option value="">Tous statuts</option>
+          <option value="saisie">Saisie</option>
+          <option value="en_attente_paiement">À payer</option>
+          <option value="payee">Payée</option>
+          <option value="litige">Litige</option>
+        </select>
+        <button class="btn-act btn-amber" onclick="ouvrirModalFacture('fournisseur')">+ Saisir facture</button>
+      </div>
+    </div>
+    <div id="liste-factures-fourn"><div class="empty-state"><div class="es-ic">📥</div>Aucune facture fournisseur.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>⚡ Échéances à venir (30 jours)</h2></div>
+    <div id="echeances-fourn"><div class="empty-state"><div class="es-ic">✅</div>Aucune échéance proche.</div></div>
+  </div>
+</div>
+
+<!-- NOTES DE FRAIS -->
+<div class="view" id="v-frais">
+  <div class="view-head"><h1>Notes de frais</h1><p>Saisissez vos dépenses professionnelles à rembourser.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Nouvelle note de frais</h2></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Date</label><input type="date" id="nf-date" class="input-field"></div>
+      <div class="form-group"><label>Catégorie</label>
+        <select id="nf-cat" class="input-field">
+          <option value="transport">Transport</option><option value="repas">Repas</option>
+          <option value="hebergement">Hébergement</option><option value="fournitures">Fournitures</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Montant TTC (€)</label><input type="number" id="nf-montant" step="0.01" class="input-field"></div>
+      <div class="form-group"><label>TVA (%)</label><input type="number" id="nf-tva" value="20" class="input-field"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Description</label><input type="text" id="nf-desc" class="input-field" placeholder="Déjeuner client ABC, Taxi gare..."></div>
+    </div>
+    <button class="btn-act btn-amber" onclick="soumettreNoteFrais()">💾 Soumettre</button>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Mes notes de frais</h2></div>
+    <div id="liste-frais"><div class="empty-state"><div class="es-ic">🧳</div>Aucune note de frais.</div></div>
+  </div>
+</div>
+
+<!-- RAPPROCHEMENT ACHATS (BC/Réception/Facture) -->
+<div class="view" id="v-rapprochement-achats">
+  <div class="view-head"><h1>Rapprochement BC / Réception / Facture</h1><p>Vérification automatique de la cohérence BC ↔ Réception ↔ Facture fournisseur.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Anomalies détectées</h2><button class="btn-act btn-amber btn-sm" onclick="chargerRapprochementAchats()">↺ Analyser</button></div>
+    <div id="rappr-achats-anomalies"><div class="empty-state"><div class="es-ic">🔗</div>Lancez l'analyse pour détecter les écarts.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Tous les dossiers</h2></div>
+    <div id="rappr-achats-tous"><div class="empty-state"><div class="es-ic">📋</div>Aucun dossier.</div></div>
+  </div>
+</div>
+
+<!-- RAPPROCHEMENT BANCAIRE -->
+<div class="view" id="v-rapprochement-bancaire">
+  <div class="view-head"><h1>Rapprochement bancaire</h1><p>Importez vos relevés, rapprochez les transactions, identifiez les écarts.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Saisir une transaction</h2></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Date</label><input type="date" id="tr-date" class="input-field"></div>
+      <div class="form-group"><label>Libellé</label><input type="text" id="tr-libelle" class="input-field" placeholder="Virement client ABC"></div>
+      <div class="form-group"><label>Montant (€)</label><input type="number" id="tr-montant" step="0.01" class="input-field"></div>
+      <div class="form-group"><label>Type</label>
+        <select id="tr-type" class="input-field"><option value="credit">Crédit (+)</option><option value="debit">Débit (−)</option></select>
+      </div>
+      <div class="form-group"><label>Catégorie</label><input type="text" id="tr-categorie" class="input-field" placeholder="Vente, Achat, Salaire..."></div>
+      <div class="form-group"><label>Compte</label><input type="text" id="tr-compte" class="input-field" placeholder="Compte courant BNP..."></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-act btn-amber" onclick="saisirTransaction()">💾 Enregistrer</button>
+      <button class="btn-act btn-ghost" onclick="ouvrirModal('modal-import-rib')">📁 Importer relevé</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Transactions à rapprocher</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerTransactions()">↺</button></div>
+    <div id="liste-transactions"><div class="empty-state"><div class="es-ic">💳</div>Aucune transaction.</div></div>
+  </div>
+</div>
+
+<!-- TRÉSORERIE -->
+<div class="view" id="v-tresorerie">
+  <div class="view-head"><h1>Trésorerie</h1><p>Flux entrants et sortants, solde estimé, projection.</p></div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val ok" id="treso-entrees">—</div><div class="stat-lbl">Entrées (€)</div></div>
+    <div class="stat-card"><div class="stat-val err" id="treso-sorties">—</div><div class="stat-lbl">Sorties (€)</div></div>
+    <div class="stat-card"><div class="stat-val" id="treso-solde">—</div><div class="stat-lbl">Solde estimé (€)</div></div>
+    <div class="stat-card"><div class="stat-val warn" id="treso-a-encaisser">—</div><div class="stat-lbl">À encaisser (€)</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Analyse Aria</h2><button class="btn-act btn-amber btn-sm" onclick="calculerTresorerie()">↺ Recalculer</button></div>
+    <textarea id="treso-question" class="input-field" rows="2" placeholder="Ex : Quelles factures arrivent à échéance cette semaine ?" style="margin-bottom:10px"></textarea>
+    <button class="btn-act btn-amber" onclick="analyseTreso()">🧠 Analyser</button>
+    <div class="aria-zone" id="treso-reponse" style="margin-top:12px;display:none"></div>
+  </div>
+</div>
+
+<!-- SAISIE ÉCRITURES -->
+<div class="view" id="v-ecritures">
+  <div class="view-head"><h1>Saisie des écritures</h1><p>Grand livre — saisissez les écritures comptables manquantes.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Nouvelle écriture</h2></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Date</label><input type="date" id="ec-date" class="input-field"></div>
+      <div class="form-group"><label>N° de pièce</label><input type="text" id="ec-piece" class="input-field" placeholder="FA-2026-001"></div>
+      <div class="form-group"><label>Compte débit</label><input type="text" id="ec-debit-compte" class="input-field" placeholder="411000"></div>
+      <div class="form-group"><label>Montant débit (€)</label><input type="number" id="ec-debit-montant" step="0.01" class="input-field"></div>
+      <div class="form-group"><label>Compte crédit</label><input type="text" id="ec-credit-compte" class="input-field" placeholder="701000"></div>
+      <div class="form-group"><label>Montant crédit (€)</label><input type="number" id="ec-credit-montant" step="0.01" class="input-field"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Libellé</label><input type="text" id="ec-libelle" class="input-field" placeholder="Vente client ABC — Facture FA-2026-001"></div>
+    </div>
+    <button class="btn-act btn-amber" onclick="saisirEcriture()">💾 Enregistrer l'écriture</button>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Journal des écritures</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerEcritures()">↺</button></div>
+    <div id="liste-ecritures"><div class="empty-state"><div class="es-ic">📒</div>Aucune écriture saisie.</div></div>
+  </div>
+</div>
+
+<!-- IMMOBILISATIONS -->
+<div class="view" id="v-immo">
+  <div class="view-head"><h1>Immobilisations</h1><p>Suivi des actifs, amortissements, dotations.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Actifs</h2><button class="btn-act btn-amber btn-sm" onclick="ouvrirModal('modal-immo')">+ Nouvel actif</button></div>
+    <div id="liste-immo"><div class="empty-state"><div class="es-ic">🏗️</div>Aucune immobilisation.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Dotations aux amortissements — mois en cours</h2><button class="btn-act btn-ghost btn-sm" onclick="calculerAmortissements()">🧮 Calculer</button></div>
+    <div id="dotations-immo"><div class="empty-state"><div class="es-ic">📊</div>Cliquez sur Calculer.</div></div>
+  </div>
+</div>
+
+<!-- EMPRUNTS -->
+<div class="view" id="v-emprunts">
+  <div class="view-head"><h1>Emprunts</h1><p>Tableau d'amortissement des emprunts, échéances.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Emprunts en cours</h2><button class="btn-act btn-amber btn-sm" onclick="ouvrirModal('modal-emprunt')">+ Nouvel emprunt</button></div>
+    <div id="liste-emprunts"><div class="empty-state"><div class="es-ic">💳</div>Aucun emprunt enregistré.</div></div>
+  </div>
+</div>
+
+<!-- NOTES DE FRAIS SALARIÉS (vue responsable élargie) -->
+<div class="view" id="v-frais-perso">
+  <div class="view-head"><h1>Notes de frais salariés</h1><p>Validation et suivi des notes de frais de l'équipe.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>À valider</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerFraisEquipe()">↺</button></div>
+    <div id="frais-a-valider"><div class="empty-state"><div class="es-ic">🧳</div>Aucune note de frais en attente.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Historique</h2></div>
+    <div id="frais-historique"><div class="empty-state"><div class="es-ic">📋</div>Aucune note de frais.</div></div>
+  </div>
+</div>
+
+<!-- TVA -->
+<div class="view" id="v-tva">
+  <div class="view-head"><h1>TVA</h1><p>Calcul automatique, déclarations CA3/CA12, alertes échéances.</p></div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val ok" id="tva-collectee">—</div><div class="stat-lbl">TVA collectée (€)</div></div>
+    <div class="stat-card"><div class="stat-val err" id="tva-deductible">—</div><div class="stat-lbl">TVA déductible (€)</div></div>
+    <div class="stat-card"><div class="stat-val warn" id="tva-due">—</div><div class="stat-lbl">TVA nette due (€)</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Calcul TVA — période</h2><button class="btn-act btn-amber btn-sm" onclick="calculerTVA()">🧮 Calculer</button></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Mois</label><input type="month" id="tva-mois" class="input-field"></div>
+    </div>
+    <div id="tva-detail"><div class="empty-state"><div class="es-ic">📋</div>Sélectionnez un mois et cliquez sur Calculer.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Prochaine déclaration</h2></div>
+    <div id="tva-prochaine"><div class="empty-state"><div class="es-ic">📅</div>Chargement...</div></div>
+  </div>
+</div>
+
+<!-- ÉCHÉANCIER FISCAL -->
+<div class="view" id="v-echeancier-fiscal">
+  <div class="view-head"><h1>Échéancier fiscal</h1><p>Obligations fiscales et sociales — TVA, IS, CFE, URSSAF...</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Échéances à venir</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerEcheancierFiscal()">↺</button></div>
+    <div id="liste-echeances-fiscales"><div class="empty-state"><div class="es-ic">📅</div>Chargement...</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>🧠 Aide Aria — préparation déclaration</h2></div>
+    <textarea id="fiscal-question" class="input-field" rows="2" placeholder="Ex : Comment préparer ma déclaration TVA mensuelle ?"></textarea>
+    <button class="btn-act btn-amber btn-sm" style="margin-top:8px" onclick="aideDeclarationFiscale()">🧠 Demander à Aria</button>
+    <div class="aria-zone" id="fiscal-reponse" style="margin-top:10px;display:none"></div>
+  </div>
+</div>
+
+<!-- ═══ SUPERVISION RESPONSABLE ═══ -->
+
+<!-- ÉQUIPE COMPTABLE -->
+<div class="view" id="v-equipe">
+  <div class="view-head"><h1>👥 Mon équipe — Comptabilité</h1><p>Supervision métier : dossiers par collaborateur, charge, retards.</p></div>
+  <div class="stats-row" id="equipe-stats-row" style="display:none">
+    <div class="stat-card"><div class="stat-val warn" id="eq-factures-valider">—</div><div class="stat-lbl">Factures à valider</div></div>
+    <div class="stat-card"><div class="stat-val err" id="eq-retards">—</div><div class="stat-lbl">Dossiers en retard</div></div>
+    <div class="stat-card"><div class="stat-val" id="eq-rappr-attente">—</div><div class="stat-lbl">Rapproch. en attente</div></div>
+    <div class="stat-card"><div class="stat-val warn" id="eq-frais-valider">—</div><div class="stat-lbl">Frais à valider</div></div>
+  </div>
+  <div class="card" id="equipe-access-guard" style="display:none">
+    <div class="access-guard"><div class="ag-ico">🔒</div><strong>Vue réservée au responsable comptable</strong><p>Contactez votre responsable.</p></div>
+  </div>
+  <div class="card" id="equipe-data-card">
+    <div class="section-head"><h2>Collaborateurs</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerEquipe()">↺</button></div>
+    <div id="equipe-liste"><div class="empty-state"><div class="es-ic">🔄</div>Chargement...</div></div>
+  </div>
+</div>
+
+<!-- CLÔTURE MENSUELLE -->
+<div class="view" id="v-cloture">
+  <div class="view-head"><h1>Clôture mensuelle</h1><p>Checklist de clôture — validez chaque point avant de clore la période.</p></div>
+  <div class="card" id="cloture-access-guard" style="display:none">
+    <div class="access-guard"><div class="ag-ico">🔒</div><strong>Vue réservée au responsable comptable</strong></div>
+  </div>
+  <div id="cloture-data">
+    <div class="card">
+      <div class="section-head">
+        <h2 id="cloture-periode-titre">Clôture — <span id="cloture-mois">chargement...</span></h2>
+        <div style="display:flex;gap:8px">
+          <input type="month" id="cloture-mois-select" class="input-field" style="width:160px">
+          <button class="btn-act btn-amber btn-sm" onclick="chargerCloture()">Charger</button>
+        </div>
+      </div>
+      <div id="cloture-checklist"><div class="empty-state"><div class="es-ic">📆</div>Sélectionnez un mois.</div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>🧠 Vérification Aria</h2></div>
+      <button class="btn-act btn-amber" onclick="verificationAriaСloture()">🧠 Analyser la période avant clôture</button>
+      <div class="aria-zone" id="cloture-aria-check" style="margin-top:12px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ANALYTIQUE -->
+<div class="view" id="v-analytique">
+  <div class="view-head"><h1>Analytique</h1><p>Balance, compte de résultat, répartition par centre de coût.</p></div>
+  <div class="card" id="analytique-access-guard" style="display:none">
+    <div class="access-guard"><div class="ag-ico">🔒</div><strong>Vue réservée au responsable comptable</strong></div>
+  </div>
+  <div id="analytique-data">
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-val ok" id="ana-ca">—</div><div class="stat-lbl">CA cumulé YTD (€)</div></div>
+      <div class="stat-card"><div class="stat-val err" id="ana-charges">—</div><div class="stat-lbl">Charges YTD (€)</div></div>
+      <div class="stat-card"><div class="stat-val" id="ana-resultat">—</div><div class="stat-lbl">Résultat net (€)</div></div>
+      <div class="stat-card"><div class="stat-val warn" id="ana-marge">—</div><div class="stat-lbl">Marge (%)</div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>Compte de résultat simplifié</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerAnalytique()">↺</button></div>
+      <div id="cr-simplifie"><div class="empty-state"><div class="es-ic">📊</div>Chargement...</div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>🧠 Analyse Aria</h2></div>
+      <textarea id="ana-question" class="input-field" rows="2" placeholder="Ex : Quels postes de charges ont le plus augmenté ce trimestre ?"></textarea>
+      <button class="btn-act btn-amber btn-sm" style="margin-top:8px" onclick="analyseAriaComptable()">🧠 Analyser</button>
+      <div class="aria-zone" id="ana-reponse" style="margin-top:10px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- BILAN & RÉSULTAT -->
+<div class="view" id="v-bilan">
+  <div class="view-head"><h1>Bilan &amp; Résultat</h1><p>Synthèse financière — à transmettre à l'expert-comptable.</p></div>
+  <div class="card" id="bilan-access-guard" style="display:none">
+    <div class="access-guard"><div class="ag-ico">🔒</div><strong>Vue réservée au responsable comptable</strong></div>
+  </div>
+  <div id="bilan-data">
+    <div class="card">
+      <div class="section-head"><h2>Synthèse financière</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerBilan()">↺ Calculer</button></div>
+      <div id="bilan-actif-passif"><div class="empty-state"><div class="es-ic">📕</div>Cliquez sur Calculer.</div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>🧠 Rapport de direction</h2></div>
+      <button class="btn-act btn-amber" onclick="genererRapportDirection()">🧠 Générer avec Aria</button>
+      <div class="aria-zone" id="bilan-rapport" style="margin-top:12px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- EXPERT-COMPTABLE -->
+<div class="view" id="v-expert">
+  <div class="view-head"><h1>Expert-comptable</h1><p>Préparez et transmettez vos dossiers de clôture.</p></div>
+  <div class="card" id="expert-access-guard" style="display:none">
+    <div class="access-guard"><div class="ag-ico">🔒</div><strong>Vue réservée au responsable comptable</strong></div>
+  </div>
+  <div id="expert-data">
+    <div class="card">
+      <div class="section-head"><h2>Dossier de clôture à transmettre</h2></div>
+      <div id="expert-checklist-items" style="margin-bottom:14px">
+        <div class="checklist-item" onclick="toggleCheck(this)"><div class="check-box">✓</div><div class="check-label">Grand livre exporté (PDF/CSV)</div></div>
+        <div class="checklist-item" onclick="toggleCheck(this)"><div class="check-box">✓</div><div class="check-label">Balance de vérification</div></div>
+        <div class="checklist-item" onclick="toggleCheck(this)"><div class="check-box">✓</div><div class="check-label">Tableau des immobilisations</div></div>
+        <div class="checklist-item" onclick="toggleCheck(this)"><div class="check-box">✓</div><div class="check-label">Récapitulatif TVA</div></div>
+        <div class="checklist-item" onclick="toggleCheck(this)"><div class="check-box">✓</div><div class="check-label">Relevés bancaires rapprochés</div></div>
+        <div class="checklist-item" onclick="toggleCheck(this)"><div class="check-box">✓</div><div class="check-label">Factures fournisseurs numérisées</div></div>
+      </div>
+      <button class="btn-act btn-amber" onclick="preparerTransmissionExpert()">📤 Préparer la transmission</button>
+      <div class="aria-zone" id="expert-recap" style="margin-top:12px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- COFFRE DOCUMENTAIRE -->
+<div class="view" id="v-coffre">
+  <div class="view-head"><h1>Coffre documentaire</h1><p>Recherche et archivage des pièces justificatives.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Recherche</h2></div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Rechercher une pièce</label><input id="coffre-search" class="input-field" placeholder="Client, date, montant, numéro..."></div>
+      <div class="form-group"><label>Type</label>
+        <select id="coffre-type" class="input-field">
+          <option value="">Tous</option>
+          <option value="client">Facture client</option>
+          <option value="fournisseur">Facture fournisseur</option>
+          <option value="releve_bancaire">Relevé bancaire</option>
+          <option value="contrat">Contrat</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Période</label><input type="month" id="coffre-periode" class="input-field"></div>
+    </div>
+    <button class="btn-act btn-amber" onclick="rechercherDocuments()">🔍 Rechercher</button>
+    <div id="coffre-resultats" style="margin-top:14px"><div class="empty-state"><div class="es-ic">🗄️</div>Lancez une recherche.</div></div>
+  </div>
+</div>
+
+<!-- EXPORT COMPTABLE -->
+<div class="view" id="v-export">
+  <div class="view-head"><h1>Export comptable</h1><p>Exportez votre grand livre, balance et journaux au format FEC ou CSV.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Export FEC (Fichier des Écritures Comptables)</h2></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Exercice</label>
+        <select id="export-exercice" class="input-field">
+          <option value="2026">2026</option><option value="2025">2025</option><option value="2024">2024</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Format</label>
+        <select id="export-format" class="input-field">
+          <option value="fec">FEC (DGFiP)</option>
+          <option value="csv">CSV</option>
+          <option value="sage">Sage</option>
+          <option value="ebp">EBP</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-act btn-amber" onclick="lancerExport()">⬇️ Générer l'export</button>
+    <div class="aria-zone" id="export-statut" style="margin-top:12px;display:none"></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Export Factur-X</h2></div>
+    <div class="form-group" style="margin-bottom:12px"><label>Facture à exporter</label>
+      <select id="export-facturx-id" class="input-field"><option value="">Sélectionner une facture</option></select>
+    </div>
+    <button class="btn-act btn-amber" onclick="exporterFacturX()">⬇️ Factur-X PDF</button>
+  </div>
+</div>
+
+<!-- CONSULTING ARIA -->
+<div class="view" id="v-consulting">
+  <div class="view-head"><h1>Consulting Aria</h1><p>IA métier — posez vos questions comptables avec contexte réel.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Analyse rapide</h2></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <button class="btn-act btn-ghost btn-sm" onclick="ariaRapide('retards')">⏰ Retards de paiement</button>
+      <button class="btn-act btn-ghost btn-sm" onclick="ariaRapide('tva')">📋 Prochaine TVA</button>
+      <button class="btn-act btn-ghost btn-sm" onclick="ariaRapide('tresorerie')">💧 Analyse trésorerie</button>
+      <button class="btn-act btn-ghost btn-sm" onclick="ariaRapide('cloture')">📆 Préparer la clôture</button>
+      <button class="btn-act btn-ghost btn-sm" onclick="ariaRapide('anomalies')">⚠️ Anomalies</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="form-group" style="margin-bottom:10px"><label>Question libre</label>
+      <textarea id="consult-question" class="input-field" rows="3" placeholder="Ex : Quelle est ma marge nette ce trimestre ? Quelles factures arrivent à échéance ?"></textarea>
+    </div>
+    <button class="btn-act btn-amber" onclick="demanderAriaCompta()">🧠 Demander à Aria</button>
+    <div class="aria-zone" id="consult-reponse" style="margin-top:12px;display:none"></div>
+  </div>
+</div>
+
+<!-- JOURNAL -->
+<div class="view" id="v-journal">
+  <div class="view-head"><h1>Journal d'activité</h1></div>
+  <div class="card">
+    <div id="journal-empty" class="empty-state"><div class="es-ic">📜</div>Journal vide.</div>
+    <div id="journal-list"></div>
+  </div>
+</div>
+
+<!-- POINTAGE -->
+<div class="view" id="v-pointage">
+  <div class="view-head"><h1>Pointage</h1></div>
+  <div class="card">
+    <div class="section-head"><h2 id="point-heure">--:--</h2></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <button class="btn-act btn-ok" onclick="pointerWeb('arrivee')">✅ Arrivée</button>
+      <button class="btn-act btn-ghost" onclick="pointerWeb('pause_debut')">⏸ Début pause</button>
+      <button class="btn-act btn-ghost" onclick="pointerWeb('pause_fin')">▶️ Fin pause</button>
+      <button class="btn-act btn-err" onclick="pointerWeb('depart')">🚪 Départ</button>
+    </div>
+    <div id="point-status" style="font-size:13px;color:var(--ink-dim)">—</div>
+  </div>
+</div>
+
+<!-- TÂCHES -->
+<div class="view" id="v-taches">
+  <div class="view-head"><h1>Mes tâches</h1></div>
+  <div class="card">
+    <div class="section-head"><h2>Tâches assignées</h2><button class="btn-act btn-amber btn-sm" onclick="ouvrirModal('modal-tache-p')">+ Tâche</button></div>
+    <div id="liste-taches-poste"><div class="empty-state"><div class="es-ic">✅</div>Aucune tâche.</div></div>
+  </div>
+</div>
+
+<!-- CONGÉS -->
+<div class="view" id="v-mes-conges">
+  <div class="view-head"><h1>Mes congés</h1></div>
+  <div class="card">
+    <div class="section-head"><h2>Nouvelle demande</h2></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Type</label>
+        <select id="cg-type" class="input-field">
+          <option value="conges_payes">Congés payés</option><option value="maladie">Maladie</option>
+          <option value="sans_solde">Sans solde</option><option value="formation">Formation</option><option value="autre">Autre</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Début</label><input type="date" id="cg-debut" class="input-field"></div>
+      <div class="form-group"><label>Fin</label><input type="date" id="cg-fin" class="input-field"></div>
+    </div>
+    <textarea id="cg-motif" class="input-field" rows="2" placeholder="Motif (optionnel)" style="margin-bottom:12px"></textarea>
+    <button class="btn-act btn-amber" onclick="soumettreCongePoste()">Envoyer</button>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Mes demandes</h2></div>
+    <div id="mes-absences-poste"><div class="empty-state"><div class="es-ic">🏖️</div>Aucune demande.</div></div>
+  </div>
+</div>
+
+<!-- DROITS -->
+<div class="view" id="v-mes-droits">
+  <div class="view-head"><h1>Mes droits</h1></div>
+  <div class="card">
+    <textarea id="droits-question-p" class="input-field" rows="2" placeholder="Ex : Ai-je droit au télétravail ? Quel est mon préavis ?"></textarea>
+    <button class="btn-act btn-amber btn-sm" style="margin-top:8px" onclick="demanderDroitsPoste()">⚖️ Demander à Aria</button>
+    <div class="aria-zone" id="droits-reponse-p" style="margin-top:10px;display:none"></div>
+  </div>
+</div>
+
+<!-- FORMATION QCM -->
+
+<!-- CLIENTS -->
+<div class="view" id="v-clients">
+  <div class="view-head"><h1>Base clients</h1><p>Referencez vos clients et creez des taches directement depuis leur fiche.</p></div>
+  <div class="card" id="clients-liste-panel">
+    <div class="section-head"><h2>Clients</h2>
+      <button class="btn-act btn-amber btn-sm" onclick="afficherFormulaireClient()">+ Nouveau client</button>
+    </div>
+    <input type="text" class="input-field" placeholder="Rechercher un client..." oninput="rechercherClients(this.value)" style="margin-bottom:10px">
+    <div id="clients-liste"><div style="color:var(--muted);font-size:13px">Chargement...</div></div>
+  </div>
+  <div class="card" id="client-fiche-panel" style="display:none">
+    <div style="margin-bottom:10px">
+      <button class="btn-act btn-ghost btn-sm" onclick="fermerFicheClient()">&larr; Retour</button>
+    </div>
+    <div id="client-fiche-contenu"></div>
+  </div>
+  <div class="card" id="client-form-panel" style="display:none">
+    <div class="section-head"><h2>Nouveau client</h2></div>
+    <div id="client-form-contenu"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn-act btn-amber" onclick="sauvegarderClient()">Enregistrer</button>
+      <button class="btn-act btn-ghost" onclick="annulerFormClient()">Annuler</button>
+    </div>
+  </div>
+</div>
+<div class="view" id="v-formation-qcm">
+  <div class="view-head"><h1>Formation</h1><p>Questions de comptabilité générées par Aria.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>QCM Comptabilité</h2><button class="btn-act btn-amber" onclick="lancerQCMPoste()">▶ Démarrer</button></div>
+    <div id="qcm-zone-p"><div class="empty-state"><div class="es-ic">🎓</div>Cliquez sur Démarrer.</div></div>
+  </div>
+</div>
+
+</div><!-- fin main-content -->
+</div><!-- fin app-shell -->
+
+<!-- ═══ MODALES ═══ -->
+
+<!-- Modale Facture -->
+<div class="modal-overlay" id="modal-facture" style="display:none">
+  <div class="modal-box" style="max-width:640px">
+    <div class="modal-head"><h3 id="modal-facture-titre">Nouvelle facture</h3><button class="modal-close" onclick="fermerModal('modal-facture')">✕</button></div>
+    <input type="hidden" id="f-type">
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Nom client / fournisseur *</label><input type="text" id="f-tiers-nom" class="input-field"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="f-tiers-email" class="input-field"></div>
+      <div class="form-group"><label>Numéro facture</label><input type="text" id="f-numero" class="input-field" placeholder="Auto si vide"></div>
+      <div class="form-group"><label>Date émission</label><input type="date" id="f-date-em" class="input-field"></div>
+      <div class="form-group"><label>Date échéance</label><input type="date" id="f-date-ech" class="input-field"></div>
+      <div class="form-group"><label>Montant HT (€) *</label><input type="number" id="f-ht" class="input-field" step="0.01" oninput="calcTTC()"></div>
+      <div class="form-group"><label>TVA (%)</label><input type="number" id="f-tva" class="input-field" value="20" oninput="calcTTC()"></div>
+      <div class="form-group"><label>Montant TTC (€)</label><input type="number" id="f-ttc" class="input-field" readonly style="opacity:.6"></div>
+      <div class="form-group"><label>Mode paiement</label>
+        <select id="f-mode-paie" class="input-field"><option value="virement">Virement</option><option value="cheque">Chèque</option><option value="cb">CB</option><option value="especes">Espèces</option></select>
+      </div>
+      <div class="form-group"><label>Statut</label>
+        <select id="f-statut" class="input-field">
+          <option value="brouillon">Brouillon</option><option value="envoyee">Envoyée</option><option value="payee">Payée</option>
+          <option value="en_attente_paiement">En attente paiement</option><option value="en_retard">En retard</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1/-1"><label>Notes</label><textarea id="f-notes" class="input-field" rows="2" placeholder="Références, mentions légales..."></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn-act btn-ghost" onclick="fermerModal('modal-facture')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="creerFacture()">💾 Créer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modale Import RIB -->
+<div class="modal-overlay" id="modal-import-rib" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>📁 Importer un relevé bancaire</h3><button class="modal-close" onclick="fermerModal('modal-import-rib')">✕</button></div>
+    <p style="font-size:13px;color:var(--ink-dim);margin-bottom:14px">Collez votre relevé CSV ou texte — Aria l'analyse et crée les transactions.</p>
+    <textarea id="rib-contenu" class="input-field" rows="8" placeholder="Date;Libellé;Débit;Crédit&#10;01/08/2026;VIREMENT CLIENT ABC;;1500.00&#10;02/08/2026;FOURNISSEUR XYZ;450.00;"></textarea>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-act btn-ghost" onclick="fermerModal('modal-import-rib')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="importerRIB()">✨ Analyser et importer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modale Immobilisation -->
+<div class="modal-overlay" id="modal-immo" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>🏗️ Nouvelle immobilisation</h3><button class="modal-close" onclick="fermerModal('modal-immo')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Désignation *</label><input type="text" id="immo-nom" class="input-field" placeholder="Véhicule, Matériel informatique..."></div>
+      <div class="form-group"><label>Catégorie</label>
+        <select id="immo-cat" class="input-field">
+          <option value="corporelle">Corporelle</option><option value="incorporelle">Incorporelle</option><option value="financiere">Financière</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Date acquisition</label><input type="date" id="immo-date" class="input-field"></div>
+      <div class="form-group"><label>Valeur HT (€) *</label><input type="number" id="immo-valeur" step="0.01" class="input-field"></div>
+      <div class="form-group"><label>Durée amort. (ans)</label><input type="number" id="immo-duree" class="input-field" value="5"></div>
+      <div class="form-group"><label>Méthode</label>
+        <select id="immo-methode" class="input-field"><option value="lineaire">Linéaire</option><option value="degressif">Dégressif</option></select>
+      </div>
+    </div>
+    <button class="btn-act btn-amber" onclick="creerImmobilisation()" style="width:100%;margin-top:4px">Enregistrer</button>
+  </div>
+</div>
+
+<!-- Modale Emprunt -->
+<div class="modal-overlay" id="modal-emprunt" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>💳 Nouvel emprunt</h3><button class="modal-close" onclick="fermerModal('modal-emprunt')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Établissement</label><input type="text" id="emp-banque" class="input-field" placeholder="BNP Paribas, Crédit Agricole..."></div>
+      <div class="form-group"><label>Capital emprunté (€)</label><input type="number" id="emp-capital" step="0.01" class="input-field"></div>
+      <div class="form-group"><label>Taux (%)</label><input type="number" id="emp-taux" step="0.01" class="input-field"></div>
+      <div class="form-group"><label>Durée (mois)</label><input type="number" id="emp-duree" class="input-field"></div>
+      <div class="form-group"><label>Date début</label><input type="date" id="emp-debut" class="input-field"></div>
+      <div class="form-group"><label>Type</label>
+        <select id="emp-type" class="input-field"><option value="immobilier">Immobilier</option><option value="materiel">Matériel</option><option value="tresorerie">Trésorerie</option></select>
+      </div>
+    </div>
+    <button class="btn-act btn-amber" onclick="creerEmprunt()" style="width:100%;margin-top:4px">Enregistrer</button>
+  </div>
+</div>
+
+<!-- Modale Tâche -->
+<div class="modal-overlay" id="modal-tache-p" style="display:none">
+  <div class="modal-box" style="max-width:460px">
+    <div class="modal-head"><h3>✅ Nouvelle tâche</h3><button class="modal-close" onclick="fermerModal('modal-tache-p')">✕</button></div>
+    <div class="form-group" style="margin-bottom:10px"><label>Titre *</label><input type="text" id="tp-titre" class="input-field"></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Priorité</label>
+        <select id="tp-priorite" class="input-field"><option value="normale">Normale</option><option value="haute">Haute</option><option value="urgente">Urgente</option><option value="basse">Basse</option></select>
+      </div>
+      <div class="form-group"><label>Deadline</label><input type="date" id="tp-deadline" class="input-field"></div>
+    </div>
+    <textarea id="tp-desc" class="input-field" rows="2" placeholder="Description..." style="margin-bottom:12px"></textarea>
+    <div style="display:flex;gap:8px">
+      <button class="btn-act btn-ghost" onclick="fermerModal('modal-tache-p')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="creerTachePoste()">Créer</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══ MODALES ═══ -->
+
+<!-- Modale facture -->
+<div class="modal-overlay" id="modal-facture" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="modal-facture-titre">Nouvelle facture</h3><button class="modal-close" onclick="fermerModal('modal-facture')">✕</button></div>
+    <input type="hidden" id="f-type">
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Tiers (client / fournisseur) *</label><input type="text" id="f-tiers-nom" class="input-field"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="f-tiers-email" class="input-field"></div>
+      <div class="form-group"><label>N° facture</label><input type="text" id="f-numero" class="input-field" placeholder="FA-2026-001"></div>
+      <div class="form-group"><label>Date émission</label><input type="date" id="f-date-em" class="input-field"></div>
+      <div class="form-group"><label>Date échéance</label><input type="date" id="f-date-ech" class="input-field"></div>
+      <div class="form-group"><label>Montant HT (€) *</label><input type="number" id="f-ht" step="0.01" class="input-field" oninput="calcTTC()"></div>
+      <div class="form-group"><label>TVA (%)</label><input type="number" id="f-tva" value="20" class="input-field" oninput="calcTTC()"></div>
+      <div class="form-group"><label>Montant TTC (€)</label><input type="number" id="f-ttc" class="input-field" readonly style="opacity:.6"></div>
+      <div class="form-group"><label>Mode paiement</label>
+        <select id="f-mode-paie" class="input-field"><option value="virement">Virement</option><option value="cheque">Chèque</option><option value="cb">Carte bancaire</option><option value="especes">Espèces</option></select>
+      </div>
+      <div class="form-group"><label>Statut</label>
+        <select id="f-statut" class="input-field"><option value="brouillon">Brouillon</option><option value="envoyee">Envoyée</option><option value="payee">Payée</option><option value="saisie">Saisie</option><option value="en_attente_paiement">En attente paiement</option></select>
+      </div>
+      <div class="form-group" style="grid-column:1/-1"><label>Désignation / notes</label><textarea id="f-notes" class="input-field" style="height:60px;resize:vertical"></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn-act btn-ghost" onclick="fermerModal('modal-facture')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="creerFacture()">💾 Créer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modale import RIB -->
+<div class="modal-overlay" id="modal-import-rib" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Importer un relevé bancaire</h3><button class="modal-close" onclick="fermerModal('modal-import-rib')">✕</button></div>
+    <p style="font-size:13px;color:var(--ink-dim);margin-bottom:12px">Collez le contenu de votre relevé (CSV ou texte libre). Aria le parse automatiquement.</p>
+    <textarea id="rib-contenu" class="input-field" style="height:140px;resize:vertical" placeholder="Date;Libellé;Débit;Crédit&#10;2026-08-01;VIREMENT CLIENT ABC;;1500.00&#10;2026-08-02;FOURNISSEUR XYZ;450.00;"></textarea>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-act btn-ghost" onclick="fermerModal('modal-import-rib')">Annuler</button>
+      <button class="btn-act btn-amber" id="btn-import-rib" onclick="importerRIB()">✨ Analyser et importer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modale immobilisation -->
+<div class="modal-overlay" id="modal-immo" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Nouvel actif immobilisé</h3><button class="modal-close" onclick="fermerModal('modal-immo')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Désignation *</label><input type="text" id="im-designation" class="input-field" placeholder="Véhicule de fonction, Matériel informatique..."></div>
+      <div class="form-group"><label>Date acquisition</label><input type="date" id="im-date" class="input-field"></div>
+      <div class="form-group"><label>Valeur d'achat HT (€) *</label><input type="number" id="im-valeur" step="0.01" class="input-field"></div>
+      <div class="form-group"><label>Durée amort. (années)</label><input type="number" id="im-duree" value="5" class="input-field"></div>
+      <div class="form-group"><label>Méthode</label>
+        <select id="im-methode" class="input-field"><option value="lineaire">Linéaire</option><option value="degressif">Dégressif</option></select>
+      </div>
+      <div class="form-group"><label>Catégorie</label>
+        <select id="im-cat" class="input-field">
+          <option value="materiel">Matériel</option><option value="vehicule">Véhicule</option>
+          <option value="logiciel">Logiciel</option><option value="mobilier">Mobilier</option><option value="autre">Autre</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn-act btn-ghost" onclick="fermerModal('modal-immo')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="creerImmobilisation()">💾 Créer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modale emprunt -->
+<div class="modal-overlay" id="modal-emprunt" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Nouvel emprunt</h3><button class="modal-close" onclick="fermerModal('modal-emprunt')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Objet de l'emprunt *</label><input type="text" id="emp-objet" class="input-field" placeholder="Crédit équipement, Prêt immobilier..."></div>
+      <div class="form-group"><label>Organisme prêteur</label><input type="text" id="emp-banque" class="input-field" placeholder="BNP, Crédit Agricole..."></div>
+      <div class="form-group"><label>Montant emprunté (€) *</label><input type="number" id="emp-montant" step="0.01" class="input-field"></div>
+      <div class="form-group"><label>Taux annuel (%)</label><input type="number" id="emp-taux" step="0.01" class="input-field"></div>
+      <div class="form-group"><label>Durée (mois)</label><input type="number" id="emp-duree" class="input-field"></div>
+      <div class="form-group"><label>Date première échéance</label><input type="date" id="emp-debut" class="input-field"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn-act btn-ghost" onclick="fermerModal('modal-emprunt')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="creerEmprunt()">💾 Créer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modale tâche -->
+<div class="modal-overlay" id="modal-tache-p" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Nouvelle tâche</h3><button class="modal-close" onclick="fermerModal('modal-tache-p')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Titre *</label><input type="text" id="tp-titre" class="input-field" placeholder="Titre de la tâche"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Description</label><textarea id="tp-desc" class="input-field" style="height:60px;resize:vertical"></textarea></div>
+      <div class="form-group"><label>Priorité</label>
+        <select id="tp-priorite" class="input-field"><option value="normale">Normale</option><option value="haute">Haute</option><option value="urgente">Urgente</option><option value="basse">Basse</option></select>
+      </div>
+      <div class="form-group"><label>Deadline</label><input type="date" id="tp-deadline" class="input-field"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn-act btn-ghost" onclick="fermerModal('modal-tache-p')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="creerTachePoste()">Créer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// ARIA INDUSTRIAL — POSTE COMPTABILITÉ
+// ════════════════════════════════════════════════════════════
+
+var RELAY = 'https://aria-forgelis.onrender.com';
+var SESSION = {};
+var estResponsable = false;
+var POSTE_COURANT = 'comptabilite';
+var _facturesClient = [];
+var _facturesFourn = [];
+var _transactions = [];
+var _equipeData = [];
+
+// ── Session ──
+function getSession() {
+  try { SESSION = JSON.parse(localStorage.getItem('aria_industrial_session') || '{}'); return SESSION; } catch(e) { return {}; }
+}
+function getToken() { return SESSION.salarie_id || ''; }
+function getEntrepriseId() { return SESSION.entreprise_id || ''; }
+function getNom() { return SESSION.nom || ''; }
+
+// ── API ──
+async function api(endpoint, body, method) {
+  method = method || (body ? 'POST' : 'GET');
+  var url = RELAY + endpoint;
+  if (method === 'GET' && body) {
+    var qs = Object.entries(body).map(function(p) { return encodeURIComponent(p[0]) + '=' + encodeURIComponent(p[1]); }).join('&');
+    url += '?' + qs;
+    body = null;
+  }
+  try {
+    var r = await fetch(url, {
+      method: method,
+      headers: { 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : null
+    });
+    return await r.json();
+  } catch(e) { return { ok: false, erreur: 'Erreur réseau' }; }
+}
+
+async function apiAsk(prompt, contexte) {
+  try {
+    var r = await fetch(RELAY + '/ask-industrial', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: getToken(), message: (contexte ? '[CONTEXTE] ' + contexte + '\n\n' : '') + prompt, poste: 'comptabilite', max_tokens: 2000 })
+    });
+    var d = await r.json();
+    return d.reponse || d.message || '';
+  } catch(e) { return 'Erreur de connexion à Aria.'; }
+}
+
+function construireContexteRiche() {
+  var s = getSession();
+  var fc = _facturesClient.length;
+  var ff = _facturesFourn.length;
+  var tr = _transactions.length;
+  var retards = _facturesClient.filter(function(f) { return f.statut === 'en_retard'; }).length;
+  return 'Poste: Comptabilité | Entreprise: ' + (s.entreprise_nom || getEntrepriseId()) +
+    ' | Role: ' + (estResponsable ? 'Responsable' : 'Salarié') +
+    ' | Factures clients: ' + fc + ' (retards: ' + retards + ')' +
+    ' | Factures fournisseurs: ' + ff +
+    ' | Transactions à rapprocher: ' + tr;
+}
+
+// ── Modale Aria (remplace confirm/prompt natifs) ──
+var _ariaModalResolve = null;
+function ariaConfirm(msg, titre, danger) {
+  return new Promise(function(resolve) {
+    _ariaModalResolve = resolve;
+    document.getElementById('aria-modal-ico').textContent = danger ? '⚠️' : '❓';
+    document.getElementById('aria-modal-title').textContent = titre || 'Confirmation';
+    document.getElementById('aria-modal-msg').textContent = msg;
+    document.getElementById('aria-modal-input').style.display = 'none';
+    document.getElementById('aria-modal-confirm').className = 'aria-modal-confirm ' + (danger ? 'danger' : 'primary');
+    document.getElementById('aria-modal-overlay').classList.add('open');
+  });
+}
+function ariaPrompt(msg, titre, placeholder) {
+  return new Promise(function(resolve) {
+    _ariaModalResolve = resolve;
+    document.getElementById('aria-modal-ico').textContent = '✏️';
+    document.getElementById('aria-modal-title').textContent = titre || 'Saisie';
+    document.getElementById('aria-modal-msg').textContent = msg;
+    var inp = document.getElementById('aria-modal-input');
+    inp.style.display = 'block';
+    inp.value = '';
+    inp.placeholder = placeholder || '';
+    inp.focus();
+    document.getElementById('aria-modal-confirm').className = 'aria-modal-confirm primary';
+    document.getElementById('aria-modal-overlay').classList.add('open');
+  });
+}
+function _ariaModalConfirm() {
+  var inp = document.getElementById('aria-modal-input');
+  var v = inp.style.display !== 'none' ? inp.value : true;
+  document.getElementById('aria-modal-overlay').classList.remove('open');
+  if (_ariaModalResolve) { _ariaModalResolve(v); _ariaModalResolve = null; }
+}
+function _ariaModalCancel() {
+  document.getElementById('aria-modal-overlay').classList.remove('open');
+  if (_ariaModalResolve) { _ariaModalResolve(null); _ariaModalResolve = null; }
+}
+
+// ── Navigation ──
+function goToView(viewId, tabEl) {
+  document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+  var v = document.getElementById(viewId); if (v) v.classList.add('active');
+  var n = tabEl || document.querySelector('.nav-item[data-view="' + viewId + '"]');
+  if (n) n.classList.add('active');
+  chargerVue(viewId);
+}
+function toggleSidebar() {
+  var sb = document.getElementById('app-sidebar');
+  if (sb) sb.style.display = sb.style.display === 'none' ? 'flex' : 'none';
+}
+
+function chargerVue(id) {
+  var map = {
+    'v-clients': chargerClients,
+    'v-dash': chargerDash,
+    'v-factures-client': function() { chargerFactures('client'); },
+    'v-devis': chargerDevis,
+    'v-relances': chargerRelances,
+    'v-factures-fourn': function() { chargerFactures('fournisseur'); },
+    'v-frais': function() { chargerListeFrais(); },
+    'v-rapprochement-achats': chargerRapprochementAchats,
+    'v-rapprochement-bancaire': chargerTransactions,
+    'v-tresorerie': calculerTresorerie,
+    'v-ecritures': chargerEcritures,
+    'v-immo': chargerImmo,
+    'v-emprunts': chargerEmprunts,
+    'v-frais-perso': chargerFraisEquipe,
+    'v-tva': function() { chargerTVAProchaine(); },
+    'v-echeancier-fiscal': chargerEcheancierFiscal,
+    'v-equipe': chargerEquipe,
+    'v-cloture': function() {
+      var today = new Date();
+      var m = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+      var ms = document.getElementById('cloture-mois-select');
+      if (ms && !ms.value) ms.value = m;
+    },
+    'v-analytique': chargerAnalytique,
+    'v-bilan': chargerBilan,
+    'v-coffre': function() {},
+    'v-export': chargerExportFactures,
+    'v-consulting': function() {},
+    'v-journal': function() {},
+    'v-pointage': function() {
+      setInterval(function() {
+        var h = document.getElementById('point-heure');
+        if (h) h.textContent = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      }, 1000);
+    },
+    'v-taches': chargerTachesPoste,
+    'v-mes-conges': chargerMesCongesPoste,
+    'v-mes-droits': function() {},
+    'v-formation-qcm': function() {},
+  };
+  if (map[id]) map[id]();
+}
+
+// ── Vérification session ──
+function verifierSession() {
+  var s = getSession();
+  if (!s.salarie_id || !s.entreprise_id || s.poste !== 'comptabilite') {
+    window.location.href = 'connexion-industrial.html';
+    return;
+  }
+  estResponsable = (s.role === 'responsable' || s.role === 'dirigeant');
+  adaptSidebarRole();
+  if (s.entreprise_nom) {
+    var el = document.getElementById('entreprise-nom-affiche');
+    if (el) { el.textContent = s.entreprise_nom; el.style.display = 'block'; }
+  }
+  initPoste();
+}
+function deconnexion() {
+  ['aria_industrial_session', 'aria_industrial_token', 'aria_industrial_entreprise_id', 'aria_industrial_nom', 'aria_session_active', 'aria_industrial_email', 'aria_industrial_poste', 'aria_industrial_role']
+    .forEach(function(k) { try { localStorage.removeItem(k); } catch(e) {} });
+  window.location.href = 'connexion-industrial.html';
+}
+function initPoste() { chargerDash(); chargerFactures('client'); chargerFactures('fournisseur'); chargerTransactions(); }
+
+// ════════════════════════════════════════════════════════════
+// GESTION DES RÔLES
+// ════════════════════════════════════════════════════════════
+function adaptSidebarRole() {
+  var s = getSession();
+  var isResp = estResponsable;
+  // Navigation réservée responsable
+  document.querySelectorAll('.nav-group-resp').forEach(function(el) { el.style.display = isResp ? '' : 'none'; });
+  document.querySelectorAll('.nav-item-resp').forEach(function(el) { el.style.display = isResp ? '' : 'none'; });
+  // Gardes sur vues superviseur
+  var guards = ['equipe', 'cloture', 'analytique', 'bilan', 'expert'];
+  guards.forEach(function(g) {
+    var guard = document.getElementById(g + '-access-guard');
+    var data  = document.getElementById(g + '-data') || document.getElementById(g + '-data-card');
+    if (guard) guard.style.display = isResp ? 'none' : 'block';
+    if (data)  data.style.display  = isResp ? 'block' : 'none';
+  });
+  // Gardes sans bloc data séparé
+  var equipeGuard = document.getElementById('equipe-access-guard');
+  var equipeData  = document.getElementById('equipe-data-card');
+  if (equipeGuard) equipeGuard.style.display = isResp ? 'none' : 'block';
+  if (equipeData)  equipeData.style.display  = isResp ? 'block' : 'none';
+  // Badge rôle
+  var badge = document.getElementById('role-badge-el');
+  var tag   = document.getElementById('poste-tag');
+  var roleLabel = isResp ? '👔 Responsable Comptabilité' : '🧾 Comptabilité';
+  if (badge) { badge.textContent = isResp ? '👔 Responsable' : '🧾 Salarié'; badge.className = 'role-badge ' + (isResp ? 'resp' : 'sal'); }
+  if (tag)   tag.textContent = (s.nom ? s.nom + ' — ' : '') + roleLabel;
+}
+
+// ════════════════════════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════════════════════════
+async function chargerDash() {
+  var desc = document.getElementById('dash-desc');
+  if (desc) desc.textContent = estResponsable ? 'Vue Responsable Comptabilité' : 'Vue Salarié Comptabilité';
+  var data = await Promise.all([
+    api('/industrial/factures', { token: getToken(), entreprise_id: getEntrepriseId(), type: 'client' }, 'GET'),
+    api('/industrial/factures', { token: getToken(), entreprise_id: getEntrepriseId(), type: 'fournisseur' }, 'GET'),
+    api('/industrial/transactions', { token: getToken(), entreprise_id: getEntrepriseId(), rapproche: 'false' }, 'GET')
+  ]);
+  var fc = data[0].factures || [];
+  var ff = data[1].factures || [];
+  var tr = data[2].transactions || [];
+  _facturesClient = fc;
+  _facturesFourn  = ff;
+  _transactions   = tr;
+  // KPIs
+  var aEncaisser = fc.filter(function(f) { return ['envoyee', 'en_retard'].includes(f.statut); }).reduce(function(s, f) { return s + parseFloat(f.montant_ttc || 0); }, 0);
+  var enRetard   = fc.filter(function(f) { return f.statut === 'en_retard'; }).length;
+  var ca = fc.filter(function(f) { return f.statut === 'payee' && (f.date_paiement || '').startsWith(new Date().toISOString().slice(0, 7)); }).reduce(function(s, f) { return s + parseFloat(f.montant_ttc || 0); }, 0);
+  var ffAttente  = ff.filter(function(f) { return ['en_attente_paiement', 'saisie'].includes(f.statut); }).reduce(function(s, f) { return s + parseFloat(f.montant_ttc || 0); }, 0);
+  var entrees    = tr.filter(function(t) { return t.type === 'credit'; }).reduce(function(s, t) { return s + parseFloat(t.montant || 0); }, 0);
+  var sorties    = tr.filter(function(t) { return t.type === 'debit'; }).reduce(function(s, t) { return s + parseFloat(t.montant || 0); }, 0);
+  setStat('stat-a-encaisser', fmtMontant(aEncaisser));
+  setStat('stat-en-retard', enRetard, enRetard > 0 ? 'err' : 'ok');
+  setStat('stat-a-rapprocher', tr.length, tr.length > 5 ? 'warn' : '');
+  setStat('stat-ca-mois', fmtMontant(ca), 'ok');
+  setStat('stat-fourn-attente', fmtMontant(ffAttente), ffAttente > 0 ? 'warn' : '');
+  setStat('stat-solde', fmtMontant(entrees - sorties), (entrees - sorties) >= 0 ? 'ok' : 'err');
+  // Alertes
+  var alertes = [];
+  if (enRetard > 0) alertes.push({ type: 'crit', msg: enRetard + ' facture(s) client en retard de paiement' });
+  var now = new Date();
+  ff.forEach(function(f) {
+    if (f.date_echeance && f.statut !== 'payee') {
+      var d = new Date(f.date_echeance);
+      var diff = Math.ceil((d - now) / 86400000);
+      if (diff <= 7 && diff >= 0) alertes.push({ type: 'warn', msg: 'Facture fournisseur ' + esc(f.tiers_nom || '?') + ' échéance dans ' + diff + ' j (' + fmtMontant(parseFloat(f.montant_ttc || 0)) + ')' });
+    }
+  });
+  if (tr.length > 10) alertes.push({ type: 'warn', msg: tr.length + ' transactions non rapprochées — pensez au rapprochement bancaire' });
+  var alertesEl = document.getElementById('dash-alertes');
+  if (alertesEl) alertesEl.innerHTML = alertes.length ? alertes.map(function(a) {
+    return '<div class="alert-item ' + (a.type === 'crit' ? 'crit' : '') + '"><div class="alert-title">' + esc(a.msg) + '</div></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">✅</div>Aucune alerte.</div>';
+  // Dernières factures
+  var fcEl = document.getElementById('dash-factures-client');
+  if (fcEl) {
+    var recent = fc.slice(0, 5);
+    fcEl.innerHTML = recent.length ? recent.map(function(f) {
+      return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(f.tiers_nom || '—') + '</div><div class="ri-sub">' + (f.numero || '') + ' · ' + fmtDate(f.date_emission) + '</div></div>' +
+        '<span class="badge badge-' + statBadge(f.statut) + '">' + esc(f.statut) + '</span>' +
+        '<span class="ri-amount ' + (f.statut === 'payee' ? 'ok' : 'warn') + '">' + fmtMontant(parseFloat(f.montant_ttc || 0)) + '</span>' +
+        '</div>';
+    }).join('') : '<div class="empty-state"><div class="es-ic">🧾</div>Aucune facture.</div>';
+  }
+  // Supervision équipe (responsable)
+  var eqCard = document.getElementById('dash-equipe-card');
+  if (eqCard) eqCard.style.display = estResponsable ? 'block' : 'none';
+  if (estResponsable) chargerDashEquipe(fc, ff, tr);
+  logAction('Dashboard chargé');
+}
+
+function setStat(id, val, cls) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = val;
+  el.className = 'stat-val' + (cls ? ' ' + cls : '');
+}
+
+async function chargerDashEquipe(fc, ff, tr) {
+  var data = await api('/industrial/equipe-comptabilite', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  if (!data.ok) return;
+  var resume = data.resume || {};
+  var el = document.getElementById('dash-equipe-alertes');
+  if (!el) return;
+  var items = [];
+  if (resume.factures_brouillon > 0) items.push({ t: 'warn', m: resume.factures_brouillon + ' facture(s) en brouillon à valider' });
+  if (resume.transactions_non_rappr > 0) items.push({ t: 'warn', m: resume.transactions_non_rappr + ' transactions non rapprochées' });
+  if (resume.taches_retard > 0) items.push({ t: 'crit', m: resume.taches_retard + ' tâche(s) de l\'équipe en retard' });
+  if (resume.frais_a_valider > 0) items.push({ t: 'warn', m: resume.frais_a_valider + ' note(s) de frais à valider' });
+  el.innerHTML = items.length ? items.map(function(i) {
+    return '<div class="alert-item ' + (i.t === 'crit' ? 'crit' : '') + '"><div class="alert-title">' + esc(i.m) + '</div></div>';
+  }).join('') + '<div style="margin-top:10px"><button class="btn-act btn-ghost btn-sm" onclick="goToView(\'v-equipe\')">Voir l\'équipe →</button></div>'
+  : '<div class="empty-state"><div class="es-ic">👥</div>Équipe à jour.</div>';
+}
+
+// ════════════════════════════════════════════════════════════
+// FACTURES
+// ════════════════════════════════════════════════════════════
+async function chargerFactures(type) {
+  var data = await api('/industrial/factures', { token: getToken(), entreprise_id: getEntrepriseId(), type: type }, 'GET');
+  var liste = data.factures || [];
+  if (type === 'client') { _facturesClient = liste; afficherFactures('client'); peuplerSelectEncaissement(); }
+  else { _facturesFourn = liste; afficherFactures('fournisseur'); afficherEcheancesFourn(); }
+}
+
+function afficherFactures(type) {
+  var liste = type === 'client' ? _facturesClient : _facturesFourn;
+  var statut = (document.getElementById('filter-f' + (type === 'client' ? 'c' : 'f') + '-statut') || {}).value || '';
+  var search = ((document.getElementById('search-fc') || {}).value || '').toLowerCase();
+  if (statut) liste = liste.filter(function(f) { return f.statut === statut; });
+  if (search) liste = liste.filter(function(f) { return (f.tiers_nom || '').toLowerCase().includes(search) || (f.numero || '').toLowerCase().includes(search); });
+  var el = document.getElementById('liste-factures-' + (type === 'client' ? 'client' : 'fourn'));
+  if (!el) return;
+  if (!liste.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">' + (type === 'client' ? '🧾' : '📥') + '</div>Aucune facture.</div>'; return; }
+  el.innerHTML = liste.map(function(f) {
+    var montant = parseFloat(f.montant_ttc || 0);
+    var actions = '';
+    if (estResponsable && f.statut === 'brouillon') actions += '<button class="btn-act btn-ok btn-sm" onclick="validerFacture(\'' + f.id + '\')">✓ Valider</button>';
+    if (f.type_facture === 'client' || type === 'client') actions += '<button class="btn-act btn-ghost btn-sm" onclick="exporterFacturX(\'' + f.id + '\')">Factur-X</button>';
+    return '<div class="row-item">' +
+      '<div class="ri-main">' +
+        '<div class="ri-title">' + esc(f.tiers_nom || '—') + '</div>' +
+        '<div class="ri-sub">' + esc(f.numero || '—') + ' · Émis ' + fmtDate(f.date_emission) + (f.date_echeance ? ' · Éch. ' + fmtDate(f.date_echeance) : '') + '</div>' +
+      '</div>' +
+      '<span class="badge badge-' + statBadge(f.statut) + '">' + esc(f.statut) + '</span>' +
+      '<span class="ri-amount ' + (f.statut === 'payee' ? 'ok' : f.statut === 'en_retard' ? 'err' : 'warn') + '">' + fmtMontant(montant) + '</span>' +
+      (actions ? '<div class="ri-actions">' + actions + '</div>' : '') +
+      '</div>';
+  }).join('');
+}
+
+function afficherEcheancesFourn() {
+  var now = new Date();
+  var proches = _facturesFourn.filter(function(f) {
+    if (!f.date_echeance || f.statut === 'payee') return false;
+    var d = new Date(f.date_echeance);
+    return (d - now) <= 30 * 86400000;
+  }).sort(function(a, b) { return new Date(a.date_echeance) - new Date(b.date_echeance); });
+  var el = document.getElementById('echeances-fourn');
+  if (!el) return;
+  if (!proches.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">✅</div>Aucune échéance dans les 30 jours.</div>'; return; }
+  el.innerHTML = proches.map(function(f) {
+    var d = new Date(f.date_echeance);
+    var diff = Math.ceil((d - now) / 86400000);
+    var cls = diff <= 3 ? 'err' : diff <= 7 ? 'warn' : '';
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(f.tiers_nom || '—') + '</div><div class="ri-sub">' + esc(f.numero || '—') + ' · Éch. ' + fmtDate(f.date_echeance) + '</div></div>' +
+      '<span class="badge badge-' + (cls || 'grey') + '">J-' + diff + '</span>' +
+      '<span class="ri-amount ' + cls + '">' + fmtMontant(parseFloat(f.montant_ttc || 0)) + '</span></div>';
+  }).join('');
+}
+
+function peuplerSelectEncaissement() {
+  var sel = document.getElementById('enc-facture');
+  if (!sel) return;
+  var liste = _facturesClient.filter(function(f) { return ['envoyee', 'en_retard'].includes(f.statut); });
+  sel.innerHTML = '<option value="">Sélectionner</option>' + liste.map(function(f) {
+    return '<option value="' + f.id + '">' + esc(f.tiers_nom || '—') + ' — ' + esc(f.numero || '') + ' (' + fmtMontant(parseFloat(f.montant_ttc || 0)) + ')</option>';
+  }).join('');
+}
+
+async function validerFacture(id) {
+  if (!estResponsable) { notifErr('Accès réservé au responsable'); return; }
+  var ok = await ariaConfirm('Valider cette facture ?', 'Validation facture');
+  if (!ok) return;
+  var data = await api('/industrial/facture/modifier', { token: getToken(), entreprise_id: getEntrepriseId(), facture_id: id, valider: true });
+  if (data.ok) { notifOk('Facture validée'); logAction('Facture validée : ' + id); chargerFactures('client'); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+async function creerFacture() {
+  var type = document.getElementById('f-type').value;
+  var tiers = document.getElementById('f-tiers-nom').value.trim();
+  var ht = parseFloat(document.getElementById('f-ht').value || 0);
+  if (!tiers || !ht) { notifErr('Tiers et montant HT obligatoires'); return; }
+  var data = await api('/industrial/facture/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    type_facture: type || 'client',
+    tiers_nom: tiers,
+    tiers_email: document.getElementById('f-tiers-email').value,
+    numero: document.getElementById('f-numero').value,
+    date_emission: document.getElementById('f-date-em').value || new Date().toISOString().slice(0, 10),
+    date_echeance: document.getElementById('f-date-ech').value || null,
+    montant_ht: ht,
+    taux_tva: parseFloat(document.getElementById('f-tva').value || 20),
+    montant_ttc: parseFloat(document.getElementById('f-ttc').value || 0),
+    mode_paiement: document.getElementById('f-mode-paie').value,
+    statut: document.getElementById('f-statut').value,
+    notes: document.getElementById('f-notes').value
+  });
+  if (data.ok) { fermerModal('modal-facture'); notifOk('Facture créée'); logAction('Facture créée : ' + tiers); chargerFactures(type || 'client'); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+function ouvrirModalFacture(type) {
+  document.getElementById('f-type').value = type;
+  document.getElementById('modal-facture-titre').textContent = 'Nouvelle facture ' + (type === 'client' ? 'client' : 'fournisseur');
+  document.getElementById('f-date-em').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('f-statut').value = type === 'client' ? 'brouillon' : 'saisie';
+  ouvrirModal('modal-facture');
+}
+
+function calcTTC() {
+  var ht = parseFloat(document.getElementById('f-ht').value || 0);
+  var tva = parseFloat(document.getElementById('f-tva').value || 20);
+  document.getElementById('f-ttc').value = (ht * (1 + tva / 100)).toFixed(2);
+}
+
+async function exporterFacturX(id) {
+  id = id || document.getElementById('export-facturx-id').value;
+  if (!id) { notifErr('Sélectionnez une facture'); return; }
+  var data = await api('/industrial/facture/facturx', { token: getToken(), entreprise_id: getEntrepriseId(), facture_id: id });
+  if (!data.ok) { notifErr(data.erreur || 'Erreur génération'); return; }
+  var bin = atob(data.pdf_base64);
+  var arr = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  var blob = new Blob([arr], { type: 'application/pdf' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a'); a.href = url; a.download = data.filename || 'facture-facturx.pdf';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  notifOk('Factur-X généré'); logAction('Factur-X : ' + id);
+}
+
+// ════════════════════════════════════════════════════════════
+// DEVIS
+// ════════════════════════════════════════════════════════════
+var _lastDevis = null;
+
+function chargerDevis() {
+  // liste côté factures type devis
+  chargerFactures('client');
+}
+
+async function genererDevis() {
+  var desc = document.getElementById('devis-desc').value.trim();
+  var client = document.getElementById('devis-client').value.trim();
+  if (!desc) { notifErr('Décrivez la prestation'); return; }
+  var tva = document.getElementById('devis-tva').value || '20';
+  var zone = document.getElementById('devis-resultat');
+  zone.style.display = 'block';
+  zone.textContent = '⏳ Aria génère le devis...';
+  var rep = await apiAsk(
+    'Génère un devis professionnel pour : ' + desc +
+    '. Client : ' + (client || 'non précisé') + '. TVA : ' + tva + '%. ' +
+    'Format : lignes de prestation avec prix unitaire HT, quantité, total HT. Total HT, TVA, TTC en fin. Sois précis et professionnel.',
+    construireContexteRiche()
+  );
+  zone.textContent = rep;
+  _lastDevis = { desc: desc, client: client, tva: tva, contenu: rep };
+  document.getElementById('btn-devis-to-facture').style.display = 'inline-flex';
+  logAction('Devis généré pour : ' + (client || desc.slice(0, 30)));
+}
+
+async function convertirDevisEnFacture() {
+  if (!_lastDevis) return;
+  var ok = await ariaConfirm('Créer une facture à partir de ce devis ?', 'Convertir en facture');
+  if (!ok) return;
+  var data = await api('/industrial/facture/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    type_facture: 'client',
+    tiers_nom: _lastDevis.client || 'Client',
+    montant_ht: 0,
+    taux_tva: parseFloat(_lastDevis.tva || 20),
+    montant_ttc: 0,
+    statut: 'brouillon',
+    notes: '[DEVIS ARIA]\n' + _lastDevis.contenu,
+    date_emission: new Date().toISOString().slice(0, 10)
+  });
+  if (data.ok) { notifOk('Facture créée depuis le devis'); chargerFactures('client'); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+// ════════════════════════════════════════════════════════════
+// RELANCES & ENCAISSEMENTS
+// ════════════════════════════════════════════════════════════
+async function chargerRelances() {
+  var data = await api('/industrial/factures', { token: getToken(), entreprise_id: getEntrepriseId(), type: 'client' }, 'GET');
+  var retards = (data.factures || []).filter(function(f) { return ['en_retard', 'envoyee'].includes(f.statut); });
+  var el = document.getElementById('liste-relances');
+  if (!el) return;
+  if (!retards.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">✅</div>Aucune facture impayée.</div>'; return; }
+  el.innerHTML = retards.map(function(f) {
+    var now = new Date(); var ech = f.date_echeance ? new Date(f.date_echeance) : null;
+    var diff = ech ? Math.ceil((now - ech) / 86400000) : 0;
+    return '<div class="row-item">' +
+      '<div class="ri-main"><div class="ri-title">' + esc(f.tiers_nom || '—') + '</div>' +
+      '<div class="ri-sub">' + esc(f.numero || '—') + (diff > 0 ? ' · <span style="color:var(--err)">Retard ' + diff + ' j</span>' : ' · À relancer') + '</div></div>' +
+      '<span class="ri-amount err">' + fmtMontant(parseFloat(f.montant_ttc || 0)) + '</span>' +
+      '<div class="ri-actions"><button class="btn-act btn-amber btn-sm" onclick="preRemplirRelance(\'' + esc(f.tiers_nom || '') + '\',' + parseFloat(f.montant_ttc || 0) + ',' + diff + ')">✍️ Relancer</button></div>' +
+      '</div>';
+  }).join('');
+}
+
+function preRemplirRelance(client, montant, jours) {
+  document.getElementById('rel-client').value = client;
+  document.getElementById('rel-montant').value = montant;
+  document.getElementById('rel-jours').value = Math.max(jours, 1);
+}
+
+async function genererRelance() {
+  var client = document.getElementById('rel-client').value.trim();
+  var montant = document.getElementById('rel-montant').value;
+  var jours = document.getElementById('rel-jours').value;
+  var niveau = document.getElementById('rel-niveau').value;
+  if (!client || !montant) { notifErr('Client et montant obligatoires'); return; }
+  var zone = document.getElementById('relance-resultat');
+  zone.style.display = 'block';
+  zone.textContent = '⏳ Aria rédige...';
+  var niveauLabel = { '1': 'première relance amiable', '2': 'deuxième relance formelle', '3': 'mise en demeure' }[niveau] || 'relance';
+  var rep = await apiAsk(
+    'Rédige une ' + niveauLabel + ' pour la facture impayée de ' + client +
+    ', montant ' + montant + '€, retard de ' + jours + ' jours. Ton professionnel mais ferme. Inclure les mentions légales adaptées.',
+    construireContexteRiche()
+  );
+  zone.textContent = rep;
+  logAction('Relance rédigée pour ' + client);
+}
+
+async function enregistrerEncaissement() {
+  var factureId = document.getElementById('enc-facture').value;
+  var montant = parseFloat(document.getElementById('enc-montant').value || 0);
+  var date = document.getElementById('enc-date').value;
+  var mode = document.getElementById('enc-mode').value;
+  if (!factureId || !montant || !date) { notifErr('Tous les champs sont obligatoires'); return; }
+  var data = await api('/industrial/encaissement/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    facture_id: factureId, montant: montant, date_paiement: date, mode_paiement: mode
+  });
+  if (data.ok) { notifOk('Encaissement enregistré'); logAction('Encaissement ' + fmtMontant(montant)); chargerFactures('client'); chargerRelances(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+// ════════════════════════════════════════════════════════════
+// TRANSACTIONS BANCAIRES
+// ════════════════════════════════════════════════════════════
+async function chargerTransactions() {
+  var data = await api('/industrial/transactions', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  _transactions = data.transactions || [];
+  var el = document.getElementById('liste-transactions');
+  if (!el) return;
+  if (!_transactions.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">💳</div>Aucune transaction.</div>'; return; }
+  el.innerHTML = _transactions.map(function(t) {
+    var montant = parseFloat(t.montant || 0);
+    var isCredit = t.type === 'credit';
+    return '<div class="row-item">' +
+      '<div class="ri-main"><div class="ri-title">' + esc(t.libelle || '—') + '</div>' +
+      '<div class="ri-sub">' + fmtDate(t.date_operation) + (t.categorie ? ' · ' + esc(t.categorie) : '') + (t.compte ? ' · ' + esc(t.compte) : '') + '</div></div>' +
+      '<span class="ri-amount ' + (isCredit ? 'ok' : 'err') + '">' + (isCredit ? '+' : '−') + fmtMontant(montant) + '</span>' +
+      (t.rapproche ? '<span class="badge badge-ok">✓ Rapproché</span>' : '<button class="btn-act btn-amber btn-sm" onclick="rapprocher(\'' + t.id + '\')">Rapprocher</button>') +
+      '</div>';
+  }).join('');
+}
+
+async function saisirTransaction() {
+  var libelle = document.getElementById('tr-libelle').value.trim();
+  var montant = parseFloat(document.getElementById('tr-montant').value || 0);
+  var date = document.getElementById('tr-date').value;
+  var type = document.getElementById('tr-type').value;
+  if (!libelle || !montant || !date) { notifErr('Libellé, montant et date obligatoires'); return; }
+  var data = await api('/industrial/transaction/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    date_operation: date, libelle: libelle, montant: montant, type: type,
+    categorie: document.getElementById('tr-categorie').value,
+    compte: document.getElementById('tr-compte').value
+  });
+  if (data.ok) {
+    notifOk('Transaction enregistrée');
+    document.getElementById('tr-libelle').value = '';
+    document.getElementById('tr-montant').value = '';
+    logAction('Transaction saisie : ' + libelle);
+    chargerTransactions();
+  } else notifErr(data.erreur || 'Erreur');
+}
+
+async function rapprocher(id) {
+  var data = await api('/industrial/transaction/rapprocher', { token: getToken(), entreprise_id: getEntrepriseId(), transaction_id: id });
+  if (data.ok) { notifOk('Transaction rapprochée'); logAction('Transaction rapprochée'); chargerTransactions(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+async function importerRIB() {
+  var contenu = document.getElementById('rib-contenu').value.trim();
+  if (!contenu) { notifErr('Collez le contenu du relevé'); return; }
+  var btn = document.getElementById('btn-import-rib');
+  btn.textContent = '⏳ Analyse...'; btn.disabled = true;
+  var rep = await apiAsk('Analyse ce relevé bancaire et retourne UNIQUEMENT un JSON (sans markdown) avec les transactions. Format : [{"date":"YYYY-MM-DD","libelle":"...","montant":0.0,"type":"credit|debit"}]\n\n' + contenu);
+  btn.textContent = '✨ Analyser et importer'; btn.disabled = false;
+  try {
+    var s = rep.indexOf('['); var e = rep.lastIndexOf(']');
+    var trs = JSON.parse(rep.slice(s, e + 1));
+    var ok = 0;
+    for (var t of trs) {
+      var r = await api('/industrial/transaction/creer', { token: getToken(), entreprise_id: getEntrepriseId(), date_operation: t.date, libelle: t.libelle, montant: t.montant, type: t.type });
+      if (r.ok) ok++;
+    }
+    fermerModal('modal-import-rib');
+    notifOk(ok + ' transactions importées');
+    logAction('Import RIB : ' + ok + ' transactions');
+    chargerTransactions();
+  } catch(e) { notifErr('Erreur analyse — vérifiez le format'); }
+}
+
+// ════════════════════════════════════════════════════════════
+// TRÉSORERIE
+// ════════════════════════════════════════════════════════════
+async function calculerTresorerie() {
+  var data = await Promise.all([
+    api('/industrial/factures', { token: getToken(), entreprise_id: getEntrepriseId(), type: 'client' }, 'GET'),
+    api('/industrial/transactions', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET')
+  ]);
+  var fc = data[0].factures || [];
+  var tr = data[1].transactions || [];
+  var entrees = tr.filter(function(t) { return t.type === 'credit'; }).reduce(function(s, t) { return s + parseFloat(t.montant || 0); }, 0);
+  var sorties = tr.filter(function(t) { return t.type === 'debit'; }).reduce(function(s, t) { return s + parseFloat(t.montant || 0); }, 0);
+  var aEncaisser = fc.filter(function(f) { return ['envoyee', 'en_retard'].includes(f.statut); }).reduce(function(s, f) { return s + parseFloat(f.montant_ttc || 0); }, 0);
+  var solde = entrees - sorties;
+  setStat('treso-entrees', fmtMontant(entrees), 'ok');
+  setStat('treso-sorties', fmtMontant(sorties), 'err');
+  setStat('treso-solde', fmtMontant(solde), solde >= 0 ? 'ok' : 'err');
+  setStat('treso-a-encaisser', fmtMontant(aEncaisser), 'warn');
+  logAction('Trésorerie calculée');
+}
+
+async function analyseTreso() {
+  var q = document.getElementById('treso-question').value.trim();
+  if (!q) q = 'Donne-moi un résumé de la situation de trésorerie actuelle.';
+  var zone = document.getElementById('treso-reponse');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria analyse...';
+  var rep = await apiAsk(q, construireContexteRiche());
+  zone.textContent = rep;
+}
+
+// ════════════════════════════════════════════════════════════
+// ÉCRITURES
+// ════════════════════════════════════════════════════════════
+async function saisirEcriture() {
+  var date = document.getElementById('ec-date').value;
+  var piece = document.getElementById('ec-piece').value.trim();
+  var libelle = document.getElementById('ec-libelle').value.trim();
+  var debit = parseFloat(document.getElementById('ec-debit-montant').value || 0);
+  var credit = parseFloat(document.getElementById('ec-credit-montant').value || 0);
+  if (!date || !libelle || !debit || !credit) { notifErr('Tous les champs sont obligatoires'); return; }
+  var data = await api('/industrial/ecriture/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    date_ecriture: date, numero_piece: piece, libelle: libelle,
+    compte_debit: document.getElementById('ec-debit-compte').value,
+    montant_debit: debit,
+    compte_credit: document.getElementById('ec-credit-compte').value,
+    montant_credit: credit
+  });
+  if (data.ok) {
+    notifOk('Écriture enregistrée');
+    ['ec-date', 'ec-piece', 'ec-libelle', 'ec-debit-compte', 'ec-debit-montant', 'ec-credit-compte', 'ec-credit-montant'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+    logAction('Écriture : ' + libelle);
+    chargerEcritures();
+  } else notifErr(data.erreur || 'Erreur');
+}
+
+async function chargerEcritures() {
+  var data = await api('/industrial/ecritures', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var liste = data.ecritures || [];
+  var el = document.getElementById('liste-ecritures');
+  if (!el) return;
+  if (!liste.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">📒</div>Aucune écriture.</div>'; return; }
+  el.innerHTML = '<div class="table-wrap"><table class="dt"><thead><tr><th>Date</th><th>Pièce</th><th>Libellé</th><th>Cpte Débit</th><th>Débit</th><th>Cpte Crédit</th><th>Crédit</th></tr></thead><tbody>' +
+    liste.map(function(e) {
+      return '<tr><td>' + fmtDate(e.date_ecriture) + '</td><td>' + esc(e.numero_piece || '—') + '</td><td>' + esc(e.libelle) + '</td>' +
+        '<td class="mono">' + esc(e.compte_debit || '—') + '</td><td class="ri-amount warn">' + fmtMontant(parseFloat(e.montant_debit || 0)) + '</td>' +
+        '<td class="mono">' + esc(e.compte_credit || '—') + '</td><td class="ri-amount ok">' + fmtMontant(parseFloat(e.montant_credit || 0)) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+}
+
+// ════════════════════════════════════════════════════════════
+// IMMOBILISATIONS
+// ════════════════════════════════════════════════════════════
+async function creerImmobilisation() {
+  var designation = document.getElementById('im-designation').value.trim();
+  var valeur = parseFloat(document.getElementById('im-valeur').value || 0);
+  if (!designation || !valeur) { notifErr('Désignation et valeur obligatoires'); return; }
+  var data = await api('/industrial/immobilisation/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    designation: designation,
+    date_acquisition: document.getElementById('im-date').value,
+    valeur_achat: valeur,
+    duree_amortissement: parseInt(document.getElementById('im-duree').value || 5),
+    methode: document.getElementById('im-methode').value,
+    categorie: document.getElementById('im-cat').value
+  });
+  if (data.ok) { fermerModal('modal-immo'); notifOk('Actif créé'); logAction('Immo : ' + designation); chargerImmo(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+async function chargerImmo() {
+  var data = await api('/industrial/immobilisations', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var liste = data.immobilisations || [];
+  var el = document.getElementById('liste-immo');
+  if (!el) return;
+  if (!liste.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">🏗️</div>Aucune immobilisation.</div>'; return; }
+  el.innerHTML = liste.map(function(im) {
+    var annuite = parseFloat(im.valeur_achat || 0) / Math.max(parseInt(im.duree_amortissement || 5), 1);
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(im.designation) + '</div>' +
+      '<div class="ri-sub">' + fmtDate(im.date_acquisition) + ' · ' + esc(im.methode || 'linéaire') + ' · ' + (im.duree_amortissement || 5) + ' ans</div></div>' +
+      '<span class="ri-amount warn">' + fmtMontant(parseFloat(im.valeur_achat || 0)) + '</span>' +
+      '<span style="font-size:11px;color:var(--ink-dim)">' + fmtMontant(annuite) + '/an</span></div>';
+  }).join('');
+}
+
+async function calculerAmortissements() {
+  var data = await api('/industrial/immobilisations', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var liste = data.immobilisations || [];
+  var el = document.getElementById('dotations-immo');
+  if (!el) return;
+  if (!liste.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">📊</div>Aucune immobilisation.</div>'; return; }
+  var total = 0;
+  el.innerHTML = liste.map(function(im) {
+    var annuelle = parseFloat(im.valeur_achat || 0) / Math.max(parseInt(im.duree_amortissement || 5), 1);
+    var mensuelle = annuelle / 12;
+    total += mensuelle;
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(im.designation) + '</div></div>' +
+      '<span class="ri-amount warn">' + fmtMontant(mensuelle) + '/mois</span></div>';
+  }).join('') + '<div style="margin-top:10px;font-weight:700;color:var(--amber)">Total dotation mensuelle : ' + fmtMontant(total) + '</div>';
+}
+
+// ════════════════════════════════════════════════════════════
+// EMPRUNTS
+// ════════════════════════════════════════════════════════════
+async function creerEmprunt() {
+  var objet = document.getElementById('emp-objet').value.trim();
+  var montant = parseFloat(document.getElementById('emp-montant').value || 0);
+  if (!objet || !montant) { notifErr('Objet et montant obligatoires'); return; }
+  var data = await api('/industrial/emprunt/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    objet: objet,
+    banque: document.getElementById('emp-banque').value,
+    montant: montant,
+    taux_annuel: parseFloat(document.getElementById('emp-taux').value || 0),
+    duree_mois: parseInt(document.getElementById('emp-duree').value || 12),
+    date_premiere_echeance: document.getElementById('emp-debut').value
+  });
+  if (data.ok) { fermerModal('modal-emprunt'); notifOk('Emprunt créé'); logAction('Emprunt : ' + objet); chargerEmprunts(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+async function chargerEmprunts() {
+  var data = await api('/industrial/emprunts', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var liste = data.emprunts || [];
+  var el = document.getElementById('liste-emprunts');
+  if (!el) return;
+  if (!liste.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">💳</div>Aucun emprunt.</div>'; return; }
+  el.innerHTML = liste.map(function(em) {
+    var mensualite = em.taux_annuel > 0
+      ? parseFloat(em.montant) * (em.taux_annuel / 1200) / (1 - Math.pow(1 + em.taux_annuel / 1200, -em.duree_mois))
+      : parseFloat(em.montant) / Math.max(em.duree_mois, 1);
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(em.objet) + '</div>' +
+      '<div class="ri-sub">' + esc(em.banque || '—') + ' · ' + (em.taux_annuel || 0) + '% · ' + (em.duree_mois || '?') + ' mois</div></div>' +
+      '<span class="ri-amount warn">' + fmtMontant(parseFloat(em.montant || 0)) + '</span>' +
+      '<span style="font-size:11px;color:var(--ink-dim)">' + fmtMontant(mensualite) + '/mois</span></div>';
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+// NOTES DE FRAIS
+// ════════════════════════════════════════════════════════════
+async function soumettreNoteFrais() {
+  var montant = parseFloat(document.getElementById('nf-montant').value || 0);
+  var date = document.getElementById('nf-date').value;
+  var desc = document.getElementById('nf-desc').value.trim();
+  if (!montant || !date || !desc) { notifErr('Date, montant et description obligatoires'); return; }
+  var data = await api('/industrial/note-frais/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    date_depense: date,
+    categorie: document.getElementById('nf-cat').value,
+    montant_ttc: montant,
+    taux_tva: parseFloat(document.getElementById('nf-tva').value || 20),
+    description: desc
+  });
+  if (data.ok) { notifOk('Note de frais soumise'); logAction('Note frais : ' + desc.slice(0, 30)); chargerListeFrais(); ['nf-montant', 'nf-desc'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; }); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+async function chargerListeFrais() {
+  var data = await api('/industrial/notes-frais', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var liste = data.notes || [];
+  var el = document.getElementById('liste-frais');
+  if (!el) return;
+  if (!liste.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">🧳</div>Aucune note de frais.</div>'; return; }
+  el.innerHTML = liste.map(function(n) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(n.description || '—') + '</div>' +
+      '<div class="ri-sub">' + fmtDate(n.date_depense) + ' · ' + esc(n.categorie || '—') + '</div></div>' +
+      '<span class="badge badge-' + (n.statut === 'approuvee' ? 'ok' : n.statut === 'refusee' ? 'err' : 'warn') + '">' + esc(n.statut || 'en attente') + '</span>' +
+      '<span class="ri-amount warn">' + fmtMontant(parseFloat(n.montant_ttc || 0)) + '</span></div>';
+  }).join('');
+}
+
+async function chargerFraisEquipe() {
+  if (!estResponsable) return;
+  var data = await api('/industrial/notes-frais-equipe', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var attente = (data.notes || []).filter(function(n) { return n.statut === 'en_attente'; });
+  var histo = data.notes || [];
+  var elA = document.getElementById('frais-a-valider');
+  var elH = document.getElementById('frais-historique');
+  var renderFrais = function(liste) {
+    if (!liste.length) return '<div class="empty-state"><div class="es-ic">🧳</div>Aucune note de frais.</div>';
+    return liste.map(function(n) {
+      var actions = n.statut === 'en_attente' ? '<button class="btn-act btn-ok btn-sm" onclick="validerFrais(\'' + n.id + '\',\'approuvee\')">✓</button><button class="btn-act btn-err btn-sm" onclick="validerFrais(\'' + n.id + '\',\'refusee\')">✕</button>' : '';
+      return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(n.description || '—') + '</div>' +
+        '<div class="ri-sub">' + esc(n.salarie_nom || '—') + ' · ' + fmtDate(n.date_depense) + ' · ' + esc(n.categorie || '—') + '</div></div>' +
+        '<span class="badge badge-' + (n.statut === 'approuvee' ? 'ok' : n.statut === 'refusee' ? 'err' : 'warn') + '">' + esc(n.statut || 'attente') + '</span>' +
+        '<span class="ri-amount warn">' + fmtMontant(parseFloat(n.montant_ttc || 0)) + '</span>' +
+        (actions ? '<div class="ri-actions">' + actions + '</div>' : '') + '</div>';
+    }).join('');
+  };
+  if (elA) elA.innerHTML = renderFrais(attente);
+  if (elH) elH.innerHTML = renderFrais(histo);
+}
+
+async function validerFrais(id, statut) {
+  if (!estResponsable) return;
+  var data = await api('/industrial/note-frais/valider', { token: getToken(), entreprise_id: getEntrepriseId(), note_id: id, statut: statut });
+  if (data.ok) { notifOk(statut === 'approuvee' ? 'Frais approuvés' : 'Frais refusés'); chargerFraisEquipe(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+// ════════════════════════════════════════════════════════════
+// RAPPROCHEMENT ACHATS (3 points)
+// ════════════════════════════════════════════════════════════
+async function chargerRapprochementAchats() {
+  var data = await api('/industrial/rapprochement/analyser', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  if (data.acces_refuse) {
+    document.getElementById('rappr-achats-anomalies').innerHTML = '<div class="access-guard"><div class="ag-ico">🔒</div><strong>Vue réservée au responsable</strong></div>';
+    return;
+  }
+  var anomalies = data.anomalies || [];
+  var dossiers  = data.dossiers || [];
+  var elA = document.getElementById('rappr-achats-anomalies');
+  var elD = document.getElementById('rappr-achats-tous');
+  if (elA) elA.innerHTML = anomalies.length ? anomalies.map(function(a) {
+    return '<div class="alert-item ' + (a.gravite === 'critique' ? 'crit' : '') + '"><div class="alert-title">' + esc(a.type_anomalie) + ' — ' + esc(a.numero_bc || '') + '</div>' +
+      '<div class="alert-desc">' + esc(a.description) + '</div></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">✅</div>Aucune anomalie.</div>';
+  if (elD) elD.innerHTML = dossiers.length ? dossiers.map(function(d) {
+    var cls = d.statut_rapprochement === 'ok' ? 'ok' : d.statut_rapprochement === 'alerte' ? 'err' : 'warn';
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(d.numero_bc || '—') + ' · ' + esc(d.fournisseur_nom || '—') + '</div>' +
+      '<div class="ri-sub">' + esc(d.observations || '') + '</div></div>' +
+      '<span class="badge badge-' + cls + '">' + esc(d.statut_rapprochement) + '</span></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">📋</div>Aucun dossier.</div>';
+  logAction('Rapprochement 3 points analysé');
+}
+
+// ════════════════════════════════════════════════════════════
+// TVA
+// ════════════════════════════════════════════════════════════
+async function calculerTVA() {
+  var mois = document.getElementById('tva-mois').value;
+  if (!mois) { notifErr('Sélectionnez un mois'); return; }
+  var data = await Promise.all([
+    api('/industrial/factures', { token: getToken(), entreprise_id: getEntrepriseId(), type: 'client' }, 'GET'),
+    api('/industrial/factures', { token: getToken(), entreprise_id: getEntrepriseId(), type: 'fournisseur' }, 'GET')
+  ]);
+  var fc = (data[0].factures || []).filter(function(f) { return (f.date_emission || '').startsWith(mois); });
+  var ff = (data[1].factures || []).filter(function(f) { return (f.date_emission || '').startsWith(mois); });
+  var tvaCollectee = fc.reduce(function(s, f) { return s + (parseFloat(f.montant_ttc || 0) - parseFloat(f.montant_ht || 0)); }, 0);
+  var tvaDeductible = ff.reduce(function(s, f) { return s + (parseFloat(f.montant_ttc || 0) - parseFloat(f.montant_ht || 0)); }, 0);
+  var tvaDue = Math.max(tvaCollectee - tvaDeductible, 0);
+  setStat('tva-collectee', fmtMontant(tvaCollectee), 'ok');
+  setStat('tva-deductible', fmtMontant(tvaDeductible), 'err');
+  setStat('tva-due', fmtMontant(tvaDue), tvaDue > 0 ? 'warn' : 'ok');
+  var el = document.getElementById('tva-detail');
+  if (el) el.innerHTML = '<div class="row-item"><div class="ri-main"><div class="ri-title">TVA collectée sur ventes</div><div class="ri-sub">' + fc.length + ' facture(s) client · ' + mois + '</div></div><span class="ri-amount ok">' + fmtMontant(tvaCollectee) + '</span></div>' +
+    '<div class="row-item"><div class="ri-main"><div class="ri-title">TVA déductible sur achats</div><div class="ri-sub">' + ff.length + ' facture(s) fournisseur · ' + mois + '</div></div><span class="ri-amount err">−' + fmtMontant(tvaDeductible) + '</span></div>' +
+    '<div class="row-item" style="background:var(--amber-dim)"><div class="ri-main"><div class="ri-title" style="color:var(--amber)">TVA nette à déclarer</div></div><span class="ri-amount warn">' + fmtMontant(tvaDue) + '</span></div>';
+  logAction('TVA calculée pour ' + mois);
+}
+
+async function chargerTVAProchaine() {
+  var el = document.getElementById('tva-prochaine');
+  if (!el) return;
+  var today = new Date();
+  var moisProchain = new Date(today.getFullYear(), today.getMonth() + 1, 20);
+  var diff = Math.ceil((moisProchain - today) / 86400000);
+  el.innerHTML = '<div class="alert-item' + (diff <= 7 ? ' crit' : '') + '"><div class="alert-title">Déclaration TVA CA3</div><div class="alert-desc">Échéance : ' + moisProchain.toLocaleDateString('fr-FR') + ' (dans ' + diff + ' jours)</div></div>';
+}
+
+// ════════════════════════════════════════════════════════════
+// ÉCHÉANCIER FISCAL
+// ════════════════════════════════════════════════════════════
+async function chargerEcheancierFiscal() {
+  var today = new Date();
+  var obligations = [
+    { libelle: 'Déclaration TVA CA3 mensuelle', date: new Date(today.getFullYear(), today.getMonth() + 1, 20), type: 'TVA' },
+    { libelle: 'Acompte IS (si société)', date: new Date(today.getFullYear(), today.getMonth() + 2, 15), type: 'IS' },
+    { libelle: 'DSN mensuelle', date: new Date(today.getFullYear(), today.getMonth(), 15), type: 'Social' },
+    { libelle: 'URSSAF mensuelle', date: new Date(today.getFullYear(), today.getMonth() + 1, 5), type: 'Social' },
+    { libelle: 'CFE (si applicable)', date: new Date(today.getFullYear(), 11, 15), type: 'Local' },
+  ].sort(function(a, b) { return a.date - b.date; });
+  var el = document.getElementById('liste-echeances-fiscales');
+  if (!el) return;
+  el.innerHTML = obligations.map(function(ob) {
+    var diff = Math.ceil((ob.date - today) / 86400000);
+    var cls = diff < 0 ? 'crit' : diff <= 7 ? '' : '';
+    return '<div class="alert-item ' + cls + '"><div class="alert-title">' + esc(ob.libelle) + ' <span class="badge badge-amber">' + esc(ob.type) + '</span></div>' +
+      '<div class="alert-desc">Échéance : ' + ob.date.toLocaleDateString('fr-FR') + ' — ' + (diff < 0 ? '<span style="color:var(--err)">Dépassé de ' + Math.abs(diff) + ' j</span>' : 'Dans ' + diff + ' j') + '</div></div>';
+  }).join('');
+}
+
+async function aideDeclarationFiscale() {
+  var q = document.getElementById('fiscal-question').value.trim();
+  if (!q) { notifErr('Posez votre question'); return; }
+  var zone = document.getElementById('fiscal-reponse');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria consulte...';
+  var rep = await apiAsk(q, construireContexteRiche() + ' | Contexte fiscal France');
+  zone.textContent = rep;
+}
+
+// ════════════════════════════════════════════════════════════
+// ÉQUIPE RESPONSABLE
+// ════════════════════════════════════════════════════════════
+async function chargerEquipe() {
+  if (!estResponsable) return;
+  var el = document.getElementById('equipe-liste');
+  if (el) el.innerHTML = '<div class="empty-state"><div class="es-ic">🔄</div>Chargement...</div>';
+  var data = await api('/industrial/equipe-comptabilite', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  if (!data.ok || data.acces_refuse) {
+    if (el) el.innerHTML = '<div class="access-guard"><div class="ag-ico">🔒</div><strong>Accès refusé.</strong></div>';
+    return;
+  }
+  _equipeData = data.equipe || [];
+  var resume = data.resume || {};
+  var statsRow = document.getElementById('equipe-stats-row');
+  if (statsRow) {
+    statsRow.style.display = 'grid';
+    setStat('eq-factures-valider', resume.factures_brouillon || 0, resume.factures_brouillon > 0 ? 'warn' : 'ok');
+    setStat('eq-retards', resume.taches_retard || 0, resume.taches_retard > 0 ? 'err' : 'ok');
+    setStat('eq-rappr-attente', resume.transactions_non_rappr || 0, resume.transactions_non_rappr > 5 ? 'warn' : '');
+    setStat('eq-frais-valider', resume.frais_a_valider || 0, resume.frais_a_valider > 0 ? 'warn' : 'ok');
+  }
+  if (!_equipeData.length) { if (el) el.innerHTML = '<div class="empty-state"><div class="es-ic">👥</div>Aucun membre trouvé.</div>'; return; }
+  if (el) el.innerHTML = _equipeData.map(function(m, idx) {
+    var alertes = [];
+    if (m.factures_brouillon > 0) alertes.push('<span class="badge badge-warn">' + m.factures_brouillon + ' brouillon(s)</span>');
+    if (m.taches_retard > 0) alertes.push('<span class="badge badge-err">' + m.taches_retard + ' retard(s)</span>');
+    if (m.transactions_attente > 0) alertes.push('<span class="badge badge-warn">' + m.transactions_attente + ' rappr.</span>');
+    return '<div class="row-item">' +
+      '<div style="width:34px;height:34px;border-radius:50%;background:var(--amber-dim);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--amber);flex-shrink:0">' + esc(m.nom.charAt(0)) + '</div>' +
+      '<div class="ri-main"><div class="ri-title">' + esc(m.nom) + ' <span style="font-size:11px;color:var(--ink-faint)">' + esc(m.poste || '') + '</span></div>' +
+        '<div class="ri-sub">' + m.factures_total + ' factures · ' + m.taches_actives + ' tâches</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">' + (alertes.join('') || '<span class="badge badge-ok">✓ RAS</span>') + '</div></div>' +
+      '<div class="ri-actions"><button class="btn-act btn-ghost btn-sm" data-idx="' + idx + '" onclick="voirDetailEquipe(parseInt(this.dataset.idx))">Détail</button></div>' +
+      '</div>';
+  }).join('');
+  logAction('Équipe comptabilité chargée — ' + _equipeData.length + ' membres');
+}
+
+function voirDetailEquipe(idx) {
+  var m = _equipeData[idx]; if (!m) return;
+  ariaPrompt(
+    'Membre : ' + m.nom + '\n' +
+    'Factures : ' + m.factures_total + ' (brouillons : ' + m.factures_brouillon + ')\n' +
+    'Transactions à rapprocher : ' + m.transactions_attente + '\n' +
+    'Tâches actives : ' + m.taches_actives + ' (en retard : ' + m.taches_retard + ')\n' +
+    'Notes de frais : ' + m.frais_total,
+    '📋 ' + m.nom,
+    ''
+  );
+}
+
+// ════════════════════════════════════════════════════════════
+// CLÔTURE MENSUELLE
+// ════════════════════════════════════════════════════════════
+async function chargerCloture() {
+  if (!estResponsable) return;
+  var mois = document.getElementById('cloture-mois-select').value;
+  if (!mois) { notifErr('Sélectionnez un mois'); return; }
+  document.getElementById('cloture-mois').textContent = mois;
+  var items = [
+    'Factures clients saisies et validées',
+    'Factures fournisseurs saisies',
+    'Rapprochement bancaire effectué',
+    'Notes de frais validées',
+    'Écritures de régularisation saisies (FNP, CCA)',
+    'Dotations aux amortissements calculées',
+    'TVA calculée et vérifiée',
+    'Solde de trésorerie rapproché',
+    'Analytique mis à jour',
+    'Transmission dossier expert-comptable'
+  ];
+  var el = document.getElementById('cloture-checklist');
+  if (!el) return;
+  el.innerHTML = items.map(function(item) {
+    return '<div class="checklist-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-label">' + esc(item) + '</div></div>';
+  }).join('');
+  logAction('Clôture chargée pour ' + mois);
+}
+
+function toggleCheck(el) {
+  var box = el.querySelector('.check-box');
+  var lbl = el.querySelector('.check-label');
+  var done = box.classList.toggle('done');
+  lbl.classList.toggle('done', done);
+  if (done) box.textContent = '✓'; else box.textContent = '';
+}
+
+async function verificationAriaСloture() {
+  var zone = document.getElementById('cloture-aria-check');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria vérifie la période...';
+  var rep = await apiAsk(
+    'Vérifie la cohérence comptable de la période de clôture : identifie les écritures manquantes, les écarts de rapprochement, les risques de rejet fiscal.',
+    construireContexteRiche()
+  );
+  zone.textContent = rep;
+  logAction('Vérification clôture Aria');
+}
+
+// ════════════════════════════════════════════════════════════
+// ANALYTIQUE
+// ════════════════════════════════════════════════════════════
+async function chargerAnalytique() {
+  if (!estResponsable) return;
+  var data = await Promise.all([
+    api('/industrial/factures', { token: getToken(), entreprise_id: getEntrepriseId(), type: 'client' }, 'GET'),
+    api('/industrial/factures', { token: getToken(), entreprise_id: getEntrepriseId(), type: 'fournisseur' }, 'GET')
+  ]);
+  var fc = data[0].factures || [];
+  var ff = data[1].factures || [];
+  var ca = fc.filter(function(f) { return f.statut === 'payee'; }).reduce(function(s, f) { return s + parseFloat(f.montant_ht || 0); }, 0);
+  var charges = ff.filter(function(f) { return ['payee', 'en_attente_paiement'].includes(f.statut); }).reduce(function(s, f) { return s + parseFloat(f.montant_ht || 0); }, 0);
+  var resultat = ca - charges;
+  var marge = ca > 0 ? ((resultat / ca) * 100).toFixed(1) : 0;
+  setStat('ana-ca', fmtMontant(ca), 'ok');
+  setStat('ana-charges', fmtMontant(charges), 'err');
+  setStat('ana-resultat', fmtMontant(resultat), resultat >= 0 ? 'ok' : 'err');
+  setStat('ana-marge', marge + '%', parseFloat(marge) >= 20 ? 'ok' : parseFloat(marge) >= 10 ? 'warn' : 'err');
+  var el = document.getElementById('cr-simplifie');
+  if (el) el.innerHTML = [
+    { l: 'Chiffre d\'affaires HT', v: ca, c: 'ok' },
+    { l: 'Charges d\'exploitation HT', v: -charges, c: 'err' },
+    { l: 'Résultat d\'exploitation', v: resultat, c: resultat >= 0 ? 'ok' : 'err' }
+  ].map(function(r) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(r.l) + '</div></div><span class="ri-amount ' + r.c + '">' + fmtMontant(Math.abs(r.v)) + '</span></div>';
+  }).join('');
+  logAction('Analytique chargé');
+}
+
+async function analyseAriaComptable() {
+  var q = document.getElementById('ana-question').value.trim();
+  if (!q) { notifErr('Posez votre question'); return; }
+  var zone = document.getElementById('ana-reponse');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria analyse...';
+  var rep = await apiAsk(q, construireContexteRiche());
+  zone.textContent = rep;
+}
+
+// ════════════════════════════════════════════════════════════
+// BILAN
+// ════════════════════════════════════════════════════════════
+async function chargerBilan() {
+  if (!estResponsable) return;
+  var data = await Promise.all([
+    api('/industrial/factures', { token: getToken(), entreprise_id: getEntrepriseId(), type: 'client' }, 'GET'),
+    api('/industrial/factures', { token: getToken(), entreprise_id: getEntrepriseId(), type: 'fournisseur' }, 'GET'),
+    api('/industrial/transactions', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET'),
+    api('/industrial/immobilisations', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET')
+  ]);
+  var fc = data[0].factures || []; var ff = data[1].factures || [];
+  var tr = data[2].transactions || []; var immos = data[3].immobilisations || [];
+  var creances = fc.filter(function(f) { return ['envoyee', 'en_retard'].includes(f.statut); }).reduce(function(s, f) { return s + parseFloat(f.montant_ttc || 0); }, 0);
+  var dettes = ff.filter(function(f) { return ['saisie', 'en_attente_paiement'].includes(f.statut); }).reduce(function(s, f) { return s + parseFloat(f.montant_ttc || 0); }, 0);
+  var entrees = tr.filter(function(t) { return t.type === 'credit'; }).reduce(function(s, t) { return s + parseFloat(t.montant || 0); }, 0);
+  var sorties = tr.filter(function(t) { return t.type === 'debit'; }).reduce(function(s, t) { return s + parseFloat(t.montant || 0); }, 0);
+  var tresorerie = entrees - sorties;
+  var actifImmo = immos.reduce(function(s, im) { return s + parseFloat(im.valeur_achat || 0); }, 0);
+  var el = document.getElementById('bilan-actif-passif');
+  if (!el) return;
+  el.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
+    '<div><div class="section-head"><h2>ACTIF</h2></div>' +
+      '<div class="row-item"><div class="ri-main"><div class="ri-title">Immobilisations brutes</div></div><span class="ri-amount">' + fmtMontant(actifImmo) + '</span></div>' +
+      '<div class="row-item"><div class="ri-main"><div class="ri-title">Créances clients</div></div><span class="ri-amount warn">' + fmtMontant(creances) + '</span></div>' +
+      '<div class="row-item"><div class="ri-main"><div class="ri-title">Trésorerie</div></div><span class="ri-amount ' + (tresorerie >= 0 ? 'ok' : 'err') + '">' + fmtMontant(tresorerie) + '</span></div>' +
+      '<div class="row-item" style="background:var(--amber-dim)"><div class="ri-main"><div class="ri-title" style="color:var(--amber)">Total actif</div></div><span class="ri-amount warn">' + fmtMontant(actifImmo + creances + Math.max(tresorerie, 0)) + '</span></div>' +
+    '</div>' +
+    '<div><div class="section-head"><h2>PASSIF</h2></div>' +
+      '<div class="row-item"><div class="ri-main"><div class="ri-title">Dettes fournisseurs</div></div><span class="ri-amount err">' + fmtMontant(dettes) + '</span></div>' +
+      '<div class="row-item"><div class="ri-main"><div class="ri-title">Découvert (si tréso négative)</div></div><span class="ri-amount err">' + fmtMontant(Math.max(-tresorerie, 0)) + '</span></div>' +
+      '<div class="row-item" style="background:var(--amber-dim)"><div class="ri-main"><div class="ri-title" style="color:var(--amber)">Total passif</div></div><span class="ri-amount warn">' + fmtMontant(dettes + Math.max(-tresorerie, 0)) + '</span></div>' +
+    '</div></div>';
+  logAction('Bilan calculé');
+}
+
+async function genererRapportDirection() {
+  var zone = document.getElementById('bilan-rapport');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria rédige le rapport...';
+  var rep = await apiAsk(
+    'Rédige un rapport de direction synthétique sur la situation financière de l\'entreprise : performance, trésorerie, points d\'attention, recommandations. Style professionnel, 250 mots.',
+    construireContexteRiche()
+  );
+  zone.textContent = rep;
+  logAction('Rapport direction généré');
+}
+
+// ════════════════════════════════════════════════════════════
+// EXPERT-COMPTABLE
+// ════════════════════════════════════════════════════════════
+async function preparerTransmissionExpert() {
+  var total = document.querySelectorAll('#expert-checklist-items .check-box').length;
+  var done = document.querySelectorAll('#expert-checklist-items .check-box.done').length;
+  var zone = document.getElementById('expert-recap');
+  zone.style.display = 'block';
+  if (done < total) {
+    zone.textContent = '⚠️ ' + (total - done) + ' point(s) non complétés. Complétez la checklist avant transmission.';
+    return;
+  }
+  var rep = await apiAsk(
+    'Rédige un message de transmission de dossier de clôture à l\'expert-comptable, avec le récapitulatif des pièces jointes et les points à vérifier ensemble.',
+    construireContexteRiche()
+  );
+  zone.textContent = '✅ Dossier prêt à transmettre\n\n' + rep;
+  logAction('Transmission expert-comptable préparée');
+}
+
+// ════════════════════════════════════════════════════════════
+// COFFRE DOCUMENTAIRE
+// ════════════════════════════════════════════════════════════
+async function rechercherDocuments() {
+  var search = document.getElementById('coffre-search').value.trim();
+  var type = document.getElementById('coffre-type').value;
+  var periode = document.getElementById('coffre-periode').value;
+  var el = document.getElementById('coffre-resultats');
+  if (!search && !type && !periode) { notifErr('Entrez au moins un critère de recherche'); return; }
+  if (el) el.innerHTML = '<div class="empty-state"><div class="es-ic">🔄</div>Recherche...</div>';
+  var params = { token: getToken(), entreprise_id: getEntrepriseId() };
+  if (type) params.type_document = type;
+  if (periode) params.periode = periode;
+  var data = await api('/industrial/documents', params, 'GET');
+  var docs = data.documents || [];
+  if (search) docs = docs.filter(function(d) { return JSON.stringify(d).toLowerCase().includes(search.toLowerCase()); });
+  if (!el) return;
+  if (!docs.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">🗄️</div>Aucun document trouvé.</div>'; return; }
+  el.innerHTML = docs.map(function(d) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(d.nom || d.reference || '—') + '</div>' +
+      '<div class="ri-sub">' + esc(d.type_document || '—') + ' · ' + fmtDate(d.date_document || d.created_at) + '</div></div>' +
+      '<span class="badge badge-grey">' + esc(d.type_document || '—') + '</span></div>';
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+// EXPORT
+// ════════════════════════════════════════════════════════════
+async function chargerExportFactures() {
+  var sel = document.getElementById('export-facturx-id');
+  if (!sel) return;
+  var data = await api('/industrial/factures', { token: getToken(), entreprise_id: getEntrepriseId(), type: 'client' }, 'GET');
+  var fc = (data.factures || []).filter(function(f) { return f.statut !== 'brouillon'; });
+  sel.innerHTML = '<option value="">Sélectionner une facture</option>' + fc.map(function(f) {
+    return '<option value="' + f.id + '">' + esc(f.tiers_nom || '—') + ' — ' + esc(f.numero || '') + '</option>';
+  }).join('');
+}
+
+async function lancerExport() {
+  var exercice = document.getElementById('export-exercice').value;
+  var format = document.getElementById('export-format').value;
+  var zone = document.getElementById('export-statut');
+  zone.style.display = 'block'; zone.textContent = '⏳ Génération en cours...';
+  var data = await api('/industrial/export-comptable', { token: getToken(), entreprise_id: getEntrepriseId(), exercice: exercice, format: format });
+  if (data.ok && data.contenu) {
+    var blob = new Blob([data.contenu], { type: 'text/csv;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = url; a.download = 'export-comptable-' + exercice + '.' + (format === 'fec' ? 'txt' : 'csv');
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    zone.textContent = '✅ Export ' + format.toUpperCase() + ' téléchargé — ' + exercice;
+    notifOk('Export généré');
+    logAction('Export ' + format + ' — ' + exercice);
+  } else {
+    zone.textContent = data.erreur || 'Erreur lors de l\'export.';
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// CONSULTING ARIA
+// ════════════════════════════════════════════════════════════
+var _rapideMap = {
+  retards: 'Liste les factures clients en retard et propose des actions concrètes pour accélérer les encaissements.',
+  tva: 'Quand est ma prochaine déclaration TVA ? Quels éléments dois-je préparer ?',
+  tresorerie: 'Donne-moi un diagnostic de la trésorerie actuelle : points positifs, risques, recommandations.',
+  cloture: 'Quelles sont les étapes critiques pour préparer la clôture mensuelle de comptabilité ?',
+  anomalies: 'Analyse les données comptables et identifie les anomalies, écarts, ou risques à corriger.'
+};
+async function ariaRapide(type) {
+  var q = _rapideMap[type] || type;
+  var zone = document.getElementById('consult-reponse');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria analyse...';
+  document.getElementById('consult-question').value = q;
+  var rep = await apiAsk(q, construireContexteRiche());
+  zone.textContent = rep;
+  logAction('Consulting Aria rapide : ' + type);
+}
+async function demanderAriaCompta() {
+  var q = document.getElementById('consult-question').value.trim();
+  if (!q) { notifErr('Posez votre question'); return; }
+  var zone = document.getElementById('consult-reponse');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria analyse...';
+  var rep = await apiAsk(q, construireContexteRiche());
+  zone.textContent = rep;
+  logAction('Consulting Aria : ' + q.slice(0, 50));
+}
+
+// ════════════════════════════════════════════════════════════
+// POSTE — Pointage, Tâches, Congés, Droits, QCM
+// ════════════════════════════════════════════════════════════
+async function pointerWeb(type) {
+  var s = getSession();
+  var labels = { arrivee: 'Arrivée', depart: 'Départ', pause_debut: 'Début pause', pause_fin: 'Fin pause' };
+  var data = await api('/industrial/pointer', {
+    salarie_id: getToken(), entreprise_id: getEntrepriseId(),
+    nom_salarie: getNom(), poste: s.poste || 'comptabilite',
+    equipe_id: s.equipe_id, responsable_id: s.responsable_id, type: type
+  });
+  var msg = document.getElementById('point-status');
+  var h = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  if (data.ok) {
+    if (msg) { msg.textContent = labels[type] + ' pointé à ' + h; msg.style.color = 'var(--ok)'; }
+    notifOk(labels[type] + ' pointé à ' + h);
+    logAction('Pointage ' + labels[type] + ' à ' + h);
+  } else {
+    if (msg) { msg.textContent = data.erreur || 'Erreur'; msg.style.color = 'var(--err)'; }
+    notifErr(data.erreur || 'Erreur pointage');
+  }
+}
+
+async function chargerTachesPoste() {
+  var s = getSession();
+  var data = await api('/industrial/taches', { token: getToken(), entreprise_id: getEntrepriseId(), poste: s.poste || '' }, 'GET');
+  var taches = data.taches || [];
+  var el = document.getElementById('liste-taches-poste'); if (!el) return;
+  var prior = { urgente: '🔴', haute: '🟠', normale: '🟡', basse: '🟢' };
+  el.innerHTML = taches.length ? taches.map(function(t) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + (prior[t.priorite] || '🟡') + ' ' + esc(t.titre) + '</div>' +
+      '<div class="ri-sub">' + esc(t.statut || 'a_faire') + (t.deadline ? ' · ' + fmtDate(t.deadline) : '') + '</div>' +
+      (t.description ? '<div style="font-size:11.5px;color:var(--ink-dim);margin-top:3px">' + esc(t.description) + '</div>' : '') +
+      '</div>' + (t.statut !== 'termine' ? '<button class="btn-act btn-ok btn-sm" onclick="terminerTachePoste(\'' + t.id + '\')">✓</button>' : '') + '</div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">✅</div>Aucune tâche.</div>';
+}
+
+async function creerTachePoste() {
+  var titre = document.getElementById('tp-titre').value.trim();
+  if (!titre) { notifErr('Titre obligatoire'); return; }
+  var s = getSession();
+  var data = await api('/industrial/tache/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    titre: titre, description: document.getElementById('tp-desc').value,
+    priorite: document.getElementById('tp-priorite').value,
+    deadline: document.getElementById('tp-deadline').value || null,
+    poste_cible: s.poste || 'comptabilite'
+  });
+  if (data.ok) { fermerModal('modal-tache-p'); notifOk('Tâche créée'); logAction('Tâche : ' + titre); chargerTachesPoste(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+async function terminerTachePoste(id) {
+  var data = await api('/industrial/tache/modifier', { token: getToken(), entreprise_id: getEntrepriseId(), tache_id: id, statut: 'termine' });
+  if (data.ok) { notifOk('Tâche terminée'); chargerTachesPoste(); }
+}
+
+async function chargerMesCongesPoste() {
+  var data = await api('/industrial/absences', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var abs = data.absences || [];
+  var el = document.getElementById('mes-absences-poste'); if (!el) return;
+  var labels = { conges_payes: 'CP', maladie: 'Maladie', sans_solde: 'Sans solde', formation: 'Formation', autre: 'Autre' };
+  var statuts = { en_attente: '⏳', approuve: '✅', refuse: '❌' };
+  el.innerHTML = abs.length ? abs.map(function(a) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + (labels[a.type_absence] || a.type_absence) + '</div>' +
+      '<div class="ri-sub">' + fmtDate(a.date_debut) + ' → ' + fmtDate(a.date_fin) + '</div></div>' +
+      '<span class="badge badge-' + (a.statut === 'approuve' ? 'ok' : a.statut === 'refuse' ? 'err' : 'warn') + '">' + (statuts[a.statut] || a.statut) + '</span></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">🏖️</div>Aucune demande.</div>';
+}
+
+async function soumettreCongePoste() {
+  var debut = document.getElementById('cg-debut').value;
+  var fin = document.getElementById('cg-fin').value;
+  if (!debut || !fin) { notifErr('Dates obligatoires'); return; }
+  var data = await api('/industrial/absence/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    type_absence: document.getElementById('cg-type').value,
+    date_debut: debut, date_fin: fin,
+    commentaire: document.getElementById('cg-motif').value
+  });
+  if (data.ok) { notifOk('Demande envoyée'); logAction('Absence soumise'); chargerMesCongesPoste(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+async function demanderDroitsPoste() {
+  var q = document.getElementById('droits-question-p').value.trim(); if (!q) return;
+  var el = document.getElementById('droits-reponse-p');
+  el.style.display = 'block'; el.textContent = '⏳ Aria consulte...';
+  var rep = await apiAsk('Tu es expert en droit du travail français. Réponds précisément : ' + q + '. Cite les textes applicables.', 'Droits salarié');
+  el.textContent = rep;
+  logAction('Question droits : ' + q.slice(0, 40));
+}
+
+async function lancerQCMPoste() {
+  var zone = document.getElementById('qcm-zone-p');
+  zone.innerHTML = '<div class="empty-state"><div class="es-ic">⏳</div>Aria prépare les questions...</div>';
+  var rep = await apiAsk('Génère 3 questions QCM sur la comptabilité (saisie écritures, TVA, rapprochement bancaire). Format JSON UNIQUEMENT : [{"q":"question","options":["A. ...","B. ...","C. ...","D. ..."],"rep":"A"}]');
+  try {
+    var s = rep.indexOf('['); var e = rep.lastIndexOf(']');
+    var questions = JSON.parse(rep.slice(s, e + 1));
+    var html = '';
+    questions.forEach(function(q, i) {
+      html += '<div style="background:var(--panel2);border-radius:10px;padding:14px;margin-bottom:12px">' +
+        '<div style="font-weight:600;margin-bottom:10px">' + (i + 1) + '. ' + esc(q.q) + '</div>' +
+        q.options.map(function(opt, j) {
+          var l = ['A', 'B', 'C', 'D'][j];
+          return '<button onclick="repQCMPoste(this,\'' + l + '\',\'' + q.rep + '\')" style="display:block;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--ink);cursor:pointer;margin-bottom:4px;font-size:13px">' + esc(opt) + '</button>';
+        }).join('') + '</div>';
+    });
+    zone.innerHTML = html;
+  } catch(err) {
+    zone.innerHTML = '<div class="empty-state"><div class="es-ic">❌</div>Erreur. <button class="btn-act btn-amber btn-sm" onclick="lancerQCMPoste()">Réessayer</button></div>';
+  }
+}
+
+function repQCMPoste(btn, rep, bonne) {
+  btn.parentElement.querySelectorAll('button').forEach(function(b) { b.disabled = true; });
+  btn.style.background = rep === bonne ? 'rgba(79,191,139,.2)' : 'rgba(225,91,91,.2)';
+  btn.style.borderColor = rep === bonne ? 'var(--ok)' : 'var(--err)';
+  if (rep !== bonne) {
+    btn.parentElement.querySelectorAll('button').forEach(function(b) {
+      if (b.textContent.trim().startsWith(bonne)) { b.style.background = 'rgba(79,191,139,.2)'; b.style.borderColor = 'var(--ok)'; }
+    });
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// JOURNAL
+// ════════════════════════════════════════════════════════════
+var _journal = [];
+function logAction(msg) {
+  _journal.unshift({ msg: msg, h: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) });
+  if (_journal.length > 100) _journal.pop();
+  var el = document.getElementById('journal-list');
+  var empty = document.getElementById('journal-empty');
+  if (el) el.innerHTML = _journal.map(function(j) {
+    return '<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)"><span style="font-family:monospace;font-size:11px;color:var(--ink-faint);width:44px;flex-shrink:0;padding-top:1px">' + j.h + '</span><span style="font-size:12.5px;color:var(--ink-dim)">' + esc(j.msg) + '</span></div>';
+  }).join('');
+  if (empty) empty.style.display = 'none';
+}
+
+// ════════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════════
+function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function fmtDate(d) { if (!d) return '—'; try { return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch(e) { return d; } }
+function fmtMontant(v) { return (parseFloat(v) || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
+function statBadge(s) { var m = { payee: 'ok', en_retard: 'err', avoir: 'err', brouillon: 'grey', envoyee: 'warn', saisie: 'blue', en_attente_paiement: 'warn' }; return m[s] || 'grey'; }
+function ouvrirModal(id) { var el = document.getElementById(id); if (el) el.style.display = 'flex'; }
+function fermerModal(id) { var el = document.getElementById(id); if (el) el.style.display = 'none'; }
+function notifOk(msg) { _notif(msg, 'var(--ok)'); }
+function notifErr(msg) { _notif(msg, 'var(--err)'); }
+function _notif(msg, color) {
+  var el = document.createElement('div');
+  el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:' + color + ';color:#fff;padding:11px 16px;border-radius:10px;font-size:13px;font-weight:600;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,.3);max-width:320px';
+  el.textContent = msg; document.body.appendChild(el);
+  setTimeout(function() { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(function() { el.remove(); }, 300); }, 3000);
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', function() {
+  verifierSession();
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-overlay').forEach(function(m) { m.style.display = 'none'; });
+      _ariaModalCancel();
+    }
+  });
+});
+
+<script src="/clients_module.js"></script>
+</script>
+</body>
+</html>

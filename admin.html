@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — FORGEDIS QG</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#070B18; --bg2:#0C1226; --panel:#111934; --panel2:#162040;
+  --text:#F0F3FB; --soft:#A6B0CC; --dim:#6D7799;
+  --coral:#FF7A59; --coral-dk:#E5623F;
+  --cyan:#5BE3D8; --violet:#9B8CFF;
+  --ok:#2ECC71; --warn:#F39C12; --danger:#E74C3C;
+  --line:rgba(255,255,255,0.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:'Inter',sans-serif;
+  background:var(--bg); color:var(--text);
+  min-height:100vh; display:flex;
+}
+
+/* ═══════════ SIDEBAR ═══════════ */
+.sidebar{
+  width:240px; min-height:100vh;
+  background:var(--bg2); border-right:1px solid var(--line);
+  display:flex; flex-direction:column;
+  padding:24px 0; flex-shrink:0;
+  position:fixed; top:0; left:0; bottom:0; z-index:100;
+}
+.sidebar-logo{
+  font-family:'Sora',sans-serif; font-weight:800; font-size:1.2rem;
+  color:var(--text); padding:0 20px 24px; border-bottom:1px solid var(--line);
+  margin-bottom:16px;
+}
+.sidebar-logo span{color:var(--coral);}
+.sidebar-section{
+  font-size:10px; font-weight:700; color:var(--dim);
+  text-transform:uppercase; letter-spacing:.1em;
+  padding:12px 20px 6px;
+}
+.nav-item{
+  display:flex; align-items:center; gap:10px;
+  padding:10px 20px; color:var(--soft); font-size:13px; font-weight:500;
+  cursor:pointer; transition:all .15s; border-left:3px solid transparent;
+  text-decoration:none;
+}
+.nav-item:hover{background:rgba(255,255,255,0.04); color:var(--text);}
+.nav-item.active{
+  background:rgba(255,122,89,0.08); color:var(--coral);
+  border-left-color:var(--coral);
+}
+.nav-item .ico{font-size:16px; width:20px; text-align:center;}
+.nav-badge{
+  margin-left:auto; background:var(--danger); color:#fff;
+  font-size:10px; font-weight:700; padding:2px 6px; border-radius:10px;
+  min-width:18px; text-align:center;
+}
+.nav-badge.orange{background:var(--warn);}
+.nav-badge.green{background:var(--ok);}
+.sidebar-bottom{
+  margin-top:auto; padding:16px 20px;
+  border-top:1px solid var(--line); font-size:12px; color:var(--dim);
+}
+.sidebar-bottom strong{color:var(--soft); display:block; margin-bottom:2px;}
+
+/* ═══════════ MAIN CONTENT ═══════════ */
+.main{
+  margin-left:240px; flex:1; min-height:100vh;
+  display:flex; flex-direction:column;
+}
+.topbar{
+  background:var(--bg2); border-bottom:1px solid var(--line);
+  padding:16px 32px; display:flex; align-items:center; gap:16px;
+  position:sticky; top:0; z-index:50;
+}
+.topbar-title{
+  font-family:'Sora',sans-serif; font-weight:700; font-size:1.1rem;
+}
+.topbar-sub{font-size:12px; color:var(--dim); margin-left:auto;}
+.status-dot{
+  width:8px; height:8px; border-radius:50%; background:var(--ok);
+  animation:pulse 2s infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.content{padding:32px; flex:1;}
+
+/* ═══════════ PAGES (sections) ═══════════ */
+.page{display:none;}
+.page.active{display:block;}
+
+/* ═══════════ STAT CARDS ═══════════ */
+.stats-grid{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:16px; margin-bottom:32px;
+}
+.stat-card{
+  background:var(--panel); border:1px solid var(--line);
+  border-radius:16px; padding:20px;
+}
+.stat-label{font-size:11px; font-weight:700; color:var(--dim); text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px;}
+.stat-value{font-family:'Sora',sans-serif; font-size:2rem; font-weight:800; line-height:1;}
+.stat-value.red{color:var(--danger);}
+.stat-value.orange{color:var(--warn);}
+.stat-value.green{color:var(--ok);}
+.stat-value.cyan{color:var(--cyan);}
+.stat-sub{font-size:12px; color:var(--soft); margin-top:6px;}
+
+/* ═══════════ SECTION TITLE ═══════════ */
+.section-header{
+  display:flex; align-items:center; gap:12px; margin-bottom:20px;
+}
+.section-title{
+  font-family:'Sora',sans-serif; font-size:1.1rem; font-weight:700;
+}
+.section-badge{
+  background:var(--danger); color:#fff; font-size:11px; font-weight:700;
+  padding:2px 8px; border-radius:20px;
+}
+.section-badge.orange{background:var(--warn);}
+.section-badge.cyan{background:rgba(91,227,216,0.2); color:var(--cyan);}
+.btn-refresh{
+  margin-left:auto; background:var(--panel2); border:1px solid var(--line);
+  color:var(--soft); font-size:12px; padding:6px 14px; border-radius:8px;
+  cursor:pointer; transition:all .15s; font-family:'Inter',sans-serif;
+}
+.btn-refresh:hover{color:var(--text); border-color:rgba(255,255,255,0.2);}
+
+/* ═══════════ ALERTE CARD ═══════════ */
+.alerte-card{
+  background:var(--panel); border:1px solid var(--line);
+  border-radius:16px; margin-bottom:16px; overflow:hidden;
+  transition:border-color .2s;
+}
+.alerte-card.critique{border-color:rgba(231,76,60,0.4); background:rgba(231,76,60,0.04);}
+.alerte-card.moyen{border-color:rgba(243,156,18,0.3);}
+.alerte-card.traite{opacity:.5;}
+
+.alerte-header{
+  display:flex; align-items:center; gap:12px;
+  padding:16px 20px; cursor:pointer;
+}
+.alerte-icone{
+  width:40px; height:40px; border-radius:12px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:20px; flex-shrink:0;
+}
+.alerte-icone.rouge{background:rgba(231,76,60,0.15);}
+.alerte-icone.orange{background:rgba(243,156,18,0.15);}
+.alerte-icone.vert{background:rgba(46,204,113,0.15);}
+
+.alerte-meta{flex:1; min-width:0;}
+.alerte-titre{font-weight:700; font-size:14px; margin-bottom:3px;}
+.alerte-sous{font-size:12px; color:var(--soft);}
+
+.alerte-statut{
+  font-size:11px; font-weight:700; padding:4px 10px;
+  border-radius:20px; flex-shrink:0;
+}
+.statut-nouveau{background:rgba(231,76,60,0.15); color:#ff6b6b;}
+.statut-en_cours{background:rgba(243,156,18,0.15); color:var(--warn);}
+.statut-traite{background:rgba(46,204,113,0.15); color:var(--ok);}
+.statut-classe{background:rgba(109,119,153,0.15); color:var(--dim);}
+
+.alerte-time{font-size:11px; color:var(--dim); flex-shrink:0; margin-left:12px;}
+
+/* Détails expandable */
+.alerte-body{
+  display:none; border-top:1px solid var(--line); padding:20px;
+}
+.alerte-body.open{display:block;}
+
+.detail-grid{
+  display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;
+}
+.detail-box{
+  background:var(--bg2); border-radius:10px; padding:14px;
+}
+.detail-box-title{
+  font-size:10px; font-weight:700; color:var(--dim);
+  text-transform:uppercase; letter-spacing:.08em; margin-bottom:10px;
+}
+.detail-row{display:flex; justify-content:space-between; margin-bottom:6px; font-size:13px;}
+.detail-row span{color:var(--soft);}
+.detail-row strong{color:var(--text);}
+
+.message-alerte{
+  background:rgba(231,76,60,0.08); border:1px solid rgba(231,76,60,0.2);
+  border-radius:10px; padding:14px; margin-bottom:16px;
+}
+.message-alerte-label{
+  font-size:10px; font-weight:700; color:var(--danger);
+  text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px;
+}
+.message-alerte-text{
+  font-size:13px; color:var(--text); font-style:italic;
+}
+
+.tags-list{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px;}
+.tag{
+  background:rgba(231,76,60,0.1); border:1px solid rgba(231,76,60,0.2);
+  color:#ff6b6b; font-size:11px; font-weight:600;
+  padding:3px 10px; border-radius:20px;
+}
+
+.emails-status{
+  display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;
+}
+.email-badge{
+  font-size:11px; padding:4px 10px; border-radius:20px; font-weight:600;
+}
+.email-badge.sent{background:rgba(46,204,113,0.1); color:var(--ok); border:1px solid rgba(46,204,113,0.2);}
+.email-badge.pending{background:rgba(243,156,18,0.1); color:var(--warn); border:1px solid rgba(243,156,18,0.2);}
+
+.actions-bar{display:flex; gap:10px; flex-wrap:wrap;}
+.btn-action{
+  font-size:12px; font-weight:600; padding:8px 16px;
+  border-radius:10px; cursor:pointer; transition:all .15s;
+  border:none; font-family:'Inter',sans-serif;
+}
+.btn-traite{background:rgba(46,204,113,0.15); color:var(--ok); border:1px solid rgba(46,204,113,0.2);}
+.btn-traite:hover{background:rgba(46,204,113,0.25);}
+.btn-en-cours{background:rgba(243,156,18,0.15); color:var(--warn); border:1px solid rgba(243,156,18,0.2);}
+.btn-en-cours:hover{background:rgba(243,156,18,0.25);}
+.btn-classe{background:var(--panel2); color:var(--soft); border:1px solid var(--line);}
+.btn-classe:hover{color:var(--text);}
+.btn-pharos{background:rgba(155,140,255,0.1); color:var(--violet); border:1px solid rgba(155,140,255,0.2);}
+.btn-pharos:hover{background:rgba(155,140,255,0.2);}
+
+.notes-zone{
+  background:var(--bg2); border:1px solid var(--line);
+  border-radius:10px; padding:12px; font-size:13px;
+  color:var(--text); font-family:'Inter',sans-serif;
+  width:100%; resize:vertical; min-height:60px; margin-bottom:12px;
+  outline:none;
+}
+.notes-zone:focus{border-color:var(--coral);}
+
+/* ═══════════ EMPTY STATE ═══════════ */
+.empty-state{
+  text-align:center; padding:60px 20px; color:var(--dim);
+}
+.empty-state .ico{font-size:48px; margin-bottom:16px;}
+.empty-state p{font-size:14px; line-height:1.6;}
+
+/* ═══════════ FILTRE TABS ═══════════ */
+.filter-tabs{
+  display:flex; gap:8px; margin-bottom:24px; flex-wrap:wrap;
+}
+.filter-tab{
+  padding:6px 14px; border-radius:20px; font-size:12px; font-weight:600;
+  cursor:pointer; transition:all .15s; border:1px solid var(--line);
+  color:var(--soft); background:var(--panel);
+}
+.filter-tab.active{
+  background:var(--coral); color:#fff; border-color:var(--coral);
+}
+
+/* ═══════════ SPINNER ═══════════ */
+.spinner{
+  display:flex; align-items:center; justify-content:center;
+  padding:40px; color:var(--dim); gap:12px; font-size:14px;
+}
+.spin{
+  width:20px; height:20px; border:2px solid var(--line);
+  border-top-color:var(--coral); border-radius:50%;
+  animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ═══════════ TOAST ═══════════ */
+.toast{
+  position:fixed; bottom:24px; right:24px; z-index:1000;
+  background:var(--panel); border:1px solid var(--line);
+  border-radius:12px; padding:14px 20px; font-size:13px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4);
+  transform:translateY(100px); opacity:0;
+  transition:all .3s; max-width:320px;
+}
+.toast.show{transform:translateY(0); opacity:1;}
+.toast.ok{border-color:rgba(46,204,113,0.3);}
+.toast.err{border-color:rgba(231,76,60,0.3);}
+
+/* ═══════════ INFO BOX PHAROS ═══════════ */
+.pharos-box{
+  background:rgba(155,140,255,0.05); border:1px solid rgba(155,140,255,0.2);
+  border-radius:12px; padding:16px; margin-top:12px;
+}
+.pharos-title{
+  font-size:12px; font-weight:700; color:var(--violet);
+  text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;
+}
+.pharos-link{
+  display:flex; align-items:center; gap:8px;
+  color:var(--cyan); font-size:13px; text-decoration:none;
+  margin-bottom:6px;
+}
+.pharos-link:hover{text-decoration:underline;}
+
+/* ═══════════ RESPONSIVE ═══════════ */
+@media(max-width:768px){
+  .sidebar{display:none;}
+  .main{margin-left:0;}
+  .detail-grid{grid-template-columns:1fr;}
+}
+</style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<!-- ══ LOGIN GATE ADMIN ══ -->
+<div id="login-gate-admin" style="position:fixed;inset:0;background:#0A0F1E;display:flex;align-items:center;justify-content:center;z-index:9999">
+  <div style="background:#111934;border:1px solid #1E2D50;border-radius:20px;padding:40px;width:100%;max-width:400px;text-align:center">
+    <div style="font-size:32px;margin-bottom:8px">🔐</div>
+    <h2 style="font-size:22px;font-weight:800;color:#F0F3FB;margin-bottom:4px">QG FORGEDIS</h2>
+    <p style="font-size:13px;color:#6D7799;margin-bottom:24px">Accès réservé aux administrateurs FORGEDIS</p>
+
+    <!-- Email + mot de passe -->
+    <input type="email" id="login-admin-email" placeholder="Email administrateur"
+      style="width:100%;background:#0A0F1E;border:1px solid #1E2D50;border-radius:10px;padding:12px 14px;color:#F0F3FB;font-size:14px;font-family:inherit;outline:none;margin-bottom:10px;box-sizing:border-box"
+      onkeydown="if(event.key==='Enter')loginAdminMdp()">
+    <input type="password" id="login-admin-mdp" placeholder="Mot de passe"
+      style="width:100%;background:#0A0F1E;border:1px solid #1E2D50;border-radius:10px;padding:12px 14px;color:#F0F3FB;font-size:14px;font-family:inherit;outline:none;margin-bottom:8px;box-sizing:border-box"
+      onkeydown="if(event.key==='Enter')loginAdminMdp()">
+
+    <div id="login-admin-erreur" style="color:#E24B4A;font-size:13px;margin-bottom:12px;display:none;background:rgba(226,75,74,0.1);border:1px solid rgba(226,75,74,0.3);border-radius:8px;padding:10px"></div>
+
+    <button id="btn-login-mdp" onclick="loginAdminMdp()"
+      style="width:100%;background:#E8873A;color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:12px">
+      Se connecter
+    </button>
+
+    <!-- Séparateur -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <div style="flex:1;height:1px;background:#1E2D50"></div>
+      <span style="font-size:11px;color:#3D4F7C">ou</span>
+      <div style="flex:1;height:1px;background:#1E2D50"></div>
+    </div>
+
+    <!-- Google OAuth -->
+    <button id="btn-login-admin" onclick="loginAdminGoogle()"
+      style="width:100%;background:#fff;color:#1a1a1a;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px">
+      <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Continuer avec Google
+    </button>
+
+    <p style="font-size:11px;color:#3D4F7C;margin-top:16px">Seuls les comptes administrateurs FORGEDIS sont autorisés.</p>
+  </div>
+</div>
+
+<!-- ══ APP ADMIN ══ -->
+<div id="app-admin" style="display:none;width:100%;height:100vh">
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">FORGE<span>DIS</span> <span style="font-size:.7rem;color:var(--dim);font-weight:400;">QG</span></div>
+  <div id="admin-nom-tag" style="font-size:11px;color:#6D7799;padding:4px 16px 8px;border-bottom:1px solid #1E2D50;margin-bottom:8px"></div>
+
+  <div class="sidebar-section">Vue d'ensemble</div>
+  <a class="nav-item active" onclick="showPage('dashboard')" href="#">
+    <span class="ico">🏠</span> Tableau de bord
+  </a>
+
+  <div class="sidebar-section">Aria Kids</div>
+  <a class="nav-item" onclick="showPage('alertes')" href="#" id="nav-alertes">
+    <span class="ico">🚨</span> Alertes Jumelage
+    <span class="nav-badge" id="badge-alertes">…</span>
+  </a>
+  <a class="nav-item" onclick="showPage('clients-kids')" href="#">
+    <span class="ico">👦</span> Clients Kids
+  </a>
+
+  <div class="sidebar-section">Aria Industrial</div>
+  <a class="nav-item" onclick="showPage('clients-industrial')" href="#">
+    <span class="ico">🏭</span> Clients Industrial
+  </a>
+  <a class="nav-item" onclick="showPage('relances')" href="#">
+    <span class="ico">💳</span> Relances impayés
+  </a>
+
+  <div class="sidebar-section">Aria Facility</div>
+  <a class="nav-item" onclick="showPage('clients-facility')" href="#">
+    <span class="ico">👵</span> Clients Facility
+  </a>
+
+  <div class="sidebar-section">Système</div>
+  <a class="nav-item" onclick="showPage('couts')" href="#">
+    <span class="ico">💰</span> Coûts Anthropic
+  </a>
+
+  <div class="sidebar-bottom">
+    <strong>contact@forgedis.fr</strong>
+    FORGEDIS Admin · <span id="time-now">--:--</span>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="page-title">Tableau de bord</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+      <div class="status-dot" id="supabase-dot" title="Connexion Supabase"></div>
+      <span class="topbar-sub" id="supabase-status">Connexion…</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ═══ PAGE : DASHBOARD ═══ -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">🚨 Alertes Jumelage</div>
+          <div class="stat-value red" id="stat-alertes-nouvelles">…</div>
+          <div class="stat-sub">Nouvelles non traitées</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">👦 Clients Aria Kids</div>
+          <div class="stat-value cyan" id="stat-kids">…</div>
+          <div class="stat-sub">Comptes actifs</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🏭 Clients Industrial</div>
+          <div class="stat-value cyan" id="stat-industrial">…</div>
+          <div class="stat-sub">Entreprises actives</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">💰 Coût ce mois</div>
+          <div class="stat-value green" id="stat-cout">$0.00</div>
+          <div class="stat-sub">Anthropic (plafond $5)</div>
+        </div>
+      </div>
+
+      <!-- Alertes récentes sur dashboard -->
+      <div class="section-header">
+        <div class="section-title">⚡ Alertes récentes</div>
+        <span class="section-badge" id="badge-dash-alertes">0</span>
+      </div>
+      <div id="dash-alertes-list">
+        <div class="spinner"><div class="spin"></div> Chargement…</div>
+      </div>
+
+    </div><!-- /dashboard -->
+
+    <!-- ═══ PAGE : ALERTES JUMELAGE ═══ -->
+    <div class="page" id="page-alertes">
+      <div class="section-header">
+        <div class="section-title">🚨 Alertes Jumelage International</div>
+        <span class="section-badge" id="badge-alertes-titre">0</span>
+        <button class="btn-refresh" onclick="chargerAlertes()">↻ Actualiser</button>
+      </div>
+
+      <div class="filter-tabs">
+        <div class="filter-tab active" onclick="filtrerAlertes('TOUS')">Toutes</div>
+        <div class="filter-tab" onclick="filtrerAlertes('NOUVEAU')">🔴 Nouvelles</div>
+        <div class="filter-tab" onclick="filtrerAlertes('EN_COURS')">🟠 En cours</div>
+        <div class="filter-tab" onclick="filtrerAlertes('TRAITE')">✅ Traitées</div>
+        <div class="filter-tab" onclick="filtrerAlertes('CLASSE')">📁 Classées</div>
+      </div>
+
+      <div id="alertes-list">
+        <div class="spinner"><div class="spin"></div> Chargement des alertes…</div>
+      </div>
+
+    </div><!-- /alertes -->
+
+    <!-- ═══ PAGE : CLIENTS KIDS (placeholder) ═══ -->
+    <div class="page" id="page-clients-kids">
+      <div class="section-header">
+        <div class="section-title">👦 Clients Aria Kids</div>
+        <button class="btn-refresh" onclick="chargerClientsKids()">↻ Actualiser</button>
+      </div>
+      <div id="kids-list">
+        <div class="spinner"><div class="spin"></div> Chargement…</div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE : CLIENTS INDUSTRIAL ═══ -->
+    <div class="page" id="page-clients-industrial">
+      <div class="section-header">
+        <div class="section-title">🏭 Clients Aria Industrial</div>
+        <button class="btn-refresh" onclick="chargerClientsIndustrial()">↻ Actualiser</button>
+      </div>
+      <div id="industrial-list">
+        <div class="spinner"><div class="spin"></div> Chargement…</div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE : RELANCES ═══ -->
+    <div class="page" id="page-relances">
+      <div class="section-header">
+        <div class="section-title">💳 Relances impayés</div>
+        <button class="btn-refresh" onclick="chargerRelances()">↻ Actualiser</button>
+      </div>
+      <div id="relances-list">
+        <div class="spinner"><div class="spin"></div> Chargement…</div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE : CLIENTS FACILITY ═══ -->
+    <div class="page" id="page-clients-facility">
+      <div class="section-header">
+        <div class="section-title">👵 Clients Aria Facility</div>
+        <button class="btn-refresh" onclick="chargerClientsFacility()">↻ Actualiser</button>
+      </div>
+      <div id="facility-list">
+        <div class="spinner"><div class="spin"></div> Chargement…</div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE : COÛTS ═══ -->
+    <div class="page" id="page-couts">
+      <div class="section-header">
+        <div class="section-title">💰 Coûts Anthropic</div>
+        <button class="btn-refresh" onclick="chargerCouts()">↻ Actualiser</button>
+      </div>
+      <div id="couts-list">
+        <div class="spinner"><div class="spin"></div> Chargement…</div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+// CONFIG SUPABASE + AUTH ADMIN
+// ═══════════════════════════════════════════════
+var SUPABASE_URL = 'https://dvlrilklbspuckbplglz.supabase.co';
+var SUPABASE_KEY = 'sb_publishable_XraSG03zQGEaDyc962uqtA_Go3evCH6';
+var _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── SESSION ADMIN ──
+var sessionAdmin = null;
+
+async function verifierSessionAdmin() {
+  var { data: { session }, error } = await _supabase.auth.getSession();
+  if(!session || error) { afficherLoginAdmin(); return false; }
+
+  // Vérifier que l'email est bien dans admin_forgedis
+  var { data: admin, error: err2 } = await _supabase
+    .from('admin_forgedis')
+    .select('email, nom, role, actif')
+    .eq('email', session.user.email)
+    .eq('actif', true)
+    .single();
+
+  if(err2 || !admin) {
+    await _supabase.auth.signOut();
+    afficherLoginAdmin('Accès refusé — compte non autorisé.');
+    return false;
+  }
+
+  sessionAdmin = { ...session, admin };
+
+  // Mettre à jour derniere_connexion
+  await _supabase.rpc('maj_derniere_connexion', { p_email: session.user.email });
+
+  // Masquer login, afficher app
+  document.getElementById('login-gate-admin').style.display = 'none';
+  document.getElementById('app-admin').style.display = 'flex';
+
+  // Afficher nom admin
+  var tagEl = document.getElementById('admin-nom-tag');
+  if(tagEl) tagEl.textContent = admin.nom + ' (' + admin.role + ')';
+
+  return true;
+}
+
+function afficherLoginAdmin(erreur) {
+  document.getElementById('app-admin').style.display = 'none';
+  document.getElementById('login-gate-admin').style.display = 'flex';
+  if(erreur) {
+    var errEl = document.getElementById('login-admin-erreur');
+    if(errEl) { errEl.textContent = erreur; errEl.style.display = 'block'; }
+  }
+}
+
+async function loginAdminMdp() {
+  var email = document.getElementById('login-admin-email').value.trim().toLowerCase();
+  var mdp   = document.getElementById('login-admin-mdp').value;
+  var errEl = document.getElementById('login-admin-erreur');
+  var btn   = document.getElementById('btn-login-mdp');
+  if(!email || !mdp) { errEl.textContent = 'Email et mot de passe obligatoires'; errEl.style.display = 'block'; return; }
+  btn.textContent = 'Connexion...'; btn.disabled = true;
+  var { data, error } = await _supabase.auth.signInWithPassword({ email, password: mdp });
+  btn.textContent = 'Se connecter'; btn.disabled = false;
+  if(error) { errEl.textContent = 'Email ou mot de passe incorrect.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+  await verifierSessionAdmin();
+}
+
+async function loginAdminGoogle() {
+  var btn = document.getElementById('btn-login-admin');
+  btn.textContent = 'Redirection...'; btn.disabled = true;
+  var { error } = await _supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: 'https://forgedis.fr/admin.html'
+    }
+  });
+  if(error) {
+    var errEl = document.getElementById('login-admin-erreur');
+    errEl.textContent = 'Erreur connexion Google : ' + error.message;
+    errEl.style.display = 'block';
+    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg> Continuer avec Google';
+    btn.disabled = false;
+  }
+}
+
+async function logoutAdmin() {
+  await _supabase.auth.signOut();
+  sessionAdmin = null;
+  afficherLoginAdmin();
+}
+
+// ═══════════════════════════════════════════════
+// ÉTAT GLOBAL
+// ═══════════════════════════════════════════════
+var toutesLesAlertes = [];
+var filtreActif = 'TOUS';
+
+// ═══════════════════════════════════════════════
+// UTILITAIRES
+// ═══════════════════════════════════════════════
+async function supabaseFetch(endpoint, opts) {
+  // Utiliser le JWT de session pour que les RLS s'appliquent
+  var token = SUPABASE_KEY;
+  if(sessionAdmin && sessionAdmin.access_token) {
+    token = sessionAdmin.access_token;
+  }
+  var options = Object.assign({
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    }
+  }, opts || {});
+  var res = await fetch(SUPABASE_URL + '/rest/v1/' + endpoint, options);
+  if (!res.ok) throw new Error('Supabase ' + res.status);
+  if (res.status === 204) return [];
+  return res.json();
+}
+
+function toast(msg, type) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + (type || '');
+  setTimeout(function(){ el.className = 'toast'; }, 3500);
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso);
+  return d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+}
+
+function relativeTime(iso) {
+  if (!iso) return '';
+  var diff = Date.now() - new Date(iso).getTime();
+  var mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'À l\'instant';
+  if (mins < 60) return 'Il y a ' + mins + ' min';
+  var hrs = Math.floor(mins / 60);
+  if (hrs < 24) return 'Il y a ' + hrs + 'h';
+  return 'Il y a ' + Math.floor(hrs/24) + 'j';
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+  var page = document.getElementById('page-' + name);
+  if (page) page.classList.add('active');
+  document.querySelector('[onclick*="showPage(\'' + name + '\')"]').classList.add('active');
+  var titles = {
+    'dashboard': 'Tableau de bord',
+    'alertes': '🚨 Alertes Jumelage',
+    'clients-kids': '👦 Clients Kids',
+    'clients-industrial': '🏭 Clients Industrial',
+    'relances': '💳 Relances impayés',
+    'clients-facility': '👵 Clients Facility',
+    'couts': '💰 Coûts Anthropic'
+  };
+  document.getElementById('page-title').textContent = titles[name] || name;
+  // Charger données de la page
+  if (name === 'alertes') chargerAlertes();
+  if (name === 'dashboard') chargerDashboard();
+  if (name === 'clients-kids') chargerClientsKids();
+  if (name === 'clients-industrial') chargerClientsIndustrial();
+  if (name === 'relances') chargerRelances();
+  if (name === 'clients-facility') chargerClientsFacility();
+  if (name === 'couts') chargerCouts();
+}
+
+// ═══════════════════════════════════════════════
+// ALERTES JUMELAGE
+// ═══════════════════════════════════════════════
+async function chargerAlertes() {
+  var list = document.getElementById('alertes-list');
+  list.innerHTML = '<div class="spinner"><div class="spin"></div> Chargement…</div>';
+  try {
+    var data = await supabaseFetch('alertes_jumelage?select=*&order=created_at.desc&limit=100');
+    toutesLesAlertes = data;
+    mettreAJourBadges(data);
+    afficherAlertes(filtreActif);
+  } catch(e) {
+    list.innerHTML = '<div class="empty-state"><div class="ico">⚠️</div><p>Erreur de chargement.<br>' + e.message + '</p></div>';
+  }
+}
+
+function mettreAJourBadges(data) {
+  var nouvelles = data.filter(function(a){ return a.statut === 'NOUVEAU'; }).length;
+  document.getElementById('badge-alertes').textContent = nouvelles > 0 ? nouvelles : '✓';
+  document.getElementById('badge-alertes').className = nouvelles > 0 ? 'nav-badge' : 'nav-badge green';
+  document.getElementById('badge-alertes-titre').textContent = nouvelles;
+  document.getElementById('badge-dash-alertes').textContent = nouvelles;
+  document.getElementById('stat-alertes-nouvelles').textContent = nouvelles;
+}
+
+function filtrerAlertes(statut) {
+  filtreActif = statut;
+  document.querySelectorAll('.filter-tab').forEach(function(t){ t.classList.remove('active'); });
+  event.target.classList.add('active');
+  afficherAlertes(statut);
+}
+
+function afficherAlertes(filtre) {
+  var data = filtre === 'TOUS' ? toutesLesAlertes
+    : toutesLesAlertes.filter(function(a){ return a.statut === filtre; });
+
+  var list = document.getElementById('alertes-list');
+  if (!data || data.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="ico">✅</div><p>Aucune alerte' + (filtre !== 'TOUS' ? ' dans cette catégorie' : '') + '.</p></div>';
+    return;
+  }
+
+  list.innerHTML = data.map(function(a) { return buildAlerteCard(a); }).join('');
+}
+
+function buildAlerteCard(a) {
+  var cat = a.categorie || 1;
+  var estCritique = cat === 1;
+  var icone = cat === 1 ? '🚨' : cat === 2 ? '⚠️' : '📢';
+  var classeCard = cat === 1 ? 'critique' : cat === 2 ? 'moyen' : '';
+  if (a.statut === 'TRAITE' || a.statut === 'CLASSE') classeCard += ' traite';
+  var classeIcone = cat === 1 ? 'rouge' : cat === 2 ? 'orange' : 'vert';
+
+  var statutClass = {
+    'NOUVEAU':'statut-nouveau', 'EN_COURS':'statut-en_cours',
+    'TRAITE':'statut-traite', 'CLASSE':'statut-classe'
+  }[a.statut] || 'statut-nouveau';
+  var statutLabel = {
+    'NOUVEAU':'🔴 NOUVEAU', 'EN_COURS':'🟠 EN COURS',
+    'TRAITE':'✅ TRAITÉ', 'CLASSE':'📁 CLASSÉ'
+  }[a.statut] || a.statut;
+
+  var typeLabel = {
+    'DANGER_IMMEDIAT': '🆘 DANGER IMMÉDIAT — Catégorie 1',
+    'HARCELEMENT': '⚠️ Harcèlement — Catégorie 2',
+    'CONTACT_SUSPECT': '⚠️ Contact suspect — Catégorie 2',
+    'SIGNALEMENT_ENFANT': '📢 Signalement — Catégorie 3'
+  }[a.type_alerte] || a.type_alerte;
+
+  var mots = (a.mots_cles_detectes || []).map(function(m){ return '<span class="tag">' + m + '</span>'; }).join('');
+
+  var emails = [
+    a.email_parent_a_envoye ? '<span class="email-badge sent">✓ Email parent A</span>' : '<span class="email-badge pending">⏳ Email parent A</span>',
+    a.email_parent_b_envoye ? '<span class="email-badge sent">✓ Email parent B</span>' : '<span class="email-badge pending">⏳ Email parent B</span>',
+    a.email_forgedis_envoye ? '<span class="email-badge sent">✓ Email FORGEDIS</span>' : '<span class="email-badge pending">⏳ Email FORGEDIS</span>'
+  ].join('');
+
+  var pharosInfo = estCritique ? buildPharosInfo(a) : '';
+
+  return '<div class="alerte-card ' + classeCard + '" id="card-' + a.id + '">' +
+    '<div class="alerte-header" onclick="toggleAlerte(\'' + a.id + '\')">' +
+      '<div class="alerte-icone ' + classeIcone + '">' + icone + '</div>' +
+      '<div class="alerte-meta">' +
+        '<div class="alerte-titre">' + typeLabel + '</div>' +
+        '<div class="alerte-sous">' +
+          (a.enfant_a_prenom || '?') + ' (' + (a.enfant_a_pays || '?') + ') ↔ ' +
+          (a.enfant_b_prenom || '?') + ' (' + (a.enfant_b_pays || '?') + ')' +
+          (a.message_declencheur ? ' — <em style="color:var(--danger)">' + a.message_declencheur.substring(0,60) + (a.message_declencheur.length > 60 ? '…' : '') + '</em>' : '') +
+        '</div>' +
+      '</div>' +
+      '<span class="alerte-statut ' + statutClass + '">' + statutLabel + '</span>' +
+      '<span class="alerte-time">' + relativeTime(a.created_at) + '</span>' +
+    '</div>' +
+    '<div class="alerte-body" id="body-' + a.id + '">' +
+      '<div class="detail-grid">' +
+        '<div class="detail-box">' +
+          '<div class="detail-box-title">👤 Enfant A</div>' +
+          '<div class="detail-row"><span>Prénom</span><strong>' + (a.enfant_a_prenom || '—') + '</strong></div>' +
+          '<div class="detail-row"><span>Âge</span><strong>' + (a.enfant_a_age || '—') + ' ans</strong></div>' +
+          '<div class="detail-row"><span>Classe</span><strong>' + (a.enfant_a_classe || '—') + '</strong></div>' +
+          '<div class="detail-row"><span>Pays</span><strong>' + (a.enfant_a_pays || '—') + '</strong></div>' +
+          '<div class="detail-row"><span>Email parent</span><strong style="font-size:11px">' + (a.parent_a_email || '—') + '</strong></div>' +
+        '</div>' +
+        '<div class="detail-box">' +
+          '<div class="detail-box-title">👤 Enfant B</div>' +
+          '<div class="detail-row"><span>Prénom</span><strong>' + (a.enfant_b_prenom || '—') + '</strong></div>' +
+          '<div class="detail-row"><span>Âge</span><strong>' + (a.enfant_b_age || '—') + ' ans</strong></div>' +
+          '<div class="detail-row"><span>Classe</span><strong>' + (a.enfant_b_classe || '—') + '</strong></div>' +
+          '<div class="detail-row"><span>Pays</span><strong>' + (a.enfant_b_pays || '—') + '</strong></div>' +
+          '<div class="detail-row"><span>Email parent</span><strong style="font-size:11px">' + (a.parent_b_email || '—') + '</strong></div>' +
+        '</div>' +
+      '</div>' +
+      (a.message_declencheur ? '<div class="message-alerte"><div class="message-alerte-label">💬 Message qui a déclenché l\'alerte</div><div class="message-alerte-text">"' + a.message_declencheur + '"</div></div>' : '') +
+      (mots ? '<div class="tags-list">' + mots + '</div>' : '') +
+      (a.claude_analyse ? '<div style="background:rgba(155,140,255,0.08);border:1px solid rgba(155,140,255,0.2);border-radius:10px;padding:12px;margin-bottom:16px;"><span style="font-size:11px;font-weight:700;color:var(--violet);text-transform:uppercase;">🤖 Analyse Claude</span><p style="font-size:13px;margin-top:6px;">' + (a.claude_verdict || '—') + '</p></div>' : '') +
+      '<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;margin-bottom:8px;">📧 Emails envoyés</div><div class="emails-status">' + emails + '</div></div>' +
+      '<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;margin-bottom:6px;">📝 Notes admin</div><textarea class="notes-zone" id="notes-' + a.id + '" placeholder="Ajouter des notes…">' + (a.notes_admin || '') + '</textarea></div>' +
+      pharosInfo +
+      '<div class="actions-bar">' +
+        '<button class="btn-action btn-en-cours" onclick="changerStatut(\'' + a.id + '\',\'EN_COURS\')">🟠 En cours</button>' +
+        '<button class="btn-action btn-traite" onclick="changerStatut(\'' + a.id + '\',\'TRAITE\')">✅ Marquer traité</button>' +
+        '<button class="btn-action btn-classe" onclick="changerStatut(\'' + a.id + '\',\'CLASSE\')">📁 Classer</button>' +
+        (estCritique ? '<button class="btn-action btn-pharos" onclick="ouvrirPharos(\'' + (a.enfant_a_pays || 'FR') + '\')">🔗 PHAROS / Autorités</button>' : '') +
+        '<button class="btn-action" style="background:var(--panel2);color:var(--soft);border:1px solid var(--line);" onclick="sauvegarderNotes(\'' + a.id + '\')">💾 Sauvegarder notes</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function buildPharosInfo(a) {
+  var liens = {
+    'France': {name:'PHAROS', url:'https://www.internet-signalement.gouv.fr'},
+    'Maroc': {name:'DGSN Maroc', url:'https://www.dgsn.ma'},
+    'Algérie': {name:'DGSN Algérie', url:'https://www.dgsn.dz'},
+    'Belgique': {name:'Child Focus', url:'https://www.childfocus.be'},
+    'USA': {name:'NCMEC CyberTipline', url:'https://www.missingkids.org/gethelpnow/cybertipline'},
+    'Canada': {name:'Cyberaide.ca', url:'https://www.cybertip.ca'},
+    'Angleterre': {name:'CEOP (NCA)', url:'https://www.ceop.police.uk/ceop-reporting'}
+  };
+  var paysA = a.enfant_a_pays || '';
+  var paysB = a.enfant_b_pays || '';
+  var liensHtml = '';
+  [paysA, paysB].forEach(function(pays) {
+    if (liens[pays]) {
+      liensHtml += '<a class="pharos-link" href="' + liens[pays].url + '" target="_blank" rel="noopener">🔗 ' + liens[pays].name + ' (' + pays + ')</a>';
+    }
+  });
+  if (!liensHtml) {
+    liensHtml = '<a class="pharos-link" href="https://www.internet-signalement.gouv.fr" target="_blank" rel="noopener">🔗 PHAROS (signalement internet)</a>';
+  }
+  liensHtml += '<a class="pharos-link" href="https://www.missingkids.org/gethelpnow/cybertipline" target="_blank" rel="noopener">🔗 NCMEC CyberTipline (international)</a>';
+  return '<div class="pharos-box"><div class="pharos-title">🚨 Signalement aux autorités</div>' + liensHtml + '<p style="font-size:11px;color:var(--dim);margin-top:10px;">Signaler si contenu pédocriminel ou tentative de contact physique. Conserver l\'historique complet de la session avant signalement.</p></div>';
+}
+
+function toggleAlerte(id) {
+  var body = document.getElementById('body-' + id);
+  if (body) body.classList.toggle('open');
+}
+
+async function changerStatut(id, statut) {
+  try {
+    await supabaseFetch('alertes_jumelage?id=eq.' + id, {
+      method: 'PATCH',
+      body: JSON.stringify({ statut: statut, traite_par: 'contact@forgedis.fr', traite_le: new Date().toISOString() })
+    });
+    toast('Statut mis à jour : ' + statut, 'ok');
+    chargerAlertes();
+  } catch(e) {
+    toast('Erreur : ' + e.message, 'err');
+  }
+}
+
+async function sauvegarderNotes(id) {
+  var notes = document.getElementById('notes-' + id);
+  if (!notes) return;
+  try {
+    await supabaseFetch('alertes_jumelage?id=eq.' + id, {
+      method: 'PATCH',
+      body: JSON.stringify({ notes_admin: notes.value })
+    });
+    toast('Notes sauvegardées ✓', 'ok');
+  } catch(e) {
+    toast('Erreur : ' + e.message, 'err');
+  }
+}
+
+function ouvrirPharos(pays) {
+  var urls = {
+    'France':'https://www.internet-signalement.gouv.fr',
+    'Maroc':'https://www.dgsn.ma',
+    'Algérie':'https://www.dgsn.dz',
+    'USA':'https://www.missingkids.org/gethelpnow/cybertipline',
+    'Angleterre':'https://www.ceop.police.uk/ceop-reporting'
+  };
+  var url = urls[pays] || 'https://www.internet-signalement.gouv.fr';
+  window.open(url, '_blank', 'noopener');
+}
+
+// ═══════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════
+async function chargerDashboard() {
+  // Alertes
+  try {
+    var alertes = await supabaseFetch('alertes_jumelage?select=*&order=created_at.desc&limit=5');
+    toutesLesAlertes = alertes;
+    mettreAJourBadges(alertes);
+    // Afficher les 5 dernières alertes sur dashboard
+    var dashList = document.getElementById('dash-alertes-list');
+    var recentes = alertes.filter(function(a){ return a.statut === 'NOUVEAU'; }).slice(0,5);
+    if (recentes.length === 0) {
+      dashList.innerHTML = '<div class="empty-state"><div class="ico">✅</div><p>Aucune alerte en attente.</p></div>';
+    } else {
+      dashList.innerHTML = recentes.map(function(a){ return buildAlerteCard(a); }).join('');
+    }
+  } catch(e) {
+    document.getElementById('dash-alertes-list').innerHTML = '<div class="empty-state"><p>Erreur chargement alertes</p></div>';
+  }
+
+  // Stats Kids — table clients, forfaits kids_solo + kids_famille
+  try {
+    var kids = await supabaseFetch('clients?select=id,actif&or=(forfait.eq.kids_solo,forfait.eq.kids_famille)&actif=eq.true');
+    document.getElementById('stat-kids').textContent = Array.isArray(kids) ? kids.length : '—';
+  } catch(e) {
+    document.getElementById('stat-kids').textContent = '—';
+  }
+  // Stats Industrial — table entreprises
+  try {
+    var indus = await supabaseFetch('entreprises?select=id&statut_paiement=eq.actif');
+    document.getElementById('stat-industrial').textContent = Array.isArray(indus) ? indus.length : '—';
+  } catch(e) {
+    document.getElementById('stat-industrial').textContent = '—';
+  }
+}
+
+// ═══════════════════════════════════════════════
+// CLIENTS KIDS
+// ═══════════════════════════════════════════════
+async function chargerClientsKids() {
+  var list = document.getElementById('kids-list');
+  list.innerHTML = '<div class="spinner"><div class="spin"></div> Chargement…</div>';
+  try {
+    // Table clients — forfaits kids_solo et kids_famille
+    var data = await supabaseFetch('clients?select=id,email,forfait,actif,cree_le&or=(forfait.eq.kids_solo,forfait.eq.kids_famille)&order=cree_le.desc&limit=200');
+    if (!data || data.length === 0) {
+      list.innerHTML = '<div class="empty-state"><div class="ico">👦</div><p>Aucun client Kids enregistré.</p></div>';
+      return;
+    }
+    list.innerHTML = '<table style="width:100%;border-collapse:collapse;">' +
+      '<thead><tr>' +
+        '<th style="text-align:left;padding:10px;color:var(--dim);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--line);">Email</th>' +
+        '<th style="text-align:left;padding:10px;color:var(--dim);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--line);">Forfait</th>' +
+        '<th style="text-align:left;padding:10px;color:var(--dim);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--line);">Statut</th>' +
+        '<th style="text-align:left;padding:10px;color:var(--dim);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--line);">Depuis</th>' +
+      '</tr></thead><tbody>' +
+      data.map(function(c) {
+        var forfaitLabel = c.forfait === 'kids_famille' ? '👨‍👩‍👧 Famille' : '👤 Solo';
+        return '<tr>' +
+          '<td style="padding:12px 10px;font-size:13px;color:var(--soft);">' + (c.email || '—') + '</td>' +
+          '<td style="padding:12px 10px;font-size:12px;color:var(--cyan);">' + forfaitLabel + '</td>' +
+          '<td style="padding:12px 10px;"><span style="font-size:11px;padding:3px 8px;border-radius:20px;' + (c.actif ? 'background:rgba(46,204,113,0.1);color:var(--ok)' : 'background:rgba(231,76,60,0.1);color:var(--danger)') + ';">' + (c.actif ? '✅ Actif' : '❌ Inactif') + '</span></td>' +
+          '<td style="padding:12px 10px;font-size:12px;color:var(--dim);">' + formatDate(c.cree_le) + '</td>' +
+        '</tr>';
+      }).join('') +
+      '</tbody></table>';
+  } catch(e) {
+    list.innerHTML = '<div class="empty-state"><div class="ico">⚠️</div><p>Erreur chargement.<br>' + e.message + '</p></div>';
+  }
+}
+
+async function chargerClientsIndustrial() {
+  var list = document.getElementById('industrial-list');
+  list.innerHTML = '<div class="spinner"><div class="spin"></div> Chargement…</div>';
+  try {
+    var data = await supabaseFetch('entreprises?select=id,nom,email_contact,plan,statut_paiement,created_at,nombre_employes&order=created_at.desc&limit=200');
+    if (!data || data.length === 0) {
+      list.innerHTML = '<div class="empty-state"><div class="ico">🏭</div><p>Aucun client Industrial.</p></div>';
+      return;
+    }
+    list.innerHTML = '<table style="width:100%;border-collapse:collapse;">' +
+      '<thead><tr>' +
+        ['Entreprise','Email','Plan','Employés','Statut','Depuis'].map(function(h){
+          return '<th style="text-align:left;padding:10px;color:var(--dim);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--line);">' + h + '</th>';
+        }).join('') +
+      '</tr></thead><tbody>' +
+      data.map(function(c) {
+        var statutColor = c.statut_paiement === 'actif' ? 'background:rgba(46,204,113,0.1);color:var(--ok)' :
+                          c.statut_paiement === 'impaye' ? 'background:rgba(231,76,60,0.1);color:var(--danger)' :
+                          'background:rgba(243,156,18,0.1);color:var(--warn)';
+        var statutLabel = c.statut_paiement === 'actif' ? '✅ Actif' :
+                          c.statut_paiement === 'impaye' ? '🔴 Impayé' :
+                          c.statut_paiement === 'suspendu' ? '⏸ Suspendu' : (c.statut_paiement || '—');
+        return '<tr>' +
+          '<td style="padding:12px 10px;font-size:13px;font-weight:600;">' + (c.nom || '—') + '</td>' +
+          '<td style="padding:12px 10px;font-size:13px;color:var(--soft);">' + (c.email_contact || '—') + '</td>' +
+          '<td style="padding:12px 10px;font-size:12px;color:var(--cyan);">' + (c.plan || '—') + '</td>' +
+          '<td style="padding:12px 10px;font-size:13px;text-align:center;">' + (c.nombre_employes || '—') + '</td>' +
+          '<td style="padding:12px 10px;"><span style="font-size:11px;padding:3px 8px;border-radius:20px;' + statutColor + ';">' + statutLabel + '</span></td>' +
+          '<td style="padding:12px 10px;font-size:12px;color:var(--dim);">' + formatDate(c.created_at) + '</td>' +
+        '</tr>';
+      }).join('') +
+      '</tbody></table>';
+  } catch(e) {
+    list.innerHTML = '<div class="empty-state"><div class="ico">⚠️</div><p>' + e.message + '</p></div>';
+  }
+}
+
+// ═══════════════════════════════════════════════
+// RELANCES IMPAYÉS
+// ═══════════════════════════════════════════════
+async function chargerRelances() {
+  var list = document.getElementById('relances-list');
+  list.innerHTML = '<div class="spinner"><div class="spin"></div> Chargement…</div>';
+  try {
+    var data = await supabaseFetch('relances_impayes?select=id,email_entreprise,date_impaye,jour_actuel,statut,derniere_relance,entreprises(nom)&order=date_impaye.desc&limit=100');
+    if (!data || data.length === 0) {
+      list.innerHTML = '<div class="empty-state"><div class="ico">✅</div><p>Aucun impayé en cours.<br>Les relances automatiques sont actives.</p></div>';
+      return;
+    }
+    list.innerHTML = '<table style="width:100%;border-collapse:collapse;">' +
+      '<thead><tr>' +
+        ['Entreprise','Email','Date impayé','Jour J+','Dernière relance','Statut'].map(function(h){
+          return '<th style="text-align:left;padding:10px;color:var(--dim);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--line);">' + h + '</th>';
+        }).join('') +
+      '</tr></thead><tbody>' +
+      data.map(function(r) {
+        var statutColor = r.statut === 'en_cours' ? 'background:rgba(231,76,60,0.1);color:var(--danger)' :
+                          r.statut === 'resolu' ? 'background:rgba(46,204,113,0.1);color:var(--ok)' :
+                          'background:rgba(243,156,18,0.1);color:var(--warn)';
+        var statutLabel = r.statut === 'en_cours' ? '🔴 En cours' :
+                          r.statut === 'resolu' ? '✅ Résolu' : '⏸ Suspendu';
+        var nomEntreprise = (r.entreprises && r.entreprises.nom) ? r.entreprises.nom : '—';
+        return '<tr>' +
+          '<td style="padding:12px 10px;font-size:13px;font-weight:600;">' + nomEntreprise + '</td>' +
+          '<td style="padding:12px 10px;font-size:13px;color:var(--soft);">' + (r.email_entreprise || '—') + '</td>' +
+          '<td style="padding:12px 10px;font-size:12px;color:var(--dim);">' + formatDate(r.date_impaye) + '</td>' +
+          '<td style="padding:12px 10px;font-size:13px;font-weight:600;color:var(--danger);">J+' + (r.jour_actuel || 0) + '</td>' +
+          '<td style="padding:12px 10px;font-size:12px;color:var(--dim);">' + (r.derniere_relance ? formatDate(r.derniere_relance) : '—') + '</td>' +
+          '<td style="padding:12px 10px;"><span style="font-size:11px;padding:3px 8px;border-radius:20px;' + statutColor + ';">' + statutLabel + '</span></td>' +
+        '</tr>';
+      }).join('') +
+      '</tbody></table>';
+  } catch(e) {
+    list.innerHTML = '<div class="empty-state"><div class="ico">⚠️</div><p>Erreur chargement.<br>' + e.message + '</p></div>';
+  }
+}
+
+// ═══════════════════════════════════════════════
+// CLIENTS FACILITY
+// ═══════════════════════════════════════════════
+async function chargerClientsFacility() {
+  var list = document.getElementById('facility-list');
+  list.innerHTML = '<div class="spinner"><div class="spin"></div> Chargement…</div>';
+  try {
+    var data = await supabaseFetch('clients?select=id,email,actif,cree_le,taches_ce_mois&forfait=eq.facility&order=cree_le.desc&limit=200');
+    if (!data || data.length === 0) {
+      list.innerHTML = '<div class="empty-state"><div class="ico">👵</div><p>Aucun client Facility enregistré.</p></div>';
+      return;
+    }
+    list.innerHTML = '<table style="width:100%;border-collapse:collapse;">' +
+      '<thead><tr>' +
+        ['Email','Statut','Tâches/mois','Inscrit le'].map(function(h){
+          return '<th style="text-align:left;padding:10px;color:var(--dim);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--line);">' + h + '</th>';
+        }).join('') +
+      '</tr></thead><tbody>' +
+      data.map(function(c) {
+        return '<tr>' +
+          '<td style="padding:12px 10px;font-size:13px;color:var(--soft);">' + (c.email || '—') + '</td>' +
+          '<td style="padding:12px 10px;"><span style="font-size:11px;padding:3px 8px;border-radius:20px;' + (c.actif ? 'background:rgba(46,204,113,0.1);color:var(--ok)' : 'background:rgba(231,76,60,0.1);color:var(--danger)') + ';">' + (c.actif ? '✅ Actif' : '❌ Inactif') + '</span></td>' +
+          '<td style="padding:12px 10px;font-size:13px;text-align:center;">' + (c.taches_ce_mois || 0) + '</td>' +
+          '<td style="padding:12px 10px;font-size:12px;color:var(--dim);">' + formatDate(c.cree_le) + '</td>' +
+        '</tr>';
+      }).join('') +
+      '</tbody></table>';
+  } catch(e) {
+    list.innerHTML = '<div class="empty-state"><div class="ico">⚠️</div><p>Erreur chargement.<br>' + e.message + '</p></div>';
+  }
+}
+
+// ═══════════════════════════════════════════════
+// COÛTS ANTHROPIC
+// ═══════════════════════════════════════════════
+async function chargerCouts() {
+  var list = document.getElementById('couts-list');
+  list.innerHTML = '<div class="spinner"><div class="spin"></div> Chargement…</div>';
+  try {
+    var data = await supabaseFetch('api_usage?select=modele,tokens_entree,tokens_sortie,cout_euros,produit,created_at&order=created_at.desc&limit=500');
+    if (!data || data.length === 0) {
+      list.innerHTML = '<div class="empty-state"><div class="ico">📊</div><p>Aucun usage Anthropic enregistré.<br>Les appels Claude alimenteront ce tableau.</p></div>';
+      return;
+    }
+    // Totaux
+    var totalEuros = data.reduce(function(s, r){ return s + parseFloat(r.cout_euros || 0); }, 0);
+    var totalTokensIn = data.reduce(function(s, r){ return s + (r.tokens_entree || 0); }, 0);
+    var totalTokensOut = data.reduce(function(s, r){ return s + (r.tokens_sortie || 0); }, 0);
+    var summary = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;">' +
+      '<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center;">' +
+        '<div style="font-size:24px;font-weight:700;color:var(--danger);">€' + totalEuros.toFixed(4) + '</div>' +
+        '<div style="font-size:11px;color:var(--dim);margin-top:4px;">Coût total</div></div>' +
+      '<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center;">' +
+        '<div style="font-size:24px;font-weight:700;color:var(--cyan);">' + (totalTokensIn / 1000).toFixed(1) + 'k</div>' +
+        '<div style="font-size:11px;color:var(--dim);margin-top:4px;">Tokens entrée</div></div>' +
+      '<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center;">' +
+        '<div style="font-size:24px;font-weight:700;color:var(--ok);">' + (totalTokensOut / 1000).toFixed(1) + 'k</div>' +
+        '<div style="font-size:11px;color:var(--dim);margin-top:4px;">Tokens sortie</div></div>' +
+    '</div>';
+    var table = '<table style="width:100%;border-collapse:collapse;">' +
+      '<thead><tr>' +
+        ['Modèle','Produit','Tokens in','Tokens out','Coût €','Date'].map(function(h){
+          return '<th style="text-align:left;padding:10px;color:var(--dim);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--line);">' + h + '</th>';
+        }).join('') +
+      '</tr></thead><tbody>' +
+      data.slice(0, 100).map(function(r) {
+        return '<tr>' +
+          '<td style="padding:10px;font-size:12px;color:var(--cyan);">' + (r.modele || '—') + '</td>' +
+          '<td style="padding:10px;font-size:12px;">' + (r.produit || '—') + '</td>' +
+          '<td style="padding:10px;font-size:12px;color:var(--dim);">' + (r.tokens_entree || 0) + '</td>' +
+          '<td style="padding:10px;font-size:12px;color:var(--dim);">' + (r.tokens_sortie || 0) + '</td>' +
+          '<td style="padding:10px;font-size:12px;color:var(--danger);">€' + parseFloat(r.cout_euros || 0).toFixed(5) + '</td>' +
+          '<td style="padding:10px;font-size:11px;color:var(--dim);">' + formatDate(r.created_at) + '</td>' +
+        '</tr>';
+      }).join('') +
+      '</tbody></table>';
+    list.innerHTML = summary + table;
+  } catch(e) {
+    list.innerHTML = '<div class="empty-state"><div class="ico">⚠️</div><p>Erreur chargement.<br>' + e.message + '</p></div>';
+  }
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+async function init() {
+  // Vérifier session admin d'abord
+  var ok = await verifierSessionAdmin();
+  if(!ok) return;
+
+  // Vérifier connexion Supabase
+  try {
+    await supabaseFetch('alertes_jumelage?select=id&limit=1');
+    document.getElementById('supabase-status').textContent = 'Supabase OK';
+    document.getElementById('supabase-dot').style.background = 'var(--ok)';
+  } catch(e) {
+    document.getElementById('supabase-status').textContent = 'Erreur Supabase';
+    document.getElementById('supabase-dot').style.background = 'var(--danger)';
+  }
+  // Charger dashboard
+  chargerDashboard();
+  // Actualiser toutes les 60s
+  setInterval(chargerDashboard, 60000);
+  setInterval(function(){
+    document.getElementById('time-now').textContent = new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  }, 1000);
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+<script src="/aria-i18n.js"></script>
+</div><!-- fin app-admin -->
+</body>
+</html>

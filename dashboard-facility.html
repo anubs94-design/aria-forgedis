@@ -1,0 +1,1887 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mon espace Facility — FORGEDIS</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:     #070B18;
+    --bg-2:   #0C1226;
+    --bg2:    #0C1226;
+    --panel:  #111934;
+    --panel2: #162040;
+    --text:   #F0F3FB;
+    --soft:   #A6B0CC;
+    --dim:    #6D7799;
+    --coral:  #FF7A59;
+    --coral2: #FFA98F;
+    --coral-dk:#E5623F;
+    --cyan:   #5BE3D8;
+    --violet: #9B8CFF;
+    --ok:     #2ECC71;
+    --line:   rgba(255,255,255,0.08);
+    --border: rgba(255,255,255,0.08);
+    --radius: 16px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+  /* NAV */
+  nav {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 40px; height:64px;
+    border-bottom:1px solid var(--line);
+    background:rgba(7,11,24,0.95); backdrop-filter:blur(12px);
+    position:sticky; top:0; z-index:100;
+  }
+  .nav-logo { font-family:'Sora',sans-serif; font-weight:800; font-size:1.2rem; color:var(--text); text-decoration:none; letter-spacing:-0.01em; }
+  .nav-logo span { color:var(--coral); }
+  .nav-right { display:flex; align-items:center; gap:14px; }
+  .avatar {
+    width:36px; height:36px; border-radius:50%;
+    background:linear-gradient(135deg,var(--coral),var(--violet));
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:14px; color:#fff; cursor:pointer;
+    border:2px solid rgba(255,122,89,0.3);
+  }
+  .btn-sm { padding:8px 18px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; border:none; text-decoration:none; display:inline-flex; align-items:center; gap:6px; transition:all .2s; font-family:'Inter',sans-serif; }
+  .btn-ghost-sm { background:transparent; border:1px solid var(--line); color:var(--soft); }
+  .btn-ghost-sm:hover { border-color:var(--coral); color:var(--coral); }
+  .btn-coral-sm { background:var(--coral); color:#fff; }
+  .btn-coral-sm:hover { background:var(--coral-dk); transform:translateY(-1px); }
+
+  /* LAYOUT */
+  .layout { display:grid; grid-template-columns:240px 1fr; min-height:calc(100vh - 64px); }
+
+  /* SIDEBAR */
+  aside {
+    border-right:1px solid var(--line); padding:20px 12px;
+    background:var(--bg2); position:sticky; top:64px;
+    height:calc(100vh - 64px); overflow-y:auto;
+  }
+  .aside-section { margin-bottom:4px; }
+  .aside-label {
+    font-size:10px; font-weight:700; color:var(--dim);
+    text-transform:uppercase; letter-spacing:.1em;
+    padding:4px 12px; margin-bottom:2px;
+  }
+  .aside-item {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px; border-radius:10px; cursor:pointer;
+    color:var(--soft); font-size:14px; font-weight:500;
+    transition:all .15s; text-decoration:none;
+    position:relative;
+  }
+  .aside-item:hover { background:var(--panel); color:var(--text); }
+  .aside-item.active {
+    background:rgba(255,122,89,0.1);
+    color:var(--coral);
+    border:1px solid rgba(255,122,89,0.15);
+  }
+  .aside-item.active::before {
+    content:''; position:absolute; left:0; top:50%; transform:translateY(-50%);
+    width:3px; height:60%; background:var(--coral); border-radius:0 3px 3px 0;
+  }
+  .aside-item .ico { width:18px; text-align:center; font-size:16px; }
+  .aside-divider { height:1px; background:var(--line); margin:10px 4px; }
+
+  /* MOBILE NAV BOTTOM */
+  .mobile-nav {
+    display:none; position:fixed; bottom:0; left:0; right:0; z-index:100;
+    background:rgba(7,11,24,0.97); backdrop-filter:blur(12px);
+    border-top:1px solid var(--line);
+    padding:8px 0 env(safe-area-inset-bottom,8px);
+    justify-content:space-around; align-items:center;
+  }
+  .mobile-nav-item {
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    cursor:pointer; padding:4px 12px;
+    color:var(--dim); font-size:10px; font-weight:600;
+    transition:color .15s; border:none; background:none;
+    font-family:'Inter',sans-serif;
+  }
+  .mobile-nav-item .mn-ico { font-size:20px; }
+  .mobile-nav-item.active { color:var(--coral); }
+  .mobile-nav-item:hover { color:var(--soft); }
+
+  /* MAIN */
+  main { padding:32px 40px; overflow-y:auto; }
+  .page { display:none; }
+  .page.active { display:block; }
+
+  .cards-row { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:28px; }
+  .stat-card {
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:var(--radius); padding:20px 24px;
+    transition:border-color .2s;
+    position:relative; overflow:hidden;
+  }
+  .stat-card::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:2px;
+    background:linear-gradient(90deg,var(--coral),transparent);
+    opacity:0; transition:opacity .2s;
+  }
+  .stat-card:hover { border-color:rgba(255,122,89,0.2); }
+  .stat-card:hover::before { opacity:1; }
+  .stat-label { font-size:11px; color:var(--dim); font-weight:700; text-transform:uppercase; letter-spacing:.08em; margin-bottom:10px; }
+  .stat-value { font-family:'Sora',sans-serif; font-size:2rem; font-weight:800; letter-spacing:-0.02em; }
+  .stat-sub { font-size:12px; color:var(--soft); margin-top:6px; }
+  .stat-coral { color:var(--coral); }
+  .stat-cyan { color:var(--cyan); }
+  .stat-violet { color:var(--violet); }
+
+  .section-title {
+    font-family:'Sora',sans-serif; font-size:.8rem; font-weight:700;
+    margin-bottom:16px; color:var(--coral);
+    text-transform:uppercase; letter-spacing:.1em;
+  }
+
+  /* ABONNEMENT */
+  .plan-card {
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:var(--radius); padding:24px; margin-bottom:20px;
+    transition:border-color .2s;
+  }
+  .plan-card:hover { border-color:rgba(255,122,89,0.15); }
+  .plan-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:12px; }
+  .plan-badge {
+    background:linear-gradient(120deg,var(--coral),var(--coral2));
+    color:#fff; font-size:11px; font-weight:700;
+    padding:4px 12px; border-radius:999px; letter-spacing:.02em;
+  }
+  .plan-badge.free { background:var(--panel2); color:var(--soft); border:1px solid var(--line); }
+  .plan-name { font-family:'Sora',sans-serif; font-size:1.2rem; font-weight:800; letter-spacing:-0.01em; }
+  .plan-price { font-size:2.2rem; font-weight:800; color:var(--coral); margin:8px 0; letter-spacing:-0.02em; }
+  .plan-price span { font-size:14px; color:var(--soft); font-weight:400; }
+  .plan-features { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:16px 0; }
+  .plan-feat { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--soft); }
+  .plan-feat .tick { color:var(--ok); font-size:15px; font-weight:700; }
+  .plan-actions { display:flex; gap:10px; margin-top:20px; flex-wrap:wrap; }
+
+  /* HISTORIQUE */
+  .history-list { display:flex; flex-direction:column; gap:10px; }
+  .history-item {
+    display:flex; align-items:center; gap:14px;
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:12px; padding:14px 18px;
+    transition:border-color .15s;
+  }
+  .history-item:hover { border-color:rgba(255,122,89,0.2); }
+  .history-ico { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+  .history-ico.blue { background:rgba(61,108,255,.12); }
+  .history-ico.green { background:rgba(46,204,113,.1); }
+  .history-ico.orange { background:rgba(255,122,89,.12); }
+  .history-info { flex:1; }
+  .history-title { font-size:14px; font-weight:600; margin-bottom:2px; }
+  .history-date { font-size:12px; color:var(--dim); }
+  .history-status { font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px; }
+  .status-ok { background:rgba(46,204,113,.1); color:var(--ok); }
+  .status-pending { background:rgba(255,122,89,.1); color:var(--coral); }
+
+  /* PARAMETRES */
+  .settings-card { background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; margin-bottom:16px; }
+  .settings-row { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--line); gap:16px; }
+  .settings-row:last-child { border-bottom:none; }
+  .settings-label { font-size:14px; font-weight:600; }
+  .settings-desc { font-size:12px; color:var(--dim); margin-top:2px; }
+  .settings-val { font-size:14px; color:var(--soft); flex-shrink:0; }
+  .badge-actif { background:rgba(46,204,113,.1); color:var(--ok); border:1px solid rgba(46,204,113,.2); font-size:12px; font-weight:700; padding:4px 10px; border-radius:999px; }
+  .badge-inactif { background:rgba(255,122,89,.1); color:var(--coral); border:1px solid rgba(255,122,89,.2); font-size:12px; font-weight:700; padding:4px 10px; border-radius:999px; }
+
+  /* --- Simulations interactives (pratique sans risque) --- */
+  .sim-lancer { margin-top:6px; }
+  .zone-sim { margin-top:16px; background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:18px; }
+  .sim-rassure { background:rgba(91,227,216,0.1); border:1px solid var(--cyan); color:var(--cyan); font-size:13px; padding:10px 14px; border-radius:10px; margin-bottom:16px; line-height:1.5; }
+  .sim-etape-label { font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:.06em; font-weight:700; margin-bottom:6px; }
+  .sim-instruction { font-size:15px; font-weight:600; margin-bottom:14px; }
+  .sim-zone { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .sim-feedback { min-height:20px; font-size:13px; margin-top:12px; font-weight:600; }
+  .sim-feedback.ok { color:var(--cyan); }
+  .sim-feedback.retry { color:var(--coral2); }
+  .sim-restart { margin-top:14px; }
+  .sim-bravo { font-size:16px; font-weight:700; text-align:center; padding:20px 0; }
+  .sim-desktop { display:flex; align-items:center; justify-content:center; background:var(--bg2); border-radius:10px; min-height:90px; cursor:pointer; }
+  .sim-curseur-info { color:var(--dim); font-size:13px; }
+  .sim-icon { text-align:center; font-size:34px; cursor:pointer; padding:10px 18px; border-radius:10px; transition:background .2s; }
+  .sim-icon:hover { background:var(--panel2); }
+  .sim-icon.selected { background:rgba(255,122,89,0.15); outline:2px solid var(--coral); }
+  .sim-icon-label { font-size:12px; color:var(--soft); margin-top:4px; }
+  .sim-menu { background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:10px 14px; font-size:13px; line-height:2; display:inline-block; }
+  .sim-input { margin-bottom:0; width:100%; }
+  .sim-browser { background:var(--panel); border-radius:10px; }
+  .sim-browser-bar { display:flex; align-items:center; gap:8px; background:var(--bg2); border-radius:8px; padding:10px 14px; font-size:14px; }
+  .sim-browser-input { flex:1; background:transparent; border:none; outline:none; color:var(--text); font-size:14px; }
+  .sim-resultat { padding:10px 14px; margin-top:8px; background:var(--bg2); border-radius:8px; cursor:pointer; color:var(--cyan); font-size:14px; }
+  .sim-resultat:hover { background:var(--panel2); }
+  .sim-back { cursor:pointer; font-weight:700; color:var(--coral); }
+  .sim-email textarea.sim-input, .sim-email input.sim-input { width:100%; }
+  .sim-contact { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--bg2); border-radius:10px; cursor:pointer; font-size:14px; }
+  .sim-contact.selected { outline:2px solid var(--coral); }
+  .sim-cam { cursor:pointer; font-size:20px; }
+  .sim-raccrocher { display:block; margin:14px auto 0; background:#E5484D; color:#fff; border:none; border-radius:999px; padding:10px 24px; font-weight:700; cursor:pointer; }
+  .sim-email-item { padding:14px 16px; background:var(--bg2); border-radius:10px; cursor:pointer; font-size:14px; }
+  .sim-email-item:hover { background:var(--panel2); }
+  .sim-expediteur { font-size:13px; color:var(--coral2); font-family:monospace; margin-bottom:10px; }
+  .sim-corps-email { font-size:14px; color:var(--soft); margin-bottom:6px; }
+  .sim-lien-piege { background:transparent; border:1px solid var(--coral2); color:var(--coral2); border-radius:8px; padding:8px 14px; cursor:pointer; font-size:13px; }
+  .lecon-video { margin-bottom:16px; border-radius:12px; overflow:hidden; border:1px solid var(--line); background:#000; }
+  .lecon-video video { display:block; width:100%; max-height:320px; }
+
+  /* ── PAGE CONNEXION ── */
+  .auth-wrap {
+    min-height: calc(100vh - 64px);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding: 40px 24px;
+  }
+  .auth-header {
+    text-align:center; margin-bottom:32px; position:relative;
+  }
+  .auth-glow {
+    position:absolute; top:-60px; left:50%; transform:translateX(-50%);
+    width:300px; height:200px;
+    background:radial-gradient(ellipse, rgba(255,122,89,0.1) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .auth-logo {
+    font-family:'Sora',sans-serif; font-weight:800; font-size:1.6rem;
+    color:var(--text); margin-bottom:24px; letter-spacing:-0.02em;
+  }
+  .auth-logo span { color:var(--coral); }
+  .auth-title {
+    font-family:'Sora',sans-serif; font-size:1.8rem; font-weight:800;
+    letter-spacing:-0.02em; margin-bottom:8px;
+  }
+  .auth-subtitle { color:var(--soft); font-size:15px; }
+  .auth-card {
+    width:100%; max-width:420px;
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:20px; padding:32px;
+    box-shadow:0 24px 64px rgba(0,0,0,0.3);
+  }
+  .auth-google {
+    width:100%; display:flex; align-items:center; justify-content:center; gap:10px;
+    background:var(--panel2); border:1px solid var(--line);
+    color:var(--text); font-size:14px; font-weight:600;
+    padding:12px 20px; border-radius:12px; cursor:pointer;
+    transition:all .15s; font-family:'Inter',sans-serif;
+  }
+  .auth-google:hover { border-color:rgba(255,255,255,0.2); background:rgba(255,255,255,0.04); }
+  .auth-separator {
+    display:flex; align-items:center; gap:12px; margin:20px 0;
+  }
+  .auth-separator::before, .auth-separator::after {
+    content:''; flex:1; height:1px; background:var(--line);
+  }
+  .auth-separator span { font-size:12px; color:var(--dim); }
+  .auth-forgot {
+    text-align:right; margin:-4px 0 14px;
+  }
+  .auth-forgot a { color:var(--dim); font-size:12px; text-decoration:none; }
+  .auth-forgot a:hover { color:var(--coral); }
+  .auth-submit {
+    width:100%; padding:14px; font-size:15px; font-weight:700;
+    background:var(--coral); color:#fff; border:none; border-radius:12px;
+    cursor:pointer; transition:all .15s; font-family:'Inter',sans-serif;
+    letter-spacing:0.01em;
+  }
+  .auth-submit:hover { background:var(--coral-dk); transform:translateY(-1px); }
+  .auth-message {
+    text-align:center; margin-top:16px; font-size:13px; color:var(--soft);
+    min-height:20px;
+  }
+  .auth-toggle {
+    text-align:center; font-size:13px; color:var(--dim); margin-top:20px;
+  }
+  .auth-toggle a { color:var(--coral); text-decoration:none; font-weight:600; }
+  .auth-toggle a:hover { color:var(--coral2); }
+
+  /* ── WELCOME HEAD ── */
+  .welcome-head { margin-bottom:32px; }
+  .welcome-head h1 {
+    font-family:'Sora',sans-serif; font-size:1.8rem; font-weight:800;
+    margin-bottom:6px; letter-spacing:-0.02em;
+  }
+  .welcome-head p { color:var(--soft); font-size:14px; }
+
+  /* ── PROGRESS BAR ── */
+  .progress-wrap { margin:16px 0; }
+  .progress-label { display:flex; justify-content:space-between; font-size:13px; color:var(--soft); margin-bottom:8px; }
+  .progress-bar {
+    height:6px; background:var(--panel2); border-radius:999px; overflow:hidden;
+  }
+  .progress-fill {
+    height:100%; border-radius:999px;
+    background:linear-gradient(90deg,var(--coral),var(--coral2));
+    transition:width .6s ease;
+  }
+  .progress-fill.cyan { background:linear-gradient(90deg,var(--cyan),#3DB8AF); }
+
+  /* ── ALERTS ── */
+  .alert { border-radius:12px; padding:14px 18px; font-size:14px; margin-bottom:16px; line-height:1.5; }
+  .alert-info {
+    background:rgba(91,227,216,0.06); border:1px solid rgba(91,227,216,0.2);
+    color:var(--cyan);
+  }
+  .alert-warn {
+    background:rgba(255,122,89,0.06); border:1px solid rgba(255,122,89,0.2);
+    color:var(--coral);
+  }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,0.75); backdrop-filter:blur(6px);
+    z-index:200; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .modal-overlay.open { display:flex; }
+  .modal {
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:20px; padding:32px; max-width:460px; width:100%;
+    box-shadow:0 32px 80px rgba(0,0,0,0.5);
+  }
+  .modal h2 {
+    font-family:'Sora',sans-serif; font-size:1.3rem; font-weight:800;
+    margin-bottom:8px; letter-spacing:-0.01em;
+  }
+  .modal p { color:var(--soft); font-size:14px; margin-bottom:24px; line-height:1.6; }
+  .modal-actions { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; }
+  .btn-danger {
+    background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.3);
+    color:#f87171; padding:10px 20px; border-radius:10px;
+    font-weight:600; font-size:14px; cursor:pointer; font-family:'Inter',sans-serif;
+  }
+  .btn-danger:hover { background:rgba(239,68,68,.2); }
+  .btn-cancel {
+    background:var(--panel2); border:1px solid var(--line); color:var(--soft);
+    padding:10px 20px; border-radius:10px;
+    font-weight:600; font-size:14px; cursor:pointer; font-family:'Inter',sans-serif;
+  }
+  .btn-cancel:hover { border-color:rgba(255,255,255,0.2); color:var(--text); }
+
+  /* ── FORMATION ── */
+  .lecon {
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:14px; margin-bottom:12px; overflow:hidden;
+    transition:border-color .15s;
+  }
+  .lecon:hover { border-color:rgba(255,122,89,0.2); }
+  .lecon-head {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 20px; cursor:pointer; transition:background .15s;
+  }
+  .lecon-head:hover { background:var(--panel2); }
+  .lecon-titre { display:flex; align-items:center; gap:12px; font-weight:600; font-size:15px; }
+  .lecon-ico { font-size:22px; }
+  .lecon-chevron { color:var(--coral); transition:transform .2s; font-size:14px; }
+  .lecon.open .lecon-chevron { transform:rotate(180deg); }
+  .lecon-corps { display:none; padding:0 20px 20px 56px; }
+  .lecon.open .lecon-corps { display:block; animation:fadeIn .2s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+  .lecon-etape {
+    display:flex; gap:12px; margin-bottom:14px;
+    font-size:14px; color:var(--soft); line-height:1.6;
+  }
+  .lecon-etape:last-child { margin-bottom:0; }
+  .lecon-num {
+    flex-shrink:0; width:24px; height:24px; border-radius:50%;
+    background:rgba(255,122,89,0.12); color:var(--coral);
+    font-weight:700; font-size:12px;
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid rgba(255,122,89,0.2);
+  }
+
+  /* ── FEAT CARDS ── */
+  .feat-intro { color:var(--soft); font-size:15px; margin-bottom:24px; line-height:1.7; }
+  .feat-section { margin-bottom:28px; }
+  .feat-section-title {
+    display:flex; align-items:center; gap:10px;
+    font-family:'Sora',sans-serif; font-size:15px; font-weight:700;
+    margin-bottom:14px; color:var(--text);
+  }
+  .feat-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .feat-card {
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:12px; padding:16px 18px; font-size:14px;
+    color:var(--soft); line-height:1.6;
+    transition:border-color .15s;
+  }
+  .feat-card:hover { border-color:rgba(255,122,89,0.2); }
+  .feat-badge-premium {
+    display:inline-block;
+    background:linear-gradient(120deg,var(--coral),var(--coral2));
+    color:#fff; font-size:10px; font-weight:800;
+    padding:2px 8px; border-radius:999px; margin-left:8px;
+    vertical-align:middle; white-space:nowrap;
+  }
+  .feat-cta {
+    margin-top:8px;
+    background:linear-gradient(135deg,rgba(255,122,89,0.08),rgba(155,140,255,0.05));
+    border:1px solid rgba(255,122,89,0.2); border-radius:16px; padding:28px;
+    text-align:center;
+  }
+  .feat-cta h3 { font-family:'Sora',sans-serif; font-size:1.3rem; margin-bottom:8px; font-weight:800; }
+  .feat-cta p { color:var(--soft); font-size:14px; margin-bottom:18px; line-height:1.6; }
+
+  /* ── INPUT ── */
+  .input-field {
+    width:100%; background:var(--bg2); border:1px solid var(--line);
+    border-radius:10px; padding:12px 16px; color:var(--text);
+    font-size:15px; outline:none; margin-bottom:12px;
+    transition:border .2s; font-family:'Inter',sans-serif;
+  }
+  .input-field:focus { border-color:var(--coral); box-shadow:0 0 0 3px rgba(255,122,89,0.08); }
+  .input-label { font-size:13px; font-weight:600; color:var(--soft); margin-bottom:6px; display:block; }
+
+  @media(max-width:768px) {
+    nav { padding:0 20px; }
+    .nav-right .btn-ghost-sm { display:none; }
+    .layout { grid-template-columns:1fr; }
+    aside { display:none; }
+    main { padding:20px 16px 96px; }
+    .cards-row { grid-template-columns:1fr; }
+    .plan-features { grid-template-columns:1fr; }
+    .mobile-nav { display:flex; }
+    .welcome-head h1 { font-size:1.5rem; }
+    .settings-row { flex-direction:column; align-items:flex-start; gap:10px; }
+    .settings-row .btn-sm { align-self:flex-start; }
+    .feat-grid { grid-template-columns:1fr !important; }
+    .plan-header { flex-direction:column; align-items:flex-start; }
+    .modal { margin:16px; max-width:none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="/" class="nav-logo">FORGE<span>DIS</span></a>
+  <div class="nav-right">
+    <a href="/" class="btn-sm btn-ghost-sm">← Retour au site</a>
+    <div class="avatar" id="avatar-nav" title="Mon compte">A</div>
+  </div>
+</nav>
+
+<div class="layout" id="layout">
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div class="aside-section">
+      <div class="aside-label">Principal</div>
+      <a class="aside-item active" onclick="showPage('accueil')">
+        <span class="ico">🏠</span> Tableau de bord
+      </a>
+      <a class="aside-item" onclick="showPage('abonnement')">
+        <span class="ico">⭐</span> Mon abonnement
+      </a>
+      <a class="aside-item" onclick="showPage('historique')">
+        <span class="ico">📋</span> Historique
+      </a>
+      <a class="aside-item" onclick="showPage('formation')">
+        <span class="ico">🎓</span> Formation
+      </a>
+      <a class="aside-item" onclick="showPage('fonctionnalites')">
+        <span class="ico">✨</span> Fonctionnalités
+      </a>
+    </div>
+    <div class="aside-divider"></div>
+    <div class="aside-section">
+      <div class="aside-label">Compte</div>
+      <a class="aside-item" onclick="showPage('parametres')">
+        <span class="ico">⚙️</span> Paramètres
+      </a>
+      <a class="aside-item" href="mailto:contact@forgedis.fr">
+        <span class="ico">💬</span> Support
+      </a>
+    </div>
+    <div class="aside-divider"></div>
+    <div class="aside-section">
+      <a class="aside-item" onclick="deconnexion()">
+        <span class="ico">🚪</span> Se déconnecter
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main>
+
+    <!-- PAGE ACCUEIL -->
+    <div class="page" id="page-accueil">
+      <div class="welcome-head">
+        <h1>Bonjour 👋</h1>
+        <p>Voici un aperçu de votre utilisation d'Aria ce mois-ci.</p>
+      </div>
+
+      <div class="cards-row">
+        <div class="stat-card">
+          <div class="stat-label">Éco-tâches utilisées</div>
+          <div class="stat-value stat-coral" id="stat-eco">0</div>
+          <div class="stat-sub">sur 30 ce mois</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Forfait actuel</div>
+          <div class="stat-value stat-cyan" id="stat-forfait">—</div>
+          <div class="stat-sub" id="stat-forfait-sub">Chargement...</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Statut</div>
+          <div class="stat-value stat-violet" id="stat-statut">—</div>
+          <div class="stat-sub" id="stat-statut-sub">Vérification...</div>
+        </div>
+      </div>
+
+      <div class="plan-card">
+        <div class="progress-wrap">
+          <div class="progress-label">
+            <span>Éco-tâches du mois</span>
+            <span id="prog-label">0 / 30</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="prog-fill" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="alert alert-info" style="margin-top:16px; margin-bottom:0;">
+          ✨ Les éco-tâches utilisent Aria en mode rapide. Passez à Facility pour des actions illimitées et le pilotage PC complet.
+        </div>
+      </div>
+
+      <!-- Agent PC Windows -->
+      <div class="plan-card" style="border-color:rgba(255,122,89,0.3); margin-top:24px;">
+        <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+          <div style="font-size:36px; flex-shrink:0;">🖥️</div>
+          <div style="flex:1; min-width:200px;">
+            <div style="font-family:'Sora',sans-serif; font-weight:700; font-size:15px; margin-bottom:4px;">Agent Aria pour votre ordinateur <span style="background:rgba(46,204,113,0.1); color:var(--ok); font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; margin-left:6px;">Windows</span></div>
+            <div class="stat-sub">Installez l'agent sur votre PC — Aria pourra ouvrir vos fichiers, naviguer, répondre à vos emails et agir directement sur votre bureau.</div>
+          </div>
+          <a href="/downloads/Aria_Facility_Setup.exe" class="btn-sm btn-coral-sm" style="white-space:nowrap; padding:12px 20px;">
+            ⬇ Télécharger pour Windows
+          </a>
+        </div>
+        <div class="stat-sub" style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line);">Fichier .exe · environ 42 Mo · Installation guidée, aucune configuration requise.</div>
+      </div>
+
+      <!-- App Android -->
+      <div class="plan-card" style="border-color:rgba(255,122,89,0.3); margin-top:16px;">
+        <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+          <div style="font-size:36px; flex-shrink:0;">📱</div>
+          <div style="flex:1; min-width:200px;">
+            <div style="font-family:'Sora',sans-serif; font-weight:700; font-size:15px; margin-bottom:4px;">
+              Application Aria — Android
+              <span style="background:rgba(232,135,58,0.15); color:var(--amber,#E8873A); font-size:10px; font-weight:700; padding:2px 8px; border-radius:6px; margin-left:6px; white-space:nowrap;">Bientôt sur Google Play</span>
+            </div>
+            <div class="stat-sub">Parlez à Aria depuis votre téléphone — elle transmet vos demandes à l'agent installé sur votre ordinateur. Fonctionne partout, même à distance.</div>
+          </div>
+          <a href="downloads/Aria_Facility.apk" download class="btn-sm btn-coral-sm" style="white-space:nowrap; padding:12px 20px;">
+            ⬇ Télécharger l'APK Android
+          </a>
+        </div>
+        <details style="margin-top:14px; padding-top:12px; border-top:1px solid var(--line);">
+          <summary style="cursor:pointer; font-weight:600; font-size:13px; color:var(--coral); user-select:none;">▶ Comment installer ce fichier ? (3 étapes simples)</summary>
+          <ol style="margin-top:12px; padding-left:20px; font-size:14px; color:var(--soft); line-height:1.8;">
+            <li>Téléchargez le fichier en appuyant sur le bouton ci-dessus, puis ouvrez-le depuis vos téléchargements.</li>
+            <li>Votre téléphone va afficher un message du type <strong>"Installation bloquée"</strong> ou <strong>"Source inconnue"</strong>. <span style="color:var(--ok); font-weight:600;">C'est normal</span> — cela apparaît uniquement parce qu'Aria n'est pas encore sur le Google Play Store. Appuyez sur "Paramètres", puis activez "Autoriser cette source".</li>
+            <li>Revenez en arrière et appuyez sur "Installer". C'est terminé — Aria est prête !</li>
+          </ol>
+        </details>
+      </div>
+
+      <!-- App iPhone -->
+      <div class="plan-card" style="border-color:rgba(155,140,255,0.2); margin-top:16px;">
+        <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+          <div style="font-size:36px; flex-shrink:0;">🍎</div>
+          <div style="flex:1; min-width:200px;">
+            <div style="font-family:'Sora',sans-serif; font-weight:700; font-size:15px; margin-bottom:4px;">
+              Application Aria — iPhone
+              <span style="background:rgba(155,140,255,0.15); color:var(--violet); font-size:10px; font-weight:700; padding:2px 8px; border-radius:6px; margin-left:6px;">Bientôt disponible</span>
+            </div>
+            <div class="stat-sub">La version iPhone d'Aria est en cours de validation sur l'App Store Apple. Vous serez notifié par email dès qu'elle sera disponible.</div>
+          </div>
+          <button class="btn-sm" style="background:rgba(155,140,255,0.1); border:1px solid rgba(155,140,255,0.25); color:var(--violet); cursor:default; white-space:nowrap;" disabled>
+            Bientôt disponible
+          </button>
+        </div>
+      </div>
+
+      <div class="section-title">Accès rapide</div>
+      <div class="cards-row">
+        <div class="stat-card" style="cursor:pointer" onclick="showPage('abonnement')">
+          <div style="font-size:28px; margin-bottom:8px;">⭐</div>
+          <div style="font-weight:600; font-size:14px;">Gérer l'abonnement</div>
+          <div class="stat-sub">Changer, résilier, facturation</div>
+        </div>
+        <div class="stat-card" style="cursor:pointer" onclick="showPage('parametres')">
+          <div style="font-size:28px; margin-bottom:8px;">⚙️</div>
+          <div style="font-weight:600; font-size:14px;">Paramètres</div>
+          <div class="stat-sub">Email, token, langue</div>
+        </div>
+        <div class="stat-card" style="cursor:pointer" onclick="window.location.href='mailto:contact@forgedis.fr'">
+          <div style="font-size:28px; margin-bottom:8px;">💬</div>
+          <div style="font-weight:600; font-size:14px;">Support</div>
+          <div class="stat-sub">contact@forgedis.fr</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE ABONNEMENT -->
+    <div class="page" id="page-abonnement">
+      <div class="welcome-head">
+        <h1>Mon abonnement</h1>
+        <p>Gérez votre forfait Aria Forgedis.</p>
+      </div>
+
+      <!-- Plan Découverte -->
+      <div class="plan-card" id="plan-gratuit" style="display:none">
+        <div class="plan-header">
+          <div>
+            <div class="plan-badge free">Gratuit</div>
+            <div class="plan-name" style="margin-top:8px;">Découverte</div>
+          </div>
+          <div class="plan-price">0€ <span>/ mois</span></div>
+        </div>
+        <div class="plan-features">
+          <div class="plan-feat"><span class="tick">✓</span> 10 éco-tâches / mois</div>
+          <div class="plan-feat"><span class="tick">✓</span> Toutes les langues</div>
+          <div class="plan-feat"><span class="tick">✓</span> Données chez vous</div>
+          <div class="plan-feat" style="color:var(--dim)"><span style="color:var(--dim)">✗</span> Pilotage PC illimité</div>
+        </div>
+        <div class="plan-actions">
+          <a href="https://buy.stripe.com/3cI8wP5fD8YxaD5cPrgMw00" class="btn-sm btn-coral-sm" style="padding:12px 24px; font-size:15px;">⭐ Passer à Aria Facility</a>
+        </div>
+      </div>
+
+
+<!-- Bannière Aria Kids -->
+<div style="margin-top:32px; background:linear-gradient(135deg,rgba(255,122,89,0.08),rgba(155,140,255,0.05)); border:1px solid rgba(255,122,89,0.2); border-radius:16px; padding:24px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+  <div style="display:flex; align-items:center; gap:14px;">
+    <div style="font-size:32px;">🎓</div>
+    <div>
+      <div style="font-family:'Sora',sans-serif; font-weight:800; font-size:16px; margin-bottom:4px;">Découvrez aussi <span style="color:var(--coral);">Aria Kids</span></div>
+      <div style="font-size:13px; color:var(--soft);">L'IA éducative du CP au BTS — cours, devoirs, quiz. À partir de 9,99€/mois.</div>
+    </div>
+  </div>
+  <a href="https://forgedis.fr/kids" class="btn-sm btn-coral-sm" style="white-space:nowrap;">Découvrir Aria Kids →</a>
+</div>
+
+<!-- Plan Facility -->
+      <div class="plan-card" id="plan-facility" style="display:none">
+        <div class="plan-header">
+          <div>
+            <div class="plan-badge">Aria Facility</div>
+            <div class="plan-name" style="margin-top:8px;">Aria Facility</div>
+          </div>
+          <div class="plan-price">12,99€ <span>/ mois</span></div>
+        </div>
+        <div class="plan-features">
+          <div class="plan-feat"><span class="tick">✓</span> Actions illimitées</div>
+          <div class="plan-feat"><span class="tick">✓</span> Pilotage PC complet</div>
+          <div class="plan-feat"><span class="tick">✓</span> Toutes les langues</div>
+          <div class="plan-feat"><span class="tick">✓</span> Assistance prioritaire</div>
+          <div class="plan-feat"><span class="tick">✓</span> Données chez vous</div>
+          <div class="plan-feat"><span class="tick">✓</span> Bouclier anti-arnaque</div>
+        </div>
+        <div class="plan-actions">
+          <button class="btn-sm btn-ghost-sm" onclick="openModal('modal-resilier')">Résilier l'abonnement</button>
+        </div>
+      </div>
+
+      <!-- Plan non connecté -->
+      <div class="plan-card" id="plan-inconnu">
+        <div class="alert alert-warn">
+          🔐 Connectez-vous pour voir votre abonnement.
+        </div>
+        <div class="plan-actions">
+          <button class="btn-sm btn-coral-sm" onclick="window.location.href='/connexion.html'">Se connecter</button>
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-top:28px;">Comparer les offres</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div class="plan-card" style="margin-bottom:0;">
+          <div class="plan-name" style="margin-bottom:12px;">Découverte</div>
+          <div style="font-size:2rem; font-weight:700; color:var(--soft); margin-bottom:8px;">0€</div>
+          <div style="font-size:13px; color:var(--dim); margin-bottom:16px;">Pour commencer</div>
+          <div class="plan-feat" style="margin-bottom:6px;"><span class="tick">✓</span> 10 éco-tâches / mois</div>
+          <div class="plan-feat" style="margin-bottom:6px;"><span class="tick">✓</span> Questions & réponses</div>
+          <div class="plan-feat" style="margin-bottom:6px; color:var(--dim);"><span style="color:var(--dim)">✗</span> Pilotage PC</div>
+          <div class="plan-feat" style="margin-bottom:6px; color:var(--dim);"><span style="color:var(--dim)">✗</span> Actions illimitées</div>
+        </div>
+        <div class="plan-card" style="margin-bottom:0; border-color:rgba(255,122,89,0.3);">
+          <div class="plan-badge" style="display:inline-block; margin-bottom:8px;">Le plus choisi</div>
+          <div class="plan-name" style="margin-bottom:12px;">Aria Facility</div>
+          <div style="font-size:2rem; font-weight:700; color:var(--coral); margin-bottom:2px;">12,99€</div>
+          <div style="font-size:13px; color:var(--dim); margin-bottom:16px;">/ mois — 14 jours gratuits</div>
+          <div class="plan-feat" style="margin-bottom:6px;"><span class="tick">✓</span> Actions illimitées</div>
+          <div class="plan-feat" style="margin-bottom:6px;"><span class="tick">✓</span> Pilotage PC complet</div>
+          <div class="plan-feat" style="margin-bottom:6px;"><span class="tick">✓</span> Bouclier anti-arnaque</div>
+          <div class="plan-feat" style="margin-bottom:6px;"><span class="tick">✓</span> Assistance prioritaire</div>
+          <a href="https://buy.stripe.com/3cI8wP5fD8YxaD5cPrgMw00" class="btn-sm btn-coral-sm" style="margin-top:16px; display:inline-flex;">Essayer 14 jours gratuits →</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE HISTORIQUE -->
+    <div class="page" id="page-historique">
+      <div class="welcome-head">
+        <h1>Historique</h1>
+        <p>Vos dernières activités et paiements.</p>
+      </div>
+      <div class="section-title">Activité récente</div>
+      <div class="history-list" id="historique-liste">
+        <div style="text-align:center;padding:32px;color:var(--text-dim,#A6B0CC);font-size:14px">
+          ⏳ Chargement de l'historique...
+        </div>
+      </div>
+
+    <!-- PAGE PARAMETRES -->
+    <div class="page" id="page-parametres">
+      <div class="welcome-head">
+        <h1>Paramètres</h1>
+        <p>Gérez les informations de votre compte.</p>
+      </div>
+
+      <div class="section-title">Informations du compte</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Adresse email</div>
+            <div class="settings-desc">Utilisée pour votre abonnement et notifications</div>
+          </div>
+          <div class="settings-val" id="param-email">Non connecté</div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Forfait</div>
+            <div class="settings-desc">Votre abonnement actuel</div>
+          </div>
+          <div id="param-forfait"><span class="badge-inactif">Non connecté</span></div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Statut</div>
+            <div class="settings-desc">État de votre abonnement</div>
+          </div>
+          <div id="param-statut"><span class="badge-inactif">Inconnu</span></div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Éco-tâches ce mois</div>
+            <div class="settings-desc">Remis à zéro le 1er de chaque mois</div>
+          </div>
+          <div class="settings-val" id="param-taches">—</div>
+        </div>
+      </div>
+
+      <div class="section-title">Sécurité</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Identifiant Aria (token)</div>
+            <div class="settings-desc">Votre clé d'accès unique — ne jamais partager</div>
+          </div>
+          <div class="settings-val">••••••••••••••••</div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Chiffrement</div>
+            <div class="settings-desc">Vos données sont chiffrées en transit</div>
+          </div>
+          <span class="badge-actif">✓ Actif</span>
+        </div>
+      </div>
+
+      <div class="section-title">Données & RGPD</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Exporter mes données</div>
+            <div class="settings-desc">Recevoir une copie de vos données par email</div>
+          </div>
+          <button class="btn-sm btn-ghost-sm" onclick="exporterDonneesRGPD()">Exporter mes données</button>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Supprimer mon compte</div>
+            <div class="settings-desc">Action irréversible — supprime toutes vos données</div>
+          </div>
+          <button class="btn-sm" style="background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3); color:#f87171; cursor:pointer;" onclick="openModal('modal-supprimer')">Supprimer</button>
+        </div>
+      </div>
+
+      <div class="section-title">Support</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Contacter le support</div>
+            <div class="settings-desc">Nous répondons sous 24h</div>
+          </div>
+          <a href="mailto:contact@forgedis.fr" class="btn-sm btn-ghost-sm">✉️ Écrire</a>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Mentions légales</div>
+            <div class="settings-desc">Informations légales sur FORGEDIS</div>
+          </div>
+          <a href="mentions-legales.html" class="btn-sm btn-ghost-sm">Voir</a>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Politique de confidentialité</div>
+            <div class="settings-desc">Comment nous protégeons vos données</div>
+          </div>
+          <a href="confidentialite.html" class="btn-sm btn-ghost-sm">Voir</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE FORMATION -->
+    <div class="page" id="page-formation">
+      <div class="welcome-head">
+        <h1>Formation</h1>
+        <p>Des guides simples, étape par étape. Prenez votre temps — vous ne pouvez rien casser.</p>
+      </div>
+
+      <div class="lecon" id="lecon-1">
+        <div class="lecon-head" onclick="toggleLecon('lecon-1')">
+          <div class="lecon-titre"><span class="lecon-ico">🖱️</span> Se repérer sur l'écran et utiliser la souris</div>
+          <span class="lecon-chevron">▾</span>
+        </div>
+        <div class="lecon-corps">
+          <div class="lecon-video"><video id="video-lecon-1" controls preload="metadata"><source src="videos/lecon-1-souris.mp4" type="video/mp4"></video></div>
+          <div class="lecon-etape"><span class="lecon-num">1</span> La souris déplace une petite flèche sur l'écran. Bougez-la doucement pour voir la flèche suivre votre mouvement.</div>
+          <div class="lecon-etape"><span class="lecon-num">2</span> Le clic gauche (sous votre index) sert à sélectionner ou ouvrir quelque chose. Appuyez une seule fois.</div>
+          <div class="lecon-etape"><span class="lecon-num">3</span> Le clic droit (sous votre majeur) ouvre un menu d'options. Utile pour explorer, jamais dangereux.</div>
+          <div class="lecon-etape"><span class="lecon-num">4</span> La molette au milieu fait défiler la page vers le haut ou le bas.</div>
+          <div class="lecon-etape"><span class="lecon-num">5</span> Astuce : avec Aria, vous pouvez aussi simplement dire ce que vous voulez faire — elle s'occupe de la souris à votre place.</div>
+          <button class="btn-sm btn-ghost-sm sim-lancer" onclick="ouvrirSimulation(1)">🎮 Essayer en simulation</button>
+          <div class="zone-sim" id="sim-lecon-1" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div class="lecon" id="lecon-2">
+        <div class="lecon-head" onclick="toggleLecon('lecon-2')">
+          <div class="lecon-titre"><span class="lecon-ico">⌨️</span> Utiliser le clavier sans stress</div>
+          <span class="lecon-chevron">▾</span>
+        </div>
+        <div class="lecon-corps">
+          <div class="lecon-video"><video id="video-lecon-2" controls preload="metadata"><source src="videos/lecon-2-clavier.mp4" type="video/mp4"></video></div>
+          <div class="lecon-etape"><span class="lecon-num">1</span> Les lettres et chiffres s'écrivent en appuyant simplement sur la touche correspondante.</div>
+          <div class="lecon-etape"><span class="lecon-num">2</span> La grande touche en bas (Espace) ajoute un espace entre les mots.</div>
+          <div class="lecon-etape"><span class="lecon-num">3</span> "Retour arrière" (flèche ← en haut à droite) efface la dernière lettre tapée.</div>
+          <div class="lecon-etape"><span class="lecon-num">4</span> "Entrée" valide ce que vous avez écrit ou passe à la ligne suivante.</div>
+          <div class="lecon-etape"><span class="lecon-num">5</span> Une erreur de frappe n'est jamais grave : on peut toujours effacer et recommencer.</div>
+          <button class="btn-sm btn-ghost-sm sim-lancer" onclick="ouvrirSimulation(2)">🎮 Essayer en simulation</button>
+          <div class="zone-sim" id="sim-lecon-2" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div class="lecon" id="lecon-3">
+        <div class="lecon-head" onclick="toggleLecon('lecon-3')">
+          <div class="lecon-titre"><span class="lecon-ico">🌐</span> Naviguer sur Internet en toute sérénité</div>
+          <span class="lecon-chevron">▾</span>
+        </div>
+        <div class="lecon-corps">
+          <div class="lecon-video"><video id="video-lecon-3" controls preload="metadata"><source src="videos/lecon-3-internet.mp4" type="video/mp4"></video></div>
+          <div class="lecon-etape"><span class="lecon-num">1</span> Internet, c'est un peu comme une immense bibliothèque : chaque page a sa propre adresse.</div>
+          <div class="lecon-etape"><span class="lecon-num">2</span> Pour chercher quelque chose, cliquez dans la barre en haut et tapez ce que vous cherchez, comme une question.</div>
+          <div class="lecon-etape"><span class="lecon-num">3</span> Les liens (souvent en bleu ou soulignés) s'ouvrent d'un simple clic gauche.</div>
+          <div class="lecon-etape"><span class="lecon-num">4</span> La flèche en haut à gauche (←) vous ramène toujours à la page précédente. C'est votre bouton de secours.</div>
+          <div class="lecon-etape"><span class="lecon-num">5</span> Vous pouvez aussi demander à Aria : « Cherche-moi la météo » ou « ouvre-moi les infos », elle le fait pour vous.</div>
+          <button class="btn-sm btn-ghost-sm sim-lancer" onclick="ouvrirSimulation(3)">🎮 Essayer en simulation</button>
+          <div class="zone-sim" id="sim-lecon-3" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div class="lecon" id="lecon-4">
+        <div class="lecon-head" onclick="toggleLecon('lecon-4')">
+          <div class="lecon-titre"><span class="lecon-ico">✉️</span> Envoyer et lire ses emails</div>
+          <span class="lecon-chevron">▾</span>
+        </div>
+        <div class="lecon-corps">
+          <div class="lecon-etape"><span class="lecon-num">1</span> Un email est comme une lettre, mais elle arrive en quelques secondes, sans timbre.</div>
+          <div class="lecon-etape"><span class="lecon-num">2</span> Pour en écrire un, cherchez un bouton "Nouveau message" ou "Écrire".</div>
+          <div class="lecon-etape"><span class="lecon-num">3</span> Dans "À", indiquez l'adresse de la personne (exemple : marie@email.fr).</div>
+          <div class="lecon-etape"><span class="lecon-num">4</span> Écrivez votre message comme une lettre normale, puis cliquez sur "Envoyer".</div>
+          <div class="lecon-etape"><span class="lecon-num">5</span> Avec Aria, vous pouvez simplement dicter : « Écris un email à ma fille pour lui dire que je vais bien » — elle rédige et vous relisez avant l'envoi.</div>
+          <button class="btn-sm btn-ghost-sm sim-lancer" onclick="ouvrirSimulation(4)">🎮 Essayer en simulation</button>
+          <div class="zone-sim" id="sim-lecon-4" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div class="lecon" id="lecon-5">
+        <div class="lecon-head" onclick="toggleLecon('lecon-5')">
+          <div class="lecon-titre"><span class="lecon-ico">📹</span> Passer un appel vidéo avec ses proches</div>
+          <span class="lecon-chevron">▾</span>
+        </div>
+        <div class="lecon-corps">
+          <div class="lecon-etape"><span class="lecon-num">1</span> Un appel vidéo permet de voir et parler à un proche en direct, où qu'il soit.</div>
+          <div class="lecon-etape"><span class="lecon-num">2</span> Assurez-vous que la caméra (petit point en haut de l'écran) n'est pas cachée.</div>
+          <div class="lecon-etape"><span class="lecon-num">3</span> Cliquez sur le nom ou la photo de la personne, puis sur l'icône caméra pour l'appeler.</div>
+          <div class="lecon-etape"><span class="lecon-num">4</span> Pour raccrocher, cherchez le bouton rouge, généralement en bas de l'écran.</div>
+          <div class="lecon-etape"><span class="lecon-num">5</span> Demandez à Aria : « Appelle ma fille en vidéo » — elle lance l'appel pour vous.</div>
+          <button class="btn-sm btn-ghost-sm sim-lancer" onclick="ouvrirSimulation(5)">🎮 Essayer en simulation</button>
+          <div class="zone-sim" id="sim-lecon-5" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div class="lecon" id="lecon-6">
+        <div class="lecon-head" onclick="toggleLecon('lecon-6')">
+          <div class="lecon-titre"><span class="lecon-ico">🛡️</span> Repérer et éviter les arnaques en ligne</div>
+          <span class="lecon-chevron">▾</span>
+        </div>
+        <div class="lecon-corps">
+          <div class="lecon-etape"><span class="lecon-num">1</span> Une règle d'or : personne de sérieux (banque, impôts, sécurité sociale) ne vous demandera jamais votre mot de passe par email ou téléphone.</div>
+          <div class="lecon-etape"><span class="lecon-num">2</span> Méfiez-vous des messages qui créent l'urgence : « Agissez maintenant ou votre compte sera fermé ».</div>
+          <div class="lecon-etape"><span class="lecon-num">3</span> Ne cliquez jamais sur un lien ou une pièce jointe d'un expéditeur inconnu.</div>
+          <div class="lecon-etape"><span class="lecon-num">4</span> En cas de doute sur un message ou un site, demandez à Aria de le vérifier avant de cliquer — c'est exactement pour ça qu'elle existe.</div>
+          <div class="lecon-etape"><span class="lecon-num">5</span> Vous avez un doute, même après coup ? Ce n'est jamais gênant d'en parler à un proche ou d'écrire à contact@forgedis.fr.</div>
+          <button class="btn-sm btn-ghost-sm sim-lancer" onclick="ouvrirSimulation(6)">🎮 Essayer en simulation</button>
+          <div class="zone-sim" id="sim-lecon-6" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE FONCTIONNALITES -->
+    <div class="page" id="page-fonctionnalites">
+      <div class="welcome-head">
+        <h1>Tout ce qu'Aria sait faire</h1>
+        <p>La liste complète, en détail — sans surprise.</p>
+      </div>
+      <p class="feat-intro">Vous parlez, à voix haute ou par écrit, dans votre langue. Aria s'occupe du reste sur votre ordinateur, une action à la fois, et vous demande toujours votre accord avant tout ce qui pourrait être sensible.</p>
+
+      <div class="feat-section">
+        <div class="feat-section-title">🗣️ Vous comprendre et vous parler</div>
+        <div class="feat-grid">
+          <div class="feat-card">Vous parle et vous écoute dans votre langue, sans limite de langues disponibles.</div>
+          <div class="feat-card">Répond à voix haute avec des phrases simples et claires, jamais de jargon technique.</div>
+          <div class="feat-card">Demande toujours confirmation avant une action sensible — jamais d'initiative risquée.</div>
+          <div class="feat-card">Si elle n'est pas sûre de vous avoir compris, elle vous pose la question plutôt que de deviner.</div>
+        </div>
+      </div>
+
+      <div class="feat-section">
+        <div class="feat-section-title">🌐 Naviguer sur Internet à votre place</div>
+        <div class="feat-grid">
+          <div class="feat-card">Ouvre un site, fait une recherche, clique sur les résultats pour vous.</div>
+          <div class="feat-card">Cherche et lance directement une vidéo sur YouTube.</div>
+          <div class="feat-card">Remplit des champs, revient en arrière, fait défiler la page à votre place.</div>
+          <div class="feat-card">Retrouve une information : météo, itinéraire, recherche générale.</div>
+        </div>
+      </div>
+
+      <div class="feat-section">
+        <div class="feat-section-title">🖥️ Vos logiciels du quotidien</div>
+        <div class="feat-grid">
+          <div class="feat-card">Ouvre Word, Excel, PowerPoint, le Bloc-notes, la Calculatrice.</div>
+          <div class="feat-card">Ouvre l'Explorateur de fichiers et retrouve vos documents.</div>
+          <div class="feat-card">Retrouve et ouvre vos photos, y compris celles synchronisées depuis votre téléphone.</div>
+          <div class="feat-card">Lance vos vidéos et votre musique en un mot.</div>
+        </div>
+      </div>
+
+      <div class="feat-section">
+        <div class="feat-section-title">✉️ Rester en contact avec vos proches</div>
+        <div class="feat-grid">
+          <div class="feat-card">Rédige et envoie un email depuis Gmail ou Outlook — vous relisez toujours avant l'envoi.</div>
+          <div class="feat-card">Ouvre WhatsApp Web et lance un appel vidéo avec un proche.</div>
+        </div>
+      </div>
+
+      <div class="feat-section">
+        <div class="feat-section-title">🎬 Divertissement</div>
+        <div class="feat-grid">
+          <div class="feat-card">Lance Netflix, Prime Video ou Disney+.</div>
+          <div class="feat-card">Lance Spotify ou une recherche musicale sur YouTube.</div>
+        </div>
+      </div>
+
+      <div class="feat-section">
+        <div class="feat-section-title">🛡️ Sécurité et confiance</div>
+        <div class="feat-grid">
+          <div class="feat-card">Vous alerte si un email ou un site semble suspect.</div>
+          <div class="feat-card">Bouclier anti-arnaque avancé<span class="feat-badge-premium">Facility</span> — vérification renforcée des messages douteux.</div>
+          <div class="feat-card">Ne réalise jamais d'action destructrice (vider la corbeille, éteindre le PC...) sans votre confirmation explicite.</div>
+          <div class="feat-card">Vos données ne sont jamais conservées sur nos serveurs.</div>
+        </div>
+      </div>
+
+      <div class="feat-section">
+        <div class="feat-section-title">⚙️ Réglages et entretien du PC</div>
+        <div class="feat-grid">
+          <div class="feat-card">Ouvre les paramètres Windows : Wi-Fi, son, affichage, Bluetooth, imprimantes.</div>
+          <div class="feat-card">Ouvre le panneau de configuration et le gestionnaire des tâches.</div>
+          <div class="feat-card">Vide la corbeille ou le dossier téléchargements, toujours avec votre accord.</div>
+        </div>
+      </div>
+
+      <div class="feat-section">
+        <div class="feat-section-title">♿ Accessibilité</div>
+        <div class="feat-grid">
+          <div class="feat-card">Active la loupe pour agrandir ce qui s'affiche à l'écran.</div>
+          <div class="feat-card">Prend une capture d'écran à votre place.</div>
+          <div class="feat-card">Verrouille, éteint ou redémarre l'ordinateur à la voix, toujours avec confirmation.</div>
+        </div>
+      </div>
+
+      <div class="feat-section">
+        <div class="feat-section-title">🎓 Formation guidée</div>
+        <div class="feat-grid">
+          <div class="feat-card">Six leçons pas-à-pas : souris, clavier, internet, email, appel vidéo, repérer les arnaques.</div>
+          <div class="feat-card">Guides écrits, vidéos et simulations à essayer sans aucun risque. <a href="#" onclick="showPage('formation'); return false;" style="color:var(--coral);">Voir la Formation →</a></div>
+        </div>
+      </div>
+
+      <div class="feat-cta" id="cta-upgrade-fonctionnalites" style="display:none;">
+        <h3>Tout ça, sans limite</h3>
+        <p>10 éco-tâches offertes chaque mois avec Découverte. Passez à Aria Facility pour un accès illimité à absolument tout, plus le Bouclier anti-arnaque avancé.</p>
+        <a href="https://buy.stripe.com/3cI8wP5fD8YxaD5cPrgMw00" class="btn-sm btn-coral-sm" style="padding:14px 28px; font-size:15px;">⭐ Passer à Aria Facility →</a>
+      </div>
+    </div>
+
+    <!-- PAGE CONNEXION -->
+    <div class="page active" id="page-connexion">
+      <div class="auth-wrap">
+        <!-- Logo + titre -->
+        <div class="auth-header">
+          <div class="auth-logo">FORGE<span>DIS</span></div>
+          <div class="auth-glow"></div>
+          <h1 class="auth-title" id="auth-title">Connexion</h1>
+          <p class="auth-subtitle" id="auth-subtitle">Entrez vos identifiants Aria Forgedis</p>
+        </div>
+
+        <div class="auth-card">
+          <!-- Google -->
+          <button class="auth-google" id="btn-google" onclick="continuerAvecGoogle()">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+              <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+              <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+            </svg>
+            Continuer avec Google
+          </button>
+
+          <div class="auth-separator" id="separateur-ou">
+            <span>ou</span>
+          </div>
+
+          <form id="auth-form" onsubmit="event.preventDefault(); validerAuth(); return false;">
+            <label class="input-label">Adresse email</label>
+            <input type="email" class="input-field" id="login-email" placeholder="votre@email.com" autocomplete="email">
+            <label class="input-label" id="label-mdp">Mot de passe</label>
+            <input type="password" class="input-field" id="login-password" placeholder="••••••••" autocomplete="current-password">
+            <div class="auth-forgot" id="lien-mdp-oublie">
+              <a href="#" onclick="modeAuth='mdp-oublie'; mettreAJourUIAuth(); return false;">Mot de passe oublié ?</a>
+            </div>
+            <button type="submit" class="auth-submit" id="btn-connexion">
+              Se connecter →
+            </button>
+          </form>
+          <div class="auth-message" id="login-message"></div>
+        </div>
+
+        <p class="auth-toggle" id="auth-toggle">
+          Pas encore de compte ? <a href="#" onclick="modeAuth='inscription'; mettreAJourUIAuth(); return false;">S'inscrire</a>
+        </p>
+        <p class="auth-toggle" style="margin-top:8px;">
+          Pas encore abonné ? <a href="https://buy.stripe.com/3cI8wP5fD8YxaD5cPrgMw00">Essayer 14 jours gratuits</a>
+        </p>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MOBILE NAV -->
+<nav class="mobile-nav" id="mobile-nav">
+  <button class="mobile-nav-item active" id="mn-accueil" onclick="showPage('accueil')">
+    <span class="mn-ico">🏠</span>Accueil
+  </button>
+  <button class="mobile-nav-item" id="mn-abonnement" onclick="showPage('abonnement')">
+    <span class="mn-ico">⭐</span>Abonnement
+  </button>
+  <button class="mobile-nav-item" id="mn-formation" onclick="showPage('formation')">
+    <span class="mn-ico">🎓</span>Formation
+  </button>
+  <button class="mobile-nav-item" id="mn-parametres" onclick="showPage('parametres')">
+    <span class="mn-ico">⚙️</span>Paramètres
+  </button>
+  <button class="mobile-nav-item" id="mn-historique" onclick="showPage('historique')">
+    <span class="mn-ico">📋</span>Historique
+  </button>
+</nav>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-resilier">
+  <div class="modal">
+    <h2>Résilier l'abonnement</h2>
+    <p>Votre abonnement Aria Facility sera annulé à la fin de la période en cours. Vous continuerez à bénéficier du service jusqu'à cette date, puis passerez automatiquement au forfait Découverte (10 éco-tâches / mois).</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-resilier')">Annuler</button>
+      <button class="btn-danger" onclick="resilier()">Confirmer la résiliation</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-supprimer">
+  <div class="modal">
+    <h2>Supprimer mon compte</h2>
+    <p>Cette action est <strong>irréversible</strong>. Toutes vos données seront supprimées dans un délai de 30 jours. Votre abonnement sera immédiatement annulé.</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-supprimer')">Annuler</button>
+      <button class="btn-danger" onclick="supprimerCompte()">Supprimer définitivement</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Navigation
+  function esc(s){var d=document.createElement('div');d.appendChild(document.createTextNode(String(s===null||s===undefined?'':s)));return d.innerHTML;}
+function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.aside-item').forEach(a => a.classList.remove('active'));
+    var page = document.getElementById('page-' + id);
+    if (page) page.classList.add('active');
+    document.querySelectorAll('.aside-item').forEach(a => {
+      if (a.getAttribute('onclick') && a.getAttribute('onclick').includes("'" + id + "'")) a.classList.add('active');
+    });
+    // Sync mobile-nav
+    document.querySelectorAll('.mobile-nav-item').forEach(function(b) {
+      b.classList.remove('active');
+      if (b.id === 'mn-' + id) b.classList.add('active');
+    });
+    var estConnexion = (id === 'connexion');
+    document.getElementById('sidebar').style.display = estConnexion ? 'none' : '';
+    document.getElementById('layout').style.gridTemplateColumns = estConnexion ? '1fr' : '240px 1fr';
+    var mobileNav = document.getElementById('mobile-nav');
+    if (mobileNav) mobileNav.style.display = estConnexion ? 'none' : '';
+    // Scroll haut sur mobile
+    window.scrollTo(0, 0);
+  }
+
+  // Formation
+  function toggleLecon(id) {
+    document.getElementById(id).classList.toggle('open');
+  }
+
+  // ============ Simulations interactives (pratique sans risque) ============
+  const RASSURANCE_SIM = "\uD83D\uDEDF Vous \u00eates en simulation : rien de ce que vous faites ici n'affecte votre ordinateur. Il n'y a pas de mauvaise r\u00e9ponse, prenez tout votre temps.";
+
+  function ouvrirSimulation(n) {
+    const zone = document.getElementById('sim-lecon-' + n);
+    if (!zone) return;
+    zone.style.display = 'block';
+    zone.innerHTML = '<div class="sim-rassure">' + RASSURANCE_SIM + '</div><div class="sim-corps" id="sim-corps-' + n + '"></div>';
+    SIM_INIT['l' + n](0);
+    zone.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
+
+  function simEtapeWrapper(n, etapeIndex, titre, contenuHtml) {
+    const corps = document.getElementById('sim-corps-' + n);
+    corps.innerHTML =
+      '<div class="sim-etape-label">\u00c9tape ' + (etapeIndex + 1) + '</div>' +
+      '<div class="sim-instruction">' + titre + '</div>' +
+      '<div class="sim-zone">' + contenuHtml + '</div>' +
+      '<div class="sim-feedback" id="sim-feedback-' + n + '"></div>' +
+      '<button class="btn-sm btn-ghost-sm sim-restart" onclick="ouvrirSimulation(' + n + ')">\u21ba Recommencer</button>';
+  }
+
+  function simFeedback(n, texte, succes) {
+    const fb = document.getElementById('sim-feedback-' + n);
+    if (fb) { fb.textContent = texte; fb.className = 'sim-feedback ' + (succes ? 'ok' : 'retry'); }
+  }
+
+  function simTermine(n, messageFinal) {
+    const corps = document.getElementById('sim-corps-' + n);
+    corps.innerHTML = '<div class="sim-bravo">\uD83C\uDF89 ' + messageFinal + '</div><button class="btn-sm btn-coral-sm sim-restart" onclick="ouvrirSimulation(' + n + ')">\u21ba Refaire la simulation</button>';
+  }
+
+  const SIM_INIT = {};
+
+  SIM_INIT.l1 = function(etape) {
+    if (etape === 0) {
+      simEtapeWrapper(1, 0, "Bougez votre souris \u00e0 l'int\u00e9rieur de la zone grise ci-dessous.",
+        '<div class="sim-desktop" id="sim1-zone" style="height:110px;"><div class="sim-curseur-info">\uD83D\uDDB1\uFE0F Bougez la souris ici</div></div>');
+      document.getElementById('sim1-zone').addEventListener('mousemove', function handler() {
+        this.removeEventListener('mousemove', handler);
+        simFeedback(1, "Parfait, la fl\u00e8che vous suit !", true);
+        setTimeout(function() { SIM_INIT.l1(1); }, 900);
+      });
+    } else if (etape === 1) {
+      simEtapeWrapper(1, 1, "Faites un clic gauche sur l'ic\u00f4ne ci-dessous pour la s\u00e9lectionner.",
+        '<div class="sim-desktop"><div class="sim-icon" id="sim1-icon">\uD83D\uDCC1<div class="sim-icon-label">Mes photos</div></div></div>');
+      document.getElementById('sim1-icon').addEventListener('click', function() {
+        this.classList.add('selected');
+        simFeedback(1, "Ic\u00f4ne s\u00e9lectionn\u00e9e, bravo !", true);
+        setTimeout(function() { SIM_INIT.l1(2); }, 900);
+      });
+    } else if (etape === 2) {
+      simEtapeWrapper(1, 2, "Faites un clic droit n'importe o\u00f9 dans la zone ci-dessous.",
+        '<div class="sim-desktop" id="sim1-zone2" style="height:110px;"></div>');
+      document.getElementById('sim1-zone2').addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        this.innerHTML = '<div class="sim-menu">Actualiser<br>Nouveau dossier<br>Coller</div>';
+        simFeedback(1, "Voil\u00e0 le menu ! Dans la vraie vie, Echap le referme.", true);
+        setTimeout(function() { simTermine(1, "Vous ma\u00eetrisez d\u00e9j\u00e0 les bases de la souris !"); }, 1300);
+      });
+    }
+  };
+
+  SIM_INIT.l2 = function(etape) {
+    if (etape === 0) {
+      simEtapeWrapper(2, 0, "Cliquez dans le champ ci-dessous et tapez votre pr\u00e9nom.",
+        '<input type="text" class="input-field sim-input" id="sim2-input" placeholder="Votre pr\u00e9nom">');
+      document.getElementById('sim2-input').addEventListener('input', function handler() {
+        if (this.value.length > 0) {
+          this.removeEventListener('input', handler);
+          simFeedback(2, "Tr\u00e8s bien, on vous lit !", true);
+          setTimeout(function() { SIM_INIT.l2(1); }, 900);
+        }
+      });
+    } else if (etape === 1) {
+      simEtapeWrapper(2, 1, "Cliquez dans le champ, puis appuyez sur la touche Retour arri\u00e8re pour effacer une lettre.",
+        '<input type="text" class="input-field sim-input" id="sim2-input2" value="Bonjour">');
+      const inp2 = document.getElementById('sim2-input2');
+      inp2.focus();
+      inp2.addEventListener('keydown', function handler(e) {
+        if (e.key === 'Backspace') {
+          inp2.removeEventListener('keydown', handler);
+          simFeedback(2, "Exactement, une lettre a disparu !", true);
+          setTimeout(function() { SIM_INIT.l2(2); }, 900);
+        }
+      });
+    } else if (etape === 2) {
+      simEtapeWrapper(2, 2, "\u00c9crivez une petite phrase puis appuyez sur la touche Entr\u00e9e.",
+        '<input type="text" class="input-field sim-input" id="sim2-input3" placeholder="\u00c9crivez ici...">');
+      const inp3 = document.getElementById('sim2-input3');
+      inp3.addEventListener('keydown', function handler(e) {
+        if (e.key === 'Enter') {
+          inp3.removeEventListener('keydown', handler);
+          simFeedback(2, "Valid\u00e9 !", true);
+          setTimeout(function() { simTermine(2, "Le clavier n'a plus de secret pour vous !"); }, 900);
+        }
+      });
+    }
+  };
+
+  SIM_INIT.l3 = function(etape) {
+    if (etape === 0) {
+      simEtapeWrapper(3, 0, "Cliquez dans la barre d'adresse ci-dessous, tapez \u00ab m\u00e9t\u00e9o \u00bb, puis appuyez sur Entr\u00e9e.",
+        '<div class="sim-browser"><div class="sim-browser-bar">\uD83D\uDD0D <input type="text" class="sim-browser-input" id="sim3-bar" placeholder="Tapez votre recherche..."></div></div>');
+      document.getElementById('sim3-bar').addEventListener('keydown', function handler(e) {
+        if (e.key === 'Enter' && this.value.trim().length > 0) {
+          this.removeEventListener('keydown', handler);
+          simFeedback(3, "Recherche envoy\u00e9e !", true);
+          setTimeout(function() { SIM_INIT.l3(1); }, 900);
+        }
+      });
+    } else if (etape === 1) {
+      simEtapeWrapper(3, 1, "Cliquez sur l'un des r\u00e9sultats ci-dessous pour ouvrir la page.",
+        '<div class="sim-browser"><div class="sim-resultat" id="sim3-res1">\u2600\uFE0F M\u00e9t\u00e9o de votre ville - pr\u00e9visions du jour</div>' +
+        '<div class="sim-resultat">\uD83D\uDCF0 M\u00e9t\u00e9o nationale - toute la semaine</div></div>');
+      document.getElementById('sim3-res1').addEventListener('click', function() {
+        simFeedback(3, "Bien jou\u00e9, la page s'ouvre !", true);
+        setTimeout(function() { SIM_INIT.l3(2); }, 900);
+      });
+    } else if (etape === 2) {
+      simEtapeWrapper(3, 2, "Cliquez sur la fl\u00e8che retour (\u2190) pour revenir \u00e0 la page pr\u00e9c\u00e9dente.",
+        '<div class="sim-browser"><div class="sim-browser-bar"><span class="sim-back" id="sim3-back">\u2190</span> Page m\u00e9t\u00e9o ouverte</div></div>');
+      document.getElementById('sim3-back').addEventListener('click', function() {
+        simFeedback(3, "Vous voil\u00e0 revenu en arri\u00e8re, parfait !", true);
+        setTimeout(function() { simTermine(3, "Vous savez naviguer sur Internet en toute s\u00e9r\u00e9nit\u00e9 !"); }, 900);
+      });
+    }
+  };
+
+  SIM_INIT.l4 = function(etape) {
+    if (etape === 0) {
+      simEtapeWrapper(4, 0, "Cliquez sur le bouton \u00ab Nouveau message \u00bb ci-dessous.",
+        '<div class="sim-email"><button class="btn-sm btn-coral-sm" id="sim4-nouveau">\u2709\uFE0F Nouveau message</button></div>');
+      document.getElementById('sim4-nouveau').addEventListener('click', function() {
+        simFeedback(4, "Une fen\u00eatre d'\u00e9criture s'ouvre !", true);
+        setTimeout(function() { SIM_INIT.l4(1); }, 900);
+      });
+    } else if (etape === 1) {
+      simEtapeWrapper(4, 1, "Remplissez le destinataire et un petit message, puis cliquez sur Envoyer.",
+        '<div class="sim-email">' +
+        '<input type="text" class="input-field sim-input" id="sim4-dest" placeholder="\u00c0 : marie@email.fr" style="margin-bottom:8px;">' +
+        '<textarea class="input-field sim-input" id="sim4-msg" placeholder="Votre message..." style="min-height:60px;"></textarea>' +
+        '<button class="btn-sm btn-coral-sm" id="sim4-envoyer" style="margin-top:10px;">Envoyer \u2192</button></div>');
+      document.getElementById('sim4-envoyer').addEventListener('click', function() {
+        const dest = document.getElementById('sim4-dest').value.trim();
+        const msg = document.getElementById('sim4-msg').value.trim();
+        if (dest.length > 0 && msg.length > 0) {
+          simFeedback(4, "Message envoy\u00e9 !", true);
+          setTimeout(function() { simTermine(4, "Vous savez \u00e9crire et envoyer un email !"); }, 900);
+        } else {
+          simFeedback(4, "Remplissez les deux champs, puis r\u00e9essayez \u2014 aucun souci.", false);
+        }
+      });
+    }
+  };
+
+  SIM_INIT.l5 = function(etape) {
+    if (etape === 0) {
+      simEtapeWrapper(5, 0, "Cliquez sur le nom du contact ci-dessous.",
+        '<div class="sim-contacts"><div class="sim-contact" id="sim5-contact">\uD83D\uDC69 Votre fille \u2014 Camille</div></div>');
+      document.getElementById('sim5-contact').addEventListener('click', function() {
+        this.classList.add('selected');
+        simFeedback(5, "Contact s\u00e9lectionn\u00e9 !", true);
+        setTimeout(function() { SIM_INIT.l5(1); }, 900);
+      });
+    } else if (etape === 1) {
+      simEtapeWrapper(5, 1, "Cliquez sur l'ic\u00f4ne cam\u00e9ra \u00e0 c\u00f4t\u00e9 du nom pour lancer l'appel.",
+        '<div class="sim-contacts"><div class="sim-contact">\uD83D\uDC69 Camille <span class="sim-cam" id="sim5-cam">\uD83D\uDCF9</span></div></div>');
+      document.getElementById('sim5-cam').addEventListener('click', function() {
+        simFeedback(5, "Appel en cours...", true);
+        setTimeout(function() { SIM_INIT.l5(2); }, 1200);
+      });
+    } else if (etape === 2) {
+      simEtapeWrapper(5, 2, "L'appel est connect\u00e9 ! Cliquez sur le bouton rouge pour raccrocher.",
+        '<div class="sim-contacts"><div style="text-align:center; padding:12px;">\uD83D\uDCF9 Appel connect\u00e9 avec Camille</div>' +
+        '<button class="sim-raccrocher" id="sim5-raccrocher">\uD83D\uDD34 Raccrocher</button></div>');
+      document.getElementById('sim5-raccrocher').addEventListener('click', function() {
+        simFeedback(5, "Bien raccroch\u00e9 !", true);
+        setTimeout(function() { simTermine(5, "Vous savez passer un appel vid\u00e9o !"); }, 900);
+      });
+    }
+  };
+
+  SIM_INIT.l6 = function(etape) {
+    if (etape === 0) {
+      simEtapeWrapper(6, 0, "Cliquez sur cet email pour l'ouvrir (sans risque, c'est une simulation).",
+        '<div class="sim-inbox"><div class="sim-email-item" id="sim6-email"><strong>Amazon S\u00e9curit\u00e9</strong> \u2014 Alerte : votre compte va \u00eatre ferm\u00e9 !</div></div>');
+      document.getElementById('sim6-email').addEventListener('click', function() {
+        simFeedback(6, "Email ouvert.", true);
+        setTimeout(function() { SIM_INIT.l6(1); }, 900);
+      });
+    } else if (etape === 1) {
+      simEtapeWrapper(6, 1, "Regardez bien l'adresse de l'exp\u00e9diteur ci-dessous. Elle vous semble bizarre ? Ne cliquez pas sur le lien rouge : cliquez plut\u00f4t sur \u00ab Signaler comme suspect \u00bb.",
+        '<div class="sim-inbox"><div class="sim-expediteur">De : support@amaz0n-secure-verifiy.ru</div>' +
+        '<div class="sim-corps-email">\u00ab Cliquez ici imm\u00e9diatement pour \u00e9viter la fermeture de votre compte \u00bb</div>' +
+        '<div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">' +
+        '<button class="sim-lien-piege" id="sim6-piege">Cliquez ici imm\u00e9diatement</button>' +
+        '<button class="btn-sm btn-coral-sm" id="sim6-signaler">\uD83D\uDEA9 Signaler comme suspect</button></div></div>');
+      document.getElementById('sim6-piege').addEventListener('click', function() {
+        simFeedback(6, "Pas de souci, rien de grave ne s'est pass\u00e9 \u2014 c'est justement l'int\u00e9r\u00eat de la simulation. Essayons plut\u00f4t le bouton \u00ab Signaler \u00bb.", false);
+      });
+      document.getElementById('sim6-signaler').addEventListener('click', function() {
+        simFeedback(6, "Exactement le bon r\u00e9flexe !", true);
+        setTimeout(function() { simTermine(6, "Vous savez rep\u00e9rer une arnaque en ligne !"); }, 900);
+      });
+    }
+  };
+
+  // Modals
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+  document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
+
+  // Données client (stockées localement)
+  let clientData = null;
+
+  function chargerDonnees() {
+    const email = localStorage.getItem('aria_email');
+    const token = localStorage.getItem('aria_token');
+    if (!email || !token) { window.location.href='/connexion.html'; return; }
+
+    fetch('https://aria-forgelis.onrender.com/client-token', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email: email})
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.erreur) { window.location.href='/connexion.html'; return; }
+      clientData = data;
+      showPage('accueil');
+      mettreAJourUI(email, data);
+    })
+    .catch(() => { showPage('accueil'); afficherErreurServeur(); });
+  }
+
+  function mettreAJourUI(email, data) {
+    const forfait = data.forfait || 'gratuit';
+    const actif = data.actif !== false;
+    const taches = data.taches_ce_mois || 0;
+
+    // Stats accueil
+    document.getElementById('stat-eco').textContent = forfait === 'facility' ? '∞' : taches;
+    document.getElementById('stat-forfait').textContent = forfait === 'facility' ? 'Facility' : 'Découverte';
+    document.getElementById('stat-forfait-sub').textContent = forfait === 'facility' ? 'Accès illimité' : '10 éco-tâches/mois';
+    document.getElementById('stat-statut').textContent = actif ? '✓ Actif' : '✗ Inactif';
+    document.getElementById('stat-statut-sub').textContent = actif ? 'Abonnement en cours' : 'Abonnement suspendu';
+
+    // Barre progression
+    const pct = forfait === 'facility' ? 100 : Math.min((taches/30)*100, 100);
+    document.getElementById('prog-fill').style.width = pct + '%';
+    if (forfait === 'facility') document.getElementById('prog-fill').classList.add('cyan');
+    document.getElementById('prog-label').textContent = forfait === 'facility' ? 'Illimité' : taches + ' / 30';
+
+    // Abonnement
+    document.getElementById('plan-inconnu').style.display = 'none';
+    if (forfait === 'facility') {
+      document.getElementById('plan-facility').style.display = 'block';
+    } else {
+      document.getElementById('plan-gratuit').style.display = 'block';
+    }
+    const ctaFeat = document.getElementById('cta-upgrade-fonctionnalites');
+    if (ctaFeat) ctaFeat.style.display = (forfait === 'facility') ? 'none' : 'block';
+
+    // Paramètres
+    document.getElementById('param-email').textContent = email;
+    document.getElementById('param-forfait').innerHTML = forfait === 'facility'
+      ? '<span class="badge-actif">Aria Facility</span>'
+      : '<span class="badge-inactif">Découverte</span>';
+    document.getElementById('param-statut').innerHTML = actif
+      ? '<span class="badge-actif">✓ Actif</span>'
+      : '<span class="badge-inactif">✗ Suspendu</span>';
+    document.getElementById('param-taches').textContent = forfait === 'facility' ? 'Illimité' : taches + ' / 30';
+
+    // Avatar
+    var avatarEl = document.getElementById('avatar-nav');
+    if (avatarEl) avatarEl.textContent = email[0].toUpperCase();
+  }
+
+  // Notification inline — remplace alert() dans le dashboard
+  function notifDashboard(msg, type) {
+    var el = document.getElementById('notif-dashboard');
+    if(!el) {
+      el = document.createElement('div');
+      el.id = 'notif-dashboard';
+      el.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;max-width:380px;padding:14px 18px;border-radius:12px;font-size:13px;line-height:1.5;font-family:Inter,sans-serif;box-shadow:0 4px 24px rgba(0,0,0,.4);transition:opacity .3s';
+      document.body.appendChild(el);
+    }
+    var isOk = type === 'ok';
+    el.style.background = isOk ? 'rgba(46,204,113,0.15)' : 'rgba(226,75,74,0.15)';
+    el.style.border = isOk ? '1px solid rgba(46,204,113,0.4)' : '1px solid rgba(226,75,74,0.4)';
+    el.style.color = isOk ? '#2ECC71' : '#E24B4A';
+    el.style.opacity = '1';
+    el.innerHTML = msg;
+    clearTimeout(el._timer);
+    el._timer = setTimeout(function(){ el.style.opacity='0'; }, 5000);
+  }
+
+  function afficherErreurServeur() {
+    // Règle FORGEDIS : aucune donnée fictive en production
+    // Afficher une erreur propre si le serveur ne répond pas
+    afficherErreurConnexion();
+  }
+
+  function afficherErreurConnexion() {
+    var zones = ['stat-eco','stat-forfait','stat-statut','prog-label'];
+    zones.forEach(function(id) {
+      var el = document.getElementById(id);
+      if(el) el.textContent = '—';
+    });
+    var prog = document.getElementById('prog-fill');
+    if(prog) prog.style.width = '0%';
+    // Afficher bannière d'erreur
+    var banner = document.getElementById('banner-erreur-connexion');
+    if(!banner) {
+      banner = document.createElement('div');
+      banner.id = 'banner-erreur-connexion';
+      banner.style.cssText = 'background:rgba(226,75,74,0.12);border:1px solid rgba(226,75,74,0.35);border-radius:12px;padding:14px 18px;margin:16px 0;display:flex;align-items:center;justify-content:space-between;gap:12px';
+      banner.innerHTML = '<span style="color:#E24B4A;font-size:14px">⚠️ Impossible de charger vos données. Vérifiez votre connexion internet.</span>' +
+        '<button onclick="chargerDonnees()" style="background:#E24B4A;color:#fff;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px;font-family:inherit">Réessayer</button>';
+      var main = document.querySelector('.main-content') || document.querySelector('main') || document.body;
+      main.insertBefore(banner, main.firstChild);
+    } else {
+      banner.style.display = 'flex';
+    }
+  }
+
+  // Connexion / inscription par mot de passe + Google (Supabase Auth)
+  const SUPABASE_URL = 'https://dvlrilklbspuckbplglz.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2bHJpbGtsYnNwdWNrYnBsZ2x6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNzYyNjIsImV4cCI6MjA5Njk1MjI2Mn0.lC1rt8bvfIpi1c78L8OWGXjjYhXzqzNkIgykHTle6eM';
+  let modeAuth = 'connexion';
+
+  function mettreAJourUIAuth() {
+    const titre = document.getElementById('auth-title');
+    const sousTitre = document.getElementById('auth-subtitle');
+    const btn = document.getElementById('btn-connexion');
+    const toggle = document.getElementById('auth-toggle');
+    const champPwd = document.getElementById('login-password');
+    const labelPwd = document.getElementById('label-mdp');
+    const lienOublie = document.getElementById('lien-mdp-oublie');
+    const boutonGoogle = document.getElementById('btn-google');
+    const separateur = document.getElementById('separateur-ou');
+
+    if (modeAuth === 'inscription') {
+      titre.textContent = 'Créer un compte';
+      sousTitre.textContent = 'Inscrivez-vous avec votre email';
+      champPwd.style.display = '';
+      labelPwd.style.display = '';
+      champPwd.placeholder = '•••••••• (6 caractères min.)';
+      lienOublie.style.display = 'none';
+      boutonGoogle.style.display = '';
+      separateur.style.display = '';
+      btn.textContent = 'Créer mon compte →';
+      toggle.innerHTML = 'Déjà un compte ? <a href="#" onclick="modeAuth=\'connexion\'; mettreAJourUIAuth(); return false;" style="color:var(--coral);">Se connecter</a>';
+    } else if (modeAuth === 'mdp-oublie') {
+      titre.textContent = 'Mot de passe oublié';
+      sousTitre.textContent = 'Recevez un lien pour choisir un nouveau mot de passe';
+      champPwd.style.display = 'none';
+      labelPwd.style.display = 'none';
+      lienOublie.style.display = 'none';
+      boutonGoogle.style.display = 'none';
+      separateur.style.display = 'none';
+      btn.textContent = 'Envoyer le lien →';
+      toggle.innerHTML = '<a href="#" onclick="modeAuth=\'connexion\'; mettreAJourUIAuth(); return false;" style="color:var(--coral);">Retour à la connexion</a>';
+    } else if (modeAuth === 'nouveau-mdp') {
+      titre.textContent = 'Nouveau mot de passe';
+      sousTitre.textContent = 'Choisissez un nouveau mot de passe';
+      champPwd.style.display = '';
+      labelPwd.style.display = '';
+      champPwd.placeholder = 'Nouveau mot de passe';
+      champPwd.value = '';
+      lienOublie.style.display = 'none';
+      boutonGoogle.style.display = 'none';
+      separateur.style.display = 'none';
+      document.getElementById('login-email').style.display = 'none';
+      btn.textContent = 'Définir le mot de passe →';
+      toggle.innerHTML = '';
+    } else {
+      titre.textContent = 'Connexion';
+      sousTitre.textContent = 'Entrez vos identifiants Aria Forgedis';
+      champPwd.style.display = '';
+      labelPwd.style.display = '';
+      champPwd.placeholder = '••••••••';
+      lienOublie.style.display = '';
+      boutonGoogle.style.display = '';
+      separateur.style.display = '';
+      document.getElementById('login-email').style.display = '';
+      btn.textContent = 'Se connecter →';
+      toggle.innerHTML = 'Pas encore de compte ? <a href="#" onclick="modeAuth=\'inscription\'; mettreAJourUIAuth(); return false;" style="color:var(--coral);">S\'inscrire</a>';
+    }
+    document.getElementById('login-message').textContent = '';
+  }
+
+  function continuerAvecGoogle() {
+    window.location.href = SUPABASE_URL + '/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent('https://forgedis.fr/portail');
+  }
+
+  function validerAuth() {
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+
+    if (modeAuth === 'mdp-oublie') {
+      if (!email || !email.includes('@')) { document.getElementById('login-message').textContent = 'Veuillez entrer un email valide.'; return; }
+      document.getElementById('login-message').textContent = 'Envoi en cours...';
+      fetch(SUPABASE_URL + '/auth/v1/recover', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY},
+        body: JSON.stringify({ email: email, options: { redirect_to: 'https://forgedis.fr/portail' } })
+      })
+      .then(r => {
+        // Le 429 de Supabase renvoie un corps VIDE (r.json() plante dessus) —
+        // il faut le detecter avant de tenter de parser du JSON.
+        if (r.status === 429) {
+          document.getElementById('login-message').textContent = '⏳ Trop de demandes récentes sur cet email. Merci de patienter quelques minutes avant de réessayer.';
+          return;
+        }
+        return r.text().then(txt => {
+          let data = {};
+          try { data = txt ? JSON.parse(txt) : {}; } catch (e) {}
+          if (!r.ok) {
+            document.getElementById('login-message').textContent = '❌ ' + (data.msg || data.error_description || "Erreur lors de l'envoi.");
+            return;
+          }
+          document.getElementById('login-message').textContent = '✅ Vérifie ta boîte mail pour le lien de réinitialisation.';
+        });
+      })
+      .catch(() => { document.getElementById('login-message').textContent = '⚠️ Erreur réseau. Réessayez.'; });
+      return;
+    }
+
+    if (modeAuth === 'nouveau-mdp') {
+      if (!password || password.length < 6) { document.getElementById('login-message').textContent = 'Le mot de passe doit contenir au moins 6 caractères.'; return; }
+      document.getElementById('login-message').textContent = 'Mise à jour...';
+      fetch(SUPABASE_URL + '/auth/v1/user', {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + window.__recoveryToken},
+        body: JSON.stringify({ password: password })
+      })
+      .then(r => r.json().then(data => ({ ok: r.ok, data: data })))
+      .then(res => {
+        if (!res.ok) { document.getElementById('login-message').textContent = '❌ ' + (res.data.msg || 'Erreur.'); return; }
+        finaliserAuth(res.data.email, window.__recoveryToken);
+      })
+      .catch(() => { document.getElementById('login-message').textContent = '⚠️ Erreur réseau. Réessayez.'; });
+      return;
+    }
+
+    if (!email || !email.includes('@')) { document.getElementById('login-message').textContent = 'Veuillez entrer un email valide.'; return; }
+    if (!password || password.length < 6) { document.getElementById('login-message').textContent = 'Le mot de passe doit contenir au moins 6 caractères.'; return; }
+
+    if (modeAuth === 'inscription') {
+      document.getElementById('login-message').textContent = 'Création du compte...';
+      fetch(SUPABASE_URL + '/auth/v1/signup', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY},
+        body: JSON.stringify({ email: email, password: password })
+      })
+      .then(r => r.json().then(data => ({ ok: r.ok, data: data })))
+      .then(res => {
+        if (!res.ok) { document.getElementById('login-message').textContent = '❌ ' + (res.data.msg || res.data.error_description || "Erreur lors de l'inscription."); return; }
+        if (res.data.access_token) {
+          finaliserAuth(email, res.data.access_token);
+        } else {
+          document.getElementById('login-message').textContent = '✅ Compte créé ! Vérifie ta boîte mail pour confirmer ton adresse avant de te connecter.';
+        }
+      })
+      .catch(() => { document.getElementById('login-message').textContent = '⚠️ Erreur réseau. Réessayez.'; });
+    } else {
+      document.getElementById('login-message').textContent = 'Connexion en cours...';
+      fetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY},
+        body: JSON.stringify({ email: email, password: password })
+      })
+      .then(r => r.json().then(data => ({ ok: r.ok, data: data })))
+      .then(res => {
+        if (!res.ok || !res.data.access_token) {
+          document.getElementById('login-message').textContent = '❌ ' + (res.data.error_description || res.data.msg || 'Email ou mot de passe incorrect.');
+          return;
+        }
+        finaliserAuth(email, res.data.access_token);
+      })
+      .catch(() => { document.getElementById('login-message').textContent = '⚠️ Erreur réseau. Réessayez.'; });
+    }
+  }
+
+  function finaliserAuth(emailConnu, accessToken) {
+    fetch(SUPABASE_URL + '/auth/v1/user', {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + accessToken }
+    })
+    .then(r => r.json())
+    .then(user => {
+      const emailVerifie = (user && user.email) ? user.email : emailConnu;
+      return fetch('https://aria-forgelis.onrender.com/client-token', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ email: emailVerifie })
+      }).then(r => r.json()).then(data => {
+        if (data.erreur) { document.getElementById('login-message').textContent = '❌ ' + data.erreur; return; }
+        localStorage.setItem('aria_email', emailVerifie);
+        localStorage.setItem('aria_token', data.token || '');
+        document.getElementById('login-message').textContent = '✅ Connecté !';
+        setTimeout(() => { chargerDonnees(); showPage('accueil'); }, 400);
+      });
+    })
+    .catch(() => {
+      document.getElementById('login-message').textContent = '⚠️ Erreur réseau. Réessayez.';
+    });
+  }
+
+  function traiterRetourAuth() {
+    if (!window.location.hash || window.location.hash.indexOf('access_token=') === -1) return false;
+    const params = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = params.get('access_token');
+    const type = params.get('type');
+    if (!accessToken) return false;
+    history.replaceState(null, '', window.location.pathname);
+    if (type === 'recovery') {
+      window.__recoveryToken = accessToken;
+      modeAuth = 'nouveau-mdp';
+      window.location.href='/connexion.html';
+      mettreAJourUIAuth();
+      return true;
+    }
+    document.getElementById('auth-form').style.display = 'none';
+    document.getElementById('btn-google').style.display = 'none';
+    document.getElementById('separateur-ou').style.display = 'none';
+    document.getElementById('auth-toggle').innerHTML = '';
+    document.getElementById('auth-title').textContent = 'Connexion en cours…';
+    document.getElementById('auth-subtitle').textContent = '';
+    document.getElementById('login-message').textContent = 'Merci de patienter, ça peut prendre quelques secondes...';
+    finaliserAuth(null, accessToken);
+    return true;
+  }
+
+  function exporterDonneesRGPD() {
+    // Règle FORGEDIS : aucune simulation — appel backend réel
+    var token = localStorage.getItem('aria_token') || '';
+    var email = localStorage.getItem('aria_email') || '';
+    var btn = document.querySelector('[onclick="exporterDonneesRGPD()"]');
+    if(btn) { btn.textContent = '⏳ Export en cours...'; btn.disabled = true; }
+    fetch('https://aria-forgelis.onrender.com/export-donnees', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({token: token, email: email})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(btn) { btn.textContent = 'Exporter mes données'; btn.disabled = false; }
+      if(data.ok) {
+        // Télécharger le JSON retourné
+        var blob = new Blob([JSON.stringify(data.donnees, null, 2)], {type:'application/json'});
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url; a.download = 'aria-mes-donnees.json'; a.click();
+        URL.revokeObjectURL(url);
+      } else if(data.email_envoye) {
+        notifDashboard('✅ Un email contenant vos données sera envoyé à <strong>' + email + '</strong> sous 72h.', 'ok');
+      } else {
+        notifDashboard('❌ ' + (data.erreur || 'Export indisponible. Contactez <a href="mailto:contact@forgedis.fr" style="color:#E24B4A">contact@forgedis.fr</a>.'), 'err');
+      }
+    })
+    .catch(function(){
+      if(btn) { btn.textContent = 'Exporter mes données'; btn.disabled = false; }
+      notifDashboard('❌ Erreur réseau. Réessayez ou contactez <a href="mailto:contact@forgedis.fr" style="color:#E24B4A">contact@forgedis.fr</a>.', 'err');
+    });
+  }
+
+  function deconnexion() {
+    localStorage.removeItem('aria_email');
+    localStorage.removeItem('aria_token');
+    sessionStorage.clear();
+    window.location.href = '/connexion.html';
+  }
+
+  function resilier() {
+    closeModal('modal-resilier');
+    // Règle FORGEDIS : aucune simulation — redirection vers le portail Stripe réel
+    // Le portail Stripe permet de gérer/annuler l'abonnement directement
+    var email = localStorage.getItem('aria_email') || '';
+    var msg = document.getElementById('msg-resiliation');
+    if(msg) {
+      msg.style.display = 'block';
+      msg.innerHTML = "⏳ Redirection vers votre portail d'abonnement...";
+    }
+    // Appel au backend pour générer un lien portail Stripe
+    var token = localStorage.getItem('aria_token') || '';
+    fetch('https://aria-forgelis.onrender.com/portail-stripe', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({token: token})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(data.url) {
+        window.location.href = data.url;
+      } else {
+        // Fallback : email direct si portail indisponible
+        if(msg) msg.innerHTML = '❌ Portail temporairement indisponible. ' +
+          'Pour résilier, écrivez à <a href="mailto:contact@forgedis.fr" style="color:var(--coral)">contact@forgedis.fr</a> depuis votre adresse <strong>' +
+          (email || 'enregistrée') + '</strong>.';
+      }
+    })
+    .catch(function(){
+      if(msg) msg.innerHTML = '❌ Erreur réseau. Pour résilier, écrivez à ' +
+        '<a href="mailto:contact@forgedis.fr" style="color:var(--coral)">contact@forgedis.fr</a>.';
+    });
+  }
+
+  function supprimerCompte() {
+    closeModal('modal-supprimer');
+    // Règle FORGEDIS : aucune simulation — appel backend réel
+    var token = localStorage.getItem('aria_token') || '';
+    var email = localStorage.getItem('aria_email') || '';
+    var msg = document.getElementById('msg-suppression');
+    if(msg) { msg.style.display = 'block'; msg.textContent = '⏳ Traitement en cours...'; }
+    fetch('https://aria-forgelis.onrender.com/supprimer-compte', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({token: token, email: email})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(data.ok) {
+        // Suppression confirmée — déconnecter
+        localStorage.removeItem('aria_email');
+        localStorage.removeItem('aria_token');
+        sessionStorage.clear();
+        window.location.href = '/connexion.html?suppression=ok';
+      } else {
+        // Afficher l'erreur sans simuler de succès
+        if(msg) msg.innerHTML = '❌ ' + (data.erreur || 'Erreur lors de la suppression.') +
+          ' Contactez <a href="mailto:contact@forgedis.fr" style="color:var(--coral)">contact@forgedis.fr</a>.';
+        else notifDashboard('❌ Erreur. Contactez <a href="mailto:contact@forgedis.fr" style="color:#E24B4A">contact@forgedis.fr</a> pour supprimer votre compte.', 'err');
+      }
+    })
+    .catch(function(){
+      if(msg) msg.innerHTML = '❌ Erreur réseau. Réessayez ou contactez ' +
+        '<a href="mailto:contact@forgedis.fr" style="color:var(--coral)">contact@forgedis.fr</a>.';
+    });
+  }
+
+  // Init
+  if (!traiterRetourAuth()) {
+    chargerDonnees();
+    chargerHistorique();
+  }
+
+  function chargerHistorique() {
+    var token = localStorage.getItem('aria_token') || '';
+    if(!token) return;
+    var liste = document.getElementById('historique-liste');
+    if(!liste) return;
+    fetch('https://aria-forgelis.onrender.com/historique', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({token: token})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(!data.ok || !data.evenements || data.evenements.length === 0) {
+        liste.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-dim,#A6B0CC);font-size:14px">Aucune activité récente.</div>';
+        return;
+      }
+      liste.innerHTML = data.evenements.map(function(e) {
+        var ico = e.type === 'connexion' ? '🤖' : e.type === 'paiement' ? '💳' : e.type === 'document' ? '📄' : '⭐';
+        var cls = e.statut === 'ok' ? 'status-ok' : 'status-err';
+        var label = e.statut === 'ok' ? 'Réussi' : 'Échoué';
+        return '<div class="history-item">' +
+          '<div class="history-ico">' + ico + '</div>' +
+          '<div class="history-info">' +
+            '<div class="history-title">' + (e.titre || '') + '</div>' +
+            '<div class="history-date">' + (e.date || '') + '</div>' +
+          '</div>' +
+          '<div class="history-status ' + cls + '">' + label + '</div>' +
+          '</div>';
+      }).join('');
+    })
+    .catch(function(){
+      liste.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-dim,#A6B0CC);font-size:14px">Historique indisponible. <a href="#" onclick="chargerHistorique()" style="color:var(--coral)">Réessayer</a></div>';
+    });
+  }
+</script>
+<div id="ariaConfirmModal" class="aria-confirm-overlay" style="display:none;">
+  <div class="aria-confirm-box">
+    <div class="aria-confirm-title">Confirmer votre abonnement</div>
+    <div class="aria-confirm-body">Vous allez etre redirige vers notre paiement securise (Stripe) pour Aria Facility - 12,99 euros par mois, essai gratuit de 14 jours, resiliable a tout moment.</div>
+    <div class="aria-confirm-actions">
+      <button type="button" class="btn btn-ghost" id="ariaConfirmCancel">Annuler</button>
+      <button type="button" class="btn btn-primary" id="ariaConfirmOk">Continuer</button>
+    </div>
+  </div>
+</div>
+<style>
+  .aria-confirm-overlay { position: fixed; inset: 0; background: rgba(7,11,24,0.75); display:flex; align-items:center; justify-content:center; z-index: 9999; padding: 20px; }
+  .aria-confirm-box { background: var(--panel, #111934); border: 1px solid var(--line, rgba(255,255,255,0.09)); border-radius: 20px; max-width: 420px; width:100%; padding: 28px; text-align:center; }
+  .aria-confirm-title { font-size:19px; font-weight:700; color:var(--text, #F0F3FB); margin-bottom:12px; }
+  .aria-confirm-body { font-size:15px; color:var(--text-soft, #A6B0CC); line-height:1.5; margin-bottom:22px; }
+  .aria-confirm-actions { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+</style>
+<script>
+(function(){
+  var STRIPE_URL = "https://buy.stripe.com/3cI8wP5fD8YxaD5cPrgMw00";
+  var modal = document.getElementById("ariaConfirmModal");
+  var btnOk = document.getElementById("ariaConfirmOk");
+  var btnCancel = document.getElementById("ariaConfirmCancel");
+  var pendingUrl = null;
+  document.querySelectorAll("a[href='" + STRIPE_URL + "']").forEach(function(link){
+    link.addEventListener("click", function(e){
+      e.preventDefault();
+      pendingUrl = link.href;
+      modal.style.display = "flex";
+    });
+  });
+  if (btnCancel) btnCancel.addEventListener("click", function(){ modal.style.display = "none"; pendingUrl = null; });
+  if (btnOk) btnOk.addEventListener("click", function(){ if (pendingUrl) { window.location.href = pendingUrl; } });
+  modal.addEventListener("click", function(e){ if (e.target === modal) { modal.style.display = "none"; pendingUrl = null; } });
+})();
+</script>
+<script src="/aria-i18n.js"></script>
+</body>
+</html>

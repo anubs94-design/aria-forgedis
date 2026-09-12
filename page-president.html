@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aria Industrial — Président / Multi-sites</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#14161C; --panel:#1B1E27; --panel2:#22252F; --panel3:#282C38;
+  --line:#2E3240; --line2:#3A3F4E;
+  --ink:#EDEFF3; --ink-dim:#9096A8; --ink-faint:#5E6479;
+  --amber:#E8873A; --amber-dim:#3A2E20;
+  --ok:#4FBF8B; --ok-dim:#1C2E27;
+  --wait:#E0B23C; --wait-dim:#332C1A;
+  --blocked:#E15B5B; --blocked-dim:#331E1E;
+  --radius:12px;
+  --err:var(--blocked);
+  --bg2: var(--panel2);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:'Space Grotesk',system-ui,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
+
+/* ═══ LOGIN ═══ */
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 20px}
+.login-box h1{font-size:20px;font-weight:700;text-align:center;margin-bottom:6px}
+.login-box .sub{font-size:12px;color:var(--ink-dim);text-align:center;margin-bottom:28px}
+
+label{font-size:11px;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px}
+input[type=email],input[type=password]{width:100%;background:var(--panel2);border:1px solid var(--line2);border-radius:9px;padding:10px 13px;color:var(--ink);font-size:13px;outline:none;font-family:inherit;margin-bottom:14px}
+input[type=email]:focus,input[type=password]:focus{border-color:var(--amber)}
+/* ═══ TOPBAR ═══ */
+body.logged #login-screen{display:none}
+body.logged #app{display:flex;flex-direction:column}
+#app{display:none}
+.topbar{background:var(--panel);border-bottom:1px solid var(--line);padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-left{display:flex;align-items:center;gap:16px}
+.topbar-brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:16px}
+.topbar-brand span{color:var(--amber)}
+.president-badge{background:rgba(232,135,58,.12);border:1px solid rgba(232,135,58,.3);color:var(--amber);font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.06em}
+.topbar-right{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--ink-dim)}
+.topbar-user{font-weight:600;color:var(--ink)}
+.btn-logout{background:none;border:1px solid var(--line2);border-radius:7px;padding:5px 11px;font-size:11px;color:var(--ink-dim);cursor:pointer;font-family:inherit}
+.btn-logout:hover{color:var(--ink)}
+
+/* ═══ SITE TABS ═══ */
+.site-tabs-bar{background:var(--panel);border-bottom:1px solid var(--line);padding:0 28px;display:flex;align-items:center;gap:4px;overflow-x:auto}
+.site-tab{padding:12px 18px;font-size:12px;font-weight:600;color:var(--ink-dim);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s}
+.site-tab:hover{color:var(--ink)}
+.site-tab.active{color:var(--amber);border-bottom-color:var(--amber)}
+.site-tab 
+.tab-badge
+.tab-badge.warn{background:var(--wait);color:#181008}
+
+/* ═══ MAIN ═══ */
+.main-content{flex:1;padding:24px 28px 80px;max-width:1200px;width:100%}
+.view{display:none}
+.view.active{display:block}
+.view-head{margin-bottom:20px}
+.view-head h1{font-size:19px;font-weight:700;margin-bottom:5px}
+.view-head p{font-size:12.5px;color:var(--ink-dim);line-height:1.5}
+
+/* ═══ GRIDS ═══ */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.kpi-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.kpi-val{font-size:22px;font-weight:800;margin-bottom:2px}
+.kpi-label{font-size:11px;color:var(--ink-dim)}
+.sites-table th{background:var(--panel2);padding:10px 14px;font-size:11px;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;text-align:left;border-bottom:1px solid var(--line)}
+.sites-table td{padding:11px 14px;font-size:13px;border-bottom:1px solid var(--line)}
+.sites-table tr:last-child td{border-bottom:none}
+.sites-table tr:hover td{background:var(--panel2)}
+.section{margin-bottom:22px}
+.section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.section-head h2{font-size:14px;font-weight:700}
+
+.btn-sm:hover{color:var(--ink)}
+.btn-amber{background:var(--amber);color:#181008;border:none;border-radius:7px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
+
+/* ═══ ALERTES ═══ */
+
+.alerte-item
+.alerte-item.warn{border-color:var(--wait);background:var(--wait-dim)}
+.alerte-item.ok{border-color:var(--ok);background:var(--ok-dim)}
+/* ═══ CHAT ═══ */
+.chat-conv-item:hover,.chat-conv-item.active{background:var(--panel3)}
+.chat-msg
+/* ═══ SALARIÉS ═══ */
+/* ═══ OBJECTIFS ═══ */
+/* ═══ BOTTOM NAV MOBILE ═══ */
+@media(max-width:768px){
+  .main-content{padding:16px 16px 80px}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  
+  
+  
+  
+  
+}
+
+/* ── NOUVELLES VUES PRÉSIDENT ── */
+.kpi-toggle{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-dim);background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer;}
+.kpi-toggle input{accent-color:var(--amber);}
+.risque-row{display:flex;align-items:flex-start;gap:12px;padding:14px;background:var(--bg2);border-radius:10px;margin-bottom:8px;border-left:3px solid var(--line);}
+.risque-row.critique{border-left-color:#E24B4A;}
+.risque-row.eleve{border-left-color:var(--amber);}
+.risque-row.modere{border-left-color:#F5A623;}
+.risque-row.faible{border-left-color:#2ECC71;}
+.dec-row{padding:14px;background:var(--bg2);border-radius:10px;margin-bottom:8px;border-left:3px solid var(--amber);}
+.dec-row.termine{border-left-color:#2ECC71;}
+.dec-row.abandonnee{border-left-color:var(--ink-dim);}
+.dec-statut{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;margin-bottom:6px;}
+.dec-statut.en_cours{background:rgba(232,135,58,.15);color:var(--amber);}
+.dec-statut.termine{background:rgba(46,204,113,.12);color:#2ECC71;}
+.dec-statut.abandonnee{background:rgba(255,255,255,.05);color:var(--ink-dim);}
+.reco-row{padding:14px;background:var(--bg2);border-radius:10px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start;}
+.reco-badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;flex-shrink:0;margin-top:2px;}
+.reco-badge.acceptee{background:rgba(46,204,113,.15);color:#2ECC71;}
+.reco-badge.refusee{background:rgba(226,75,74,.12);color:#E24B4A;}
+.reco-badge.en_cours{background:rgba(232,135,58,.15);color:var(--amber);}
+
+/* ── Modale Aria (remplace confirm/prompt natifs) ── */
+.aria-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .18s}
+.aria-modal-overlay.open{opacity:1;pointer-events:all}
+.aria-modal{background:var(--panel2);border:1px solid var(--line2);border-radius:var(--radius);padding:28px 28px 22px;width:min(420px,90vw);box-shadow:0 20px 60px rgba(0,0,0,.5);transform:translateY(8px);transition:transform .18s}
+.aria-modal-overlay.open .aria-modal{transform:translateY(0)}
+.aria-modal-ico{font-size:28px;text-align:center;margin-bottom:12px}
+.aria-modal-title{font-size:16px;font-weight:700;color:var(--ink);text-align:center;margin-bottom:6px}
+.aria-modal-msg{font-size:13px;color:var(--ink-dim);text-align:center;margin-bottom:18px;line-height:1.5}
+.aria-modal-input{width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-size:14px;padding:10px 14px;outline:none;transition:border-color .15s;box-sizing:border-box;margin-bottom:16px}
+.aria-modal-input:focus{border-color:var(--amber)}
+.aria-modal-actions{display:flex;gap:10px;justify-content:flex-end}
+.aria-modal-cancel{background:transparent;border:1px solid var(--line2);color:var(--ink-dim);border-radius:8px;padding:8px 18px;cursor:pointer;font-size:13px;transition:border-color .15s}
+.aria-modal-cancel:hover{border-color:var(--ink-dim)}
+.aria-modal-confirm{border:none;border-radius:8px;padding:8px 18px;cursor:pointer;font-size:13px;font-weight:600;transition:opacity .15s}
+.aria-modal-confirm:hover{opacity:.85}
+.aria-modal-confirm.danger{background:var(--blocked);color:#fff}
+.aria-modal-confirm.primary{background:var(--amber);color:#fff}
+</style>
+</head>
+<body>
+<!-- ── Modale Aria ── -->
+<div class="aria-modal-overlay" id="aria-modal-overlay" onclick="if(event.target===this)_ariaModalCancel()">
+  <div class="aria-modal">
+    <div class="aria-modal-ico" id="aria-modal-ico">⚠️</div>
+    <div class="aria-modal-title" id="aria-modal-title"></div>
+    <div class="aria-modal-msg" id="aria-modal-msg"></div>
+    <input class="aria-modal-input" id="aria-modal-input" type="password" placeholder="" style="display:none" autocomplete="new-password">
+    <div class="aria-modal-actions">
+      <button class="aria-modal-cancel" onclick="_ariaModalCancel()">Annuler</button>
+      <button class="aria-modal-confirm danger" id="aria-modal-confirm" onclick="_ariaModalConfirm()">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══ APP ═══ -->
+<div id="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-brand">FORGE<span>DIS</span></div>
+      <div class="president-badge">👑 Président</div>
+    </div>
+    <div class="topbar-right">
+      <span id="topbar-date"></span>
+      <span class="topbar-user" id="topbar-user">—</span>
+      <button class="btn-logout" onclick="deconnecterPresident()">Déconnexion</button>
+    </div>
+  </div>
+
+  <!-- ONGLETS NAVIGATION -->
+  <div class="site-tabs-bar">
+    <div class="site-tab active" data-view="v-consolide" onclick="changerVue('v-consolide', this)">🌐 Consolidé</div>
+    <div class="site-tab" data-view="v-salaries" onclick="changerVue('v-salaries', this)">👥 Salariés</div>
+    <div class="site-tab" data-view="v-presences" onclick="changerVue('v-presences', this)">🟢 Présences</div>
+    <div class="site-tab" data-view="v-absences" onclick="changerVue('v-absences', this)">🏥 Absences</div>
+    <div class="site-tab" data-view="v-taches" onclick="changerVue('v-taches', this)">✅ Tâches</div>
+    <div class="site-tab" data-view="v-consulting" onclick="changerVue('v-consulting', this)">🧠 Consulting</div>
+    <div class="site-tab" data-view="v-decisions" onclick="changerVue('v-decisions', this)">📓 Décisions</div>
+    <div class="site-tab" data-view="v-risques" onclick="changerVue('v-risques', this)">⚠️ Risques</div>
+    <div class="site-tab" data-view="v-financier" onclick="changerVue('v-financier', this)">💰 Financier</div>
+    <div class="site-tab" data-view="v-recommandations" onclick="changerVue('v-recommandations', this)">🤖 Aria IA</div>
+    <div class="site-tab" data-view="v-kpi" onclick="changerVue('v-kpi', this)">📊 Mes KPI</div>
+  </div>
+
+  <div class="main-content">
+
+<div class="main">
+
+<!-- ══ VUE CONSOLIDÉE ══ -->
+<div class="view active" id="v-consolide">
+  <div class="view-head"><h1>Vue consolidée</h1><p>Vue multi-sites du groupe.</p></div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val" id="p-stat-salaries">—</div><div class="stat-lbl">Salariés actifs</div></div>
+    <div class="stat-card"><div class="stat-val" id="p-stat-presences">—</div><div class="stat-lbl">Présents aujourd'hui</div></div>
+    <div class="stat-card"><div class="stat-val" id="p-stat-absences">—</div><div class="stat-lbl">Absences en attente</div></div>
+    <div class="stat-card"><div class="stat-val" id="p-stat-taches">—</div><div class="stat-lbl">Tâches ouvertes</div></div>
+    <div class="stat-card"><div class="stat-val" id="p-stat-tickets">—</div><div class="stat-lbl">Tickets ouverts</div></div>
+    <div class="stat-card"><div class="stat-val" id="p-stat-bc">—</div><div class="stat-lbl">BC en attente</div></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <div class="section-head"><h2>🚨 Absences à approuver</h2></div>
+    <div id="p-absences-attente"><div class="empty-state"><div class="es-ic">📭</div>Aucune demande.</div></div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <div class="section-head"><h2>📦 Bons de commande à approuver</h2></div>
+    <div id="p-bc-attente"><div class="empty-state"><div class="es-ic">📭</div>Aucun BC en attente.</div></div>
+  </div>
+</div>
+
+<!-- ══ PRÉSENCES ══ -->
+<div class="view" id="v-presences">
+  <div class="view-head"><h1>Présences</h1><p>Pointages de l'équipe.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Aujourd'hui</h2><button class="btn-act" onclick="chargerPresencesPres()">🔄</button></div>
+    <div id="p-pointages"><div class="empty-state"><div class="es-ic">⏱️</div>Aucun pointage.</div></div>
+  </div>
+</div>
+
+<!-- ══ SALARIÉS ══ -->
+<div class="view" id="v-salaries">
+  <div class="view-head"><h1>Salariés</h1><p>Gérez les comptes de vos salariés.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Équipe</h2><button class="btn-act btn-amber" onclick="ouvrirModalCreerSalariePres()">+ Nouveau salarié</button></div>
+    <input type="text" id="p-search-sal" placeholder="Rechercher..." class="input-field" style="width:100%;margin-bottom:12px" oninput="filtrerSalariesPres(this.value)">
+    <div id="p-liste-salaries"><div class="empty-state"><div class="es-ic">👥</div>Aucun salarié.</div></div>
+  </div>
+</div>
+
+<!-- ══ TÂCHES ══ -->
+<div class="view" id="v-taches">
+  <div class="view-head"><h1>Tâches</h1><p>Toutes les tâches de l'entreprise.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Tâches</h2><button class="btn-act btn-amber" onclick="ouvrirModalTachePres()">+ Nouvelle tâche</button></div>
+    <div id="p-liste-taches"><div class="empty-state"><div class="es-ic">📋</div>Aucune tâche.</div></div>
+  </div>
+</div>
+
+<!-- ══ ABSENCES ══ -->
+<div class="view" id="v-absences">
+  <div class="view-head"><h1>Absences</h1><p>Gérez les demandes d'absence.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>En attente</h2></div>
+    <div id="p-abs-attente"><div class="empty-state"><div class="es-ic">📭</div>Aucune demande.</div></div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <div class="section-head"><h2>Historique</h2></div>
+    <div id="p-abs-hist"><div class="empty-state"><div class="es-ic">📂</div>Aucune absence.</div></div>
+  </div>
+</div>
+
+<!-- ══ ARIA CONSULTING ══ -->
+<div class="view" id="v-consulting">
+  <div class="view-head"><h1>Aria Consulting</h1><p>Questions stratégiques multi-sites.</p></div>
+  <div class="card">
+    <textarea id="p-aria-q" class="input-field" style="width:100%;height:100px;resize:vertical" placeholder="Ex: Comment optimiser la productivité sur mes différents sites ? Quels KPIs suivre pour un groupe de PME ?"></textarea>
+    <button class="btn-act btn-amber" style="margin-top:8px" onclick="demanderAriaPres()">✨ Demander à Aria</button>
+    <div id="p-aria-rep" style="margin-top:12px;font-size:13px;line-height:1.7;color:var(--ink)"></div>
+  </div>
+</div>
+
+<!-- ══ JOURNAL ══ -->
+<div class="view" id="v-journal">
+  <div class="view-head"><h1>Journal d'Aria</h1></div>
+  <div class="card"><div id="journal-empty" class="empty-state"><div class="es-ic">📜</div>Journal vide.</div><div id="journal-list"></div></div>
+</div>
+
+<!-- Modal créer salarié -->
+<div class="modal-overlay" id="modal-creer-sal-p" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Nouveau salarié</h3><button onclick="fermerModal('modal-creer-sal-p')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Nom complet *</label><input type="text" id="pns-nom" class="input-field"></div>
+      <div class="form-group"><label>Email entreprise *</label><input type="email" id="pns-email" class="input-field"></div>
+      <div class="form-group"><label>Mot de passe *</label><input type="text" id="pns-mdp" class="input-field"></div>
+      <div class="form-group"><label>Poste *</label>
+        <select id="pns-poste" class="input-field">
+          <option value="rh">RH</option><option value="comptabilite">Comptabilité</option>
+          <option value="achats">Achats</option><option value="service-client">Service client</option>
+          <option value="logistique">Logistique</option><option value="technicien-sav">Technicien SAV</option>
+          <option value="dirigeant">Dirigeant</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Rôle</label>
+        <select id="pns-role" class="input-field"><option value="salarie">Salarié</option><option value="responsable">Responsable</option><option value="dirigeant">Dirigeant</option></select>
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;text-transform:none;letter-spacing:0;font-weight:600;color:var(--ink)">
+          <input type="checkbox" id="pns-terrain" style="width:18px;height:18px;accent-color:var(--amber);cursor:pointer">
+          📱 Salarié terrain — accès web bloqué, app mobile uniquement
+        </label>
+        <div style="font-size:11px;color:var(--ink-dim);margin-top:4px;margin-left:28px">Cochez pour les livreurs, techniciens SAV et autres postes terrain.</div>
+      </div>
+    </div>
+    <div id="pns-erreur" style="color:var(--err);font-size:13px;margin-top:8px;display:none"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn-act" onclick="fermerModal('modal-creer-sal-p')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="creerSalariePres()">Créer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal tâche -->
+<div class="modal-overlay" id="modal-tache-p" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Nouvelle tâche</h3><button onclick="fermerModal('modal-tache-p')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Titre *</label><input type="text" id="pt-titre" class="input-field"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Description</label><textarea id="pt-desc" class="input-field" style="height:60px;resize:vertical"></textarea></div>
+      <div class="form-group"><label>Poste cible</label>
+        <select id="pt-poste" class="input-field">
+          <option value="rh">RH</option><option value="comptabilite">Comptabilité</option>
+          <option value="achats">Achats</option><option value="service-client">Service client</option>
+          <option value="logistique">Logistique</option><option value="technicien-sav">Technicien SAV</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Priorité</label>
+        <select id="pt-priorite" class="input-field"><option value="normale">Normale</option><option value="haute">Haute</option><option value="urgente">Urgente</option></select>
+      </div>
+      <div class="form-group"><label>Deadline</label><input type="date" id="pt-deadline" class="input-field"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn-act" onclick="fermerModal('modal-tache-p')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="creerTachePres()">Créer</button>
+    </div>
+  </div>
+</div>
+
+
+  <!-- ═══ VUE JOURNAL DES DÉCISIONS ═══ -->
+  <div class="view" id="v-decisions">
+    <div class="view-head">
+      <h1>Journal des décisions</h1>
+      <p>Toutes les décisions stratégiques · Suivi d'impact · Historique complet</p>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <h2>📓 Décisions en cours</h2>
+        <button class="btn-amber" onclick="ouvrirModalDecision()">+ Nouvelle décision</button>
+      </div>
+      <div id="decisions-liste">
+        <div class="empty-state">⏳ Chargement...</div>
+      </div>
+    </div>
+
+    <div class="section" style="margin-top:24px">
+      <div class="section-head"><h2>✅ Décisions terminées (30 derniers jours)</h2></div>
+      <div id="decisions-terminees">
+        <div class="empty-state">Aucune décision terminée ce mois.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal nouvelle décision -->
+  <div class="modal" id="modal-decision" style="display:none">
+    <div class="modal-box">
+      <div class="modal-head"><h3>Nouvelle décision</h3><button class="modal-close" onclick="fermerModal('modal-decision')">✕</button></div>
+      <label class="form-label">Décision prise</label>
+      <input type="text" id="dec-titre" class="form-input" placeholder="Ex: Embaucher un chef de chantier pour le site Lyon">
+      <label class="form-label">Prise par</label>
+      <input type="text" id="dec-auteur" class="form-input" placeholder="Nom du décideur">
+      <label class="form-label">Pourquoi</label>
+      <textarea id="dec-raison" class="form-input" rows="2" placeholder="Contexte et justification..."></textarea>
+      <label class="form-label">Impact attendu</label>
+      <input type="text" id="dec-impact" class="form-input" placeholder="Ex: +15% de capacité Q3">
+      <label class="form-label">Statut</label>
+      <select id="dec-statut" class="form-input">
+        <option value="en_cours">En cours</option>
+        <option value="termine">Terminée</option>
+        <option value="abandonnee">Abandonnée</option>
+      </select>
+      <div class="modal-actions">
+        <button class="btn-act" onclick="fermerModal('modal-decision')">Annuler</button>
+        <button class="btn-act btn-amber" onclick="sauvegarderDecision()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ VUE GESTION DES RISQUES ═══ -->
+  <div class="view" id="v-risques">
+    <div class="view-head">
+      <h1>Registre des risques</h1>
+      <p>Vision 360° des risques groupe · Criticité · Plans d'action</p>
+    </div>
+
+    <!-- Matrice de criticité -->
+    <div class="section">
+      <div class="section-head">
+        <h2>🎯 Risques par criticité</h2>
+        <button class="btn-amber" onclick="ouvrirModalRisque()">+ Nouveau risque</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+        <div style="background:rgba(214,48,49,.12);border:1px solid rgba(214,48,49,.3);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:24px;font-weight:800;color:#E24B4A" id="risques-critique-count">—</div>
+          <div style="font-size:12px;color:var(--ink-dim)">Critiques</div>
+        </div>
+        <div style="background:rgba(232,135,58,.12);border:1px solid rgba(232,135,58,.3);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:24px;font-weight:800;color:var(--amber)" id="risques-eleve-count">—</div>
+          <div style="font-size:12px;color:var(--ink-dim)">Élevés</div>
+        </div>
+        <div style="background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.3);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:24px;font-weight:800;color:#2ECC71" id="risques-faible-count">—</div>
+          <div style="font-size:12px;color:var(--ink-dim)">Maîtrisés</div>
+        </div>
+      </div>
+      <div id="risques-liste">
+        <div class="empty-state">⏳ Chargement...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal nouveau risque -->
+  <div class="modal" id="modal-risque" style="display:none">
+    <div class="modal-box">
+      <div class="modal-head"><h3>Nouveau risque</h3><button class="modal-close" onclick="fermerModal('modal-risque')">✕</button></div>
+      <label class="form-label">Catégorie</label>
+      <select id="risque-categorie" class="form-input">
+        <option value="rh">RH</option>
+        <option value="financier">Financier</option>
+        <option value="juridique">Juridique</option>
+        <option value="cyber">Cybersécurité</option>
+        <option value="fournisseur">Fournisseurs</option>
+        <option value="production">Production</option>
+        <option value="qualite">Qualité</option>
+        <option value="conformite">Conformité</option>
+      </select>
+      <label class="form-label">Description du risque</label>
+      <input type="text" id="risque-desc" class="form-input" placeholder="Ex: Dépendance à un seul fournisseur clé">
+      <label class="form-label">Criticité</label>
+      <select id="risque-criticite" class="form-input">
+        <option value="critique">🔴 Critique</option>
+        <option value="eleve">🟠 Élevé</option>
+        <option value="modere">🟡 Modéré</option>
+        <option value="faible">🟢 Faible</option>
+      </select>
+      <label class="form-label">Responsable</label>
+      <input type="text" id="risque-responsable" class="form-input" placeholder="Nom du responsable">
+      <label class="form-label">Plan d'action</label>
+      <textarea id="risque-plan" class="form-input" rows="2" placeholder="Actions prévues pour réduire ce risque..."></textarea>
+      <div class="modal-actions">
+        <button class="btn-act" onclick="fermerModal('modal-risque')">Annuler</button>
+        <button class="btn-act btn-amber" onclick="sauvegarderRisque()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ VUE FINANCIER CONSOLIDÉ ═══ -->
+  <div class="view" id="v-financier">
+    <div class="view-head">
+      <h1>Vision financière consolidée</h1>
+      <p>Trésorerie · Marge · Résultat · Prévisions 30/60/90 jours</p>
+    </div>
+
+    <div class="kpi-grid" style="margin-bottom:24px">
+      <div class="kpi-card">
+        <div class="kpi-val" style="color:var(--amber)" id="fin-tresorerie">—</div>
+        <div class="kpi-label">Trésorerie disponible</div>
+        <div class="kpi-sub" id="fin-tresorerie-sub">tous sites confondus</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val" id="fin-marge">—</div>
+        <div class="kpi-label">Marge brute</div>
+        <div class="kpi-sub" id="fin-marge-sub">vs objectif</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val" id="fin-resultat">—</div>
+        <div class="kpi-label">Résultat net</div>
+        <div class="kpi-sub" id="fin-resultat-sub">cumul YTD</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val" id="fin-cash-30j">—</div>
+        <div class="kpi-label">Prévision J+30</div>
+        <div class="kpi-sub">trésorerie estimée</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <h2>📈 Prévisions de trésorerie</h2>
+        <button class="btn-amber" onclick="actualiserFinancier()">Actualiser</button>
+      </div>
+      <div id="fin-previsions">
+        <div class="empty-state">⏳ Chargement...</div>
+      </div>
+    </div>
+
+    <div class="section" style="margin-top:24px">
+      <div class="section-head">
+        <h2>📊 Par site</h2>
+      </div>
+      <div id="fin-par-site">
+        <div class="empty-state">⏳ Chargement...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ VUE RECOMMANDATIONS ARIA ═══ -->
+  <div class="view" id="v-recommandations">
+    <div class="view-head">
+      <h1>Suivi des recommandations Aria</h1>
+      <p>Historique des conseils · Acceptés · Refusés · Résultats mesurés</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
+      <div class="kpi-card"><div class="kpi-val" id="reco-total">—</div><div class="kpi-label">Total</div></div>
+      <div class="kpi-card"><div class="kpi-val" style="color:#2ECC71" id="reco-acceptees">—</div><div class="kpi-label">Acceptées</div></div>
+      <div class="kpi-card"><div class="kpi-val" style="color:var(--amber)" id="reco-en-cours">—</div><div class="kpi-label">En cours</div></div>
+      <div class="kpi-card"><div class="kpi-val" id="reco-impact">—</div><div class="kpi-label">Impact estimé</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>🤖 Recommandations récentes</h2></div>
+      <div id="reco-liste">
+        <div class="empty-state">⏳ Chargement...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ VUE KPI PERSONNALISABLES ═══ -->
+  <div class="view" id="v-kpi">
+    <div class="view-head">
+      <h1>Mes KPI personnalisés</h1>
+      <p>Choisissez vos indicateurs · Votre cockpit de pilotage</p>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <h2>📊 Indicateurs actifs</h2>
+        <button class="btn-amber" onclick="ouvrirConfigKPI()">⚙️ Configurer</button>
+      </div>
+      <div id="kpi-perso-grid" class="kpi-grid">
+        <div class="empty-state" style="grid-column:1/-1">⏳ Chargement...</div>
+      </div>
+    </div>
+
+    <!-- Panneau de configuration KPI -->
+    <div id="kpi-config-panel" style="display:none;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;margin-top:20px">
+      <h2 style="margin-bottom:16px">⚙️ Choisissez vos indicateurs</h2>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+        <label class="kpi-toggle"><input type="checkbox" id="kpi-toggle-ca" onchange="toggleKPI('ca')"> Chiffre d'affaires</label>
+        <label class="kpi-toggle"><input type="checkbox" id="kpi-toggle-marge" onchange="toggleKPI('marge')"> Marge brute</label>
+        <label class="kpi-toggle"><input type="checkbox" id="kpi-toggle-absenteisme" onchange="toggleKPI('absenteisme')"> Absentéisme</label>
+        <label class="kpi-toggle"><input type="checkbox" id="kpi-toggle-production" onchange="toggleKPI('production')"> Production</label>
+        <label class="kpi-toggle"><input type="checkbox" id="kpi-toggle-satisfaction" onchange="toggleKPI('satisfaction')"> Satisfaction client</label>
+        <label class="kpi-toggle"><input type="checkbox" id="kpi-toggle-turnover" onchange="toggleKPI('turnover')"> Turnover</label>
+        <label class="kpi-toggle"><input type="checkbox" id="kpi-toggle-delais" onchange="toggleKPI('delais')"> Délais livraison</label>
+        <label class="kpi-toggle"><input type="checkbox" id="kpi-toggle-securite" onchange="toggleKPI('securite')"> Sécurité (accidents)</label>
+        <label class="kpi-toggle"><input type="checkbox" id="kpi-toggle-tresorerie" onchange="toggleKPI('tresorerie')"> Trésorerie</label>
+      </div>
+      <button class="btn-amber" onclick="sauvegarderKPI()">Sauvegarder mes KPI</button>
+      <button class="btn-act" style="margin-left:8px" onclick="document.getElementById('kpi-config-panel').style.display='none'">Fermer</button>
+    </div>
+  </div>
+
+</div><!-- fin .main -->
+
+
+  </div><!-- fin .main-content -->
+</div><!-- fin #app -->
+
+<script>
+
+// ── Modale Aria (remplace confirm/prompt natifs) ──
+var _ariaModalCb = null;
+var _ariaModalMode = 'confirm'; // 'confirm' | 'prompt'
+
+function esc(s){var d=document.createElement('div');d.appendChild(document.createTextNode(String(s===null||s===undefined?'':s)));return d.innerHTML;}
+function ariaConfirm(opts, cb) {
+  // opts: {title, msg, ico, btnLabel, danger}
+  _ariaModalMode = 'confirm';
+  _ariaModalCb = cb;
+  document.getElementById('aria-modal-ico').textContent = opts.ico || '⚠️';
+  document.getElementById('aria-modal-title').textContent = opts.title || 'Confirmation';
+  document.getElementById('aria-modal-msg').textContent = opts.msg || '';
+  document.getElementById('aria-modal-input').style.display = 'none';
+  var btn = document.getElementById('aria-modal-confirm');
+  btn.textContent = opts.btnLabel || 'Confirmer';
+  btn.className = 'aria-modal-confirm ' + (opts.danger ? 'danger' : 'primary');
+  document.getElementById('aria-modal-overlay').classList.add('open');
+}
+
+function ariaPrompt(opts, cb) {
+  // opts: {title, msg, ico, placeholder, btnLabel, inputType}
+  _ariaModalMode = 'prompt';
+  _ariaModalCb = cb;
+  document.getElementById('aria-modal-ico').textContent = opts.ico || '🔑';
+  document.getElementById('aria-modal-title').textContent = opts.title || 'Saisie requise';
+  document.getElementById('aria-modal-msg').textContent = opts.msg || '';
+  var inp = document.getElementById('aria-modal-input');
+  inp.type = opts.inputType || 'password';
+  inp.placeholder = opts.placeholder || '';
+  inp.value = '';
+  inp.style.display = 'block';
+  var btn = document.getElementById('aria-modal-confirm');
+  btn.textContent = opts.btnLabel || 'Valider';
+  btn.className = 'aria-modal-confirm primary';
+  document.getElementById('aria-modal-overlay').classList.add('open');
+  setTimeout(function(){ inp.focus(); }, 180);
+}
+
+function _ariaModalConfirm() {
+  var overlay = document.getElementById('aria-modal-overlay');
+  overlay.classList.remove('open');
+  if (!_ariaModalCb) return;
+  if (_ariaModalMode === 'prompt') {
+    var val = document.getElementById('aria-modal-input').value.trim();
+    if (!val) return; // champ vide = annulation silencieuse
+    _ariaModalCb(val);
+  } else {
+    _ariaModalCb(true);
+  }
+  _ariaModalCb = null;
+}
+
+function _ariaModalCancel() {
+  document.getElementById('aria-modal-overlay').classList.remove('open');
+  _ariaModalCb = null;
+}
+
+// Fermer avec Échap
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') _ariaModalCancel();
+});
+
+
+var RELAY='https://aria-forgelis.onrender.com'; var SESSION={}; var estResponsable=true;
+function getSession(){ try{ SESSION=JSON.parse(localStorage.getItem('aria_industrial_session')||'{}'); return SESSION; }catch(e){ return {}; } }
+function getToken(){ return SESSION.salarie_id||localStorage.getItem('aria_industrial_token')||''; }
+function getEntrepriseId(){ return SESSION.entreprise_id||localStorage.getItem('aria_industrial_entreprise_id')||''; }
+function lireStockageSecurise(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+async function api(endpoint,body,method){
+  method=method||(body?'POST':'GET'); var url=RELAY+endpoint;
+  if(method==='GET'&&body){ url+='?'+new URLSearchParams(body).toString(); body=null; }
+  var r=await fetch(url,{method:method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  return r.json();
+}
+async function apiAsk(prompt,contexte){
+  var r=await fetch(RELAY+'/ask-industrial',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:getToken(),message:(contexte?'[CONTEXTE] '+contexte+'\n\n':'')+prompt,poste:'president',max_tokens:2500})});
+  var d=await r.json(); return d.reponse||d.message||'';
+}
+function goToView(viewId){
+  document.querySelectorAll('.nav-item[data-view]').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active');});
+  var n=document.querySelector('.nav-item[data-view="'+viewId+'"]'); if(n) n.classList.add('active');
+  var v=document.getElementById(viewId); if(v){ v.classList.add('active'); chargerVue(viewId); }
+  window.scrollTo(0,0);
+}
+function verifierSession(){
+  var s=getSession();
+  if(!s.salarie_id||lireStockageSecurise('aria_session_active')!=='president'){ window.location.href='connexion-industrial.html'; return; }
+  document.getElementById('login-gate') && (document.getElementById('login-gate').style.display='none');
+  document.getElementById('app-content') && (document.getElementById('app-content').style.display='flex');
+  initPoste();
+}
+verifierSession();
+function toggleGroup(el){ el.classList.toggle('collapsed'); el.nextElementSibling.classList.toggle('collapsed'); }
+function toggleSidebar(){ var sb=document.getElementById('app-sidebar'); if(sb) sb.classList.toggle('open'); }
+function closeSidebar(){ var sb=document.getElementById('app-sidebar'); if(sb) sb.classList.remove('open'); }
+document.querySelectorAll('.nav-item[data-view]').forEach(function(item){ item.addEventListener('click',function(){ goToView(item.dataset.view); closeSidebar(); }); });
+function notifOk(msg){ var el=document.createElement('div'); el.style.cssText='position:fixed;bottom:24px;right:24px;background:#2ECC71;color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.3)'; el.textContent='✅ '+msg; document.body.appendChild(el); setTimeout(function(){el.remove();},3000); }
+function notifErr(msg){ var el=document.createElement('div'); el.style.cssText='position:fixed;bottom:24px;right:24px;background:#E24B4A;color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.3)'; el.textContent='❌ '+msg; document.body.appendChild(el); setTimeout(function(){el.remove();},3000); }
+var journal=[]; function logAction(t){ var h=new Date(); journal.unshift({heure:String(h.getHours()).padStart(2,'0')+':'+String(h.getMinutes()).padStart(2,'0'),texte:t}); var l=document.getElementById('journal-list'); if(!l) return; var e=document.getElementById('journal-empty'); if(e) e.style.display='none'; l.innerHTML=journal.map(function(j){return '<div class="journal-item"><div class="journal-time">'+j.heure+'</div><div class="journal-txt">'+j.texte+'</div></div>';}).join(''); }
+function ouvrirModal(id){ document.getElementById(id).style.display='flex'; }
+function fermerModal(id){ document.getElementById(id).style.display='none'; }
+var styleModal=document.createElement('style');
+styleModal.textContent='.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px}.modal-box{background:var(--panel);border-radius:16px;padding:28px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;border:1px solid var(--line)}.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}.modal-head h3{font-size:18px;font-weight:700;color:var(--ink)}.modal-head button{background:none;border:none;font-size:20px;color:var(--ink-dim);cursor:pointer}.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}.form-group label{display:block;font-size:11px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}.input-field{width:100%;background:var(--panel2,#162040);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--ink,#F0F3FB);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box}.input-field:focus{border-color:var(--amber)}.input-field option{background:var(--panel)}.btn-amber{background:var(--amber,#E8873A)!important;color:#fff!important;border:none!important}';
+document.head.appendChild(styleModal);
+
+var tousSalariesPres=[]; var tousTachesPres=[];
+
+function initPoste() { chargerDashPres(); chargerSalariesPres(); }
+
+function chargerVue(viewId) {
+  if(viewId==='v-presences') chargerPresencesPres();
+  if(viewId==='v-salaries')  chargerSalariesPres();
+  if(viewId==='v-taches')    chargerTachesPres();
+  if(viewId==='v-absences')  chargerAbsencesPres();
+}
+
+async function chargerDashPres() {
+  var [sals,pts,abs,taches,tickets,bcs]=await Promise.all([
+    api('/industrial/salaries',{token:getToken(),entreprise_id:getEntrepriseId()},'GET'),
+    api('/industrial/pointages',{token:getToken(),entreprise_id:getEntrepriseId(),date:new Date().toISOString().slice(0,10)},'GET'),
+    api('/industrial/absences',{token:getToken(),entreprise_id:getEntrepriseId()},'GET'),
+    api('/industrial/taches',{token:getToken(),entreprise_id:getEntrepriseId()},'GET'),
+    api('/industrial/tickets',{token:getToken(),entreprise_id:getEntrepriseId()},'GET'),
+    api('/industrial/bons-commande',{token:getToken(),entreprise_id:getEntrepriseId()},'GET'),
+  ]);
+  document.getElementById('p-stat-salaries').textContent=(sals.salaries||[]).length;
+  document.getElementById('p-stat-presences').textContent=(pts.pointages||[]).filter(function(p){return p.type==='arrivee';}).length;
+  var attente=(abs.absences||[]).filter(function(a){return a.statut==='en_attente';});
+  document.getElementById('p-stat-absences').textContent=attente.length;
+  document.getElementById('p-stat-taches').textContent=(taches.taches||[]).filter(function(t){return t.statut!=='termine';}).length;
+  document.getElementById('p-stat-tickets').textContent=(tickets.tickets||[]).filter(function(t){return t.statut==='ouvert'||t.statut==='en_cours';}).length;
+  var bcAtt=(bcs.bons_commande||[]).filter(function(b){return b.statut==='en_attente';});
+  document.getElementById('p-stat-bc').textContent=bcAtt.length;
+  tousSalariesPres=sals.salaries||[];
+
+  var el=document.getElementById('p-absences-attente');
+  el.innerHTML=attente.length?attente.map(function(a){
+    return '<div class="row-item"><div style="flex:1"><div class="ri-title">'+a.nom_salarie+' — '+a.type_absence+'</div>'+
+      '<div class="ri-meta">'+a.date_debut+' → '+a.date_fin+'</div></div>'+
+      '<button class="btn-act btn-amber" data-id="'+a.id+'" data-action="approuve" onclick="approuverAbsPres(this.dataset.id,this.dataset.action)">✅</button>'+
+      '<button class="btn-act" style="border:1px solid var(--err);color:var(--err);margin-left:4px" data-id="'+a.id+'" data-action="refuse" onclick="approuverAbsPres(this.dataset.id,this.dataset.action)">❌</button></div>';
+  }).join(''):'<div class="empty-state"><div class="es-ic">📭</div>Aucune demande.</div>';
+
+  var elBC=document.getElementById('p-bc-attente');
+  elBC.innerHTML=bcAtt.length?bcAtt.map(function(b){
+    return '<div class="row-item"><div style="flex:1"><div class="ri-title">'+b.numero+' — '+(b.fournisseur_nom||'—')+'</div>'+
+      '<div class="ri-meta">'+parseFloat(b.montant_total||0).toFixed(2)+' €</div></div>'+
+      '<button class="btn-act btn-amber" data-id="'+b.id+'" data-action="approuve" onclick="approuverBCPres(this.dataset.id,this.dataset.action)">✅</button>'+
+      '<button class="btn-act" style="border:1px solid var(--err);color:var(--err);margin-left:4px" data-id="'+b.id+'" data-action="annule" onclick="approuverBCPres(this.dataset.id,this.dataset.action)">❌</button></div>';
+  }).join(''):'<div class="empty-state"><div class="es-ic">📭</div>Aucun BC.</div>';
+}
+
+async function chargerPresencesPres() {
+  var today=new Date().toISOString().slice(0,10);
+  var data=await api('/industrial/pointages',{token:getToken(),entreprise_id:getEntrepriseId(),date:today},'GET');
+  var el=document.getElementById('p-pointages'); if(!el) return;
+  var pts=data.pointages||[];
+  var types={arrivee:'✅ Arrivée',depart:'🚪 Départ',pause_debut:'☕ Pause',pause_fin:'▶️ Reprise'};
+  el.innerHTML=pts.length?pts.map(function(p){
+    return '<div class="row-item"><div style="flex:1">'+
+      '<div class="ri-title">'+p.nom_salarie+' — '+(types[p.type]||p.type)+'</div>'+
+      '<div class="ri-meta">'+new Date(p.horodatage).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})+(p.adresse?' · '+p.adresse:'')+'</div>'+
+    '</div><div style="font-size:12px;color:var(--ink-dim)">'+p.poste+'</div></div>';
+  }).join(''):'<div class="empty-state"><div class="es-ic">⏱️</div>Aucun pointage.</div>';
+}
+
+async function chargerSalariesPres() {
+  var data=await api('/industrial/salaries',{token:getToken(),entreprise_id:getEntrepriseId()},'GET');
+  tousSalariesPres=data.salaries||[];
+  afficherSalariesPres(tousSalariesPres);
+}
+function afficherSalariesPres(liste) {
+  var el=document.getElementById('p-liste-salaries'); if(!el) return;
+  el.innerHTML=liste.length?liste.map(function(s){
+    return '<div class="row-item"><div style="flex:1">'+
+      '<div class="ri-title">'+s.nom+'</div>'+
+      '<div class="ri-meta">'+s.poste+' · '+(s.role==='responsable'?'Responsable':'Salarié')+' · '+s.email_entreprise+'</div>'+
+    '</div>'+
+    '<button class="btn-act" data-id="'+s.id+'" data-nom="'+s.nom+'" data-email="'+(s.email_entreprise||s.email||'')+'" onclick="changerMdpPres(this.dataset.id,this.dataset.nom,this.dataset.email)" style="font-size:12px">🔑</button>'+
+    '<button class="btn-act" data-id="'+s.id+'" data-nom="'+s.nom+'" onclick="desactiverSalariePres(this.dataset.id,this.dataset.nom)" style="color:var(--err);margin-left:4px;font-size:12px">🗑️</button>'+
+    '</div>';
+  }).join(''):'<div class="empty-state"><div class="es-ic">👥</div>Aucun salarié.</div>';
+}
+function filtrerSalariesPres(q){afficherSalariesPres(tousSalariesPres.filter(function(s){return(s.nom||'').toLowerCase().includes(q.toLowerCase());}));}
+function ouvrirModalCreerSalariePres(){ouvrirModal('modal-creer-sal-p');}
+async function creerSalariePres() {
+  var nom=document.getElementById('pns-nom').value.trim(); var email=document.getElementById('pns-email').value.trim().toLowerCase();
+  var mdp=document.getElementById('pns-mdp').value.trim(); var poste=document.getElementById('pns-poste').value;
+  var errEl=document.getElementById('pns-erreur');
+  if(!nom||!email||!mdp||!poste){errEl.textContent='Champs obligatoires';errEl.style.display='block';return;}
+  var data=await api('/industrial/salarie/creer',{token:getToken(),entreprise_id:getEntrepriseId(),nom,email,mot_de_passe:mdp,poste,role:document.getElementById('pns-role').value,terrain:document.getElementById('pns-terrain').checked});
+  if(data.ok){fermerModal('modal-creer-sal-p');notifOk('Salarié créé : '+nom);logAction('Salarié créé : '+nom);chargerSalariesPres();}
+  else{errEl.textContent=data.erreur||'Erreur';errEl.style.display='block';}
+}
+async function desactiverSalariePres(id,nom){
+  ariaConfirm({ico:'⛔',title:'Désactiver un salarié',msg:'Désactiver '+nom+' ? Accès immédiatement révoqué.',btnLabel:'Désactiver',danger:true},async function(){
+    var data=await api('/industrial/salarie/supprimer',{token:getToken(),entreprise_id:getEntrepriseId(),salarie_id:id},'DELETE');
+    if(data.ok){notifOk(nom+' désactivé');chargerSalariesPres();}else notifErr(data.erreur||'Erreur');
+  });
+}
+async function changerMdpPres(id,nom,email){
+  ariaPrompt({ico:'🔑',title:'Nouveau mot de passe',msg:'Mot de passe pour '+nom,placeholder:'Nouveau mot de passe...',inputType:'password',btnLabel:'Appliquer'},async function(mdp){
+    var data=await api('/industrial/salarie/mdp',{token:getToken(),entreprise_id:getEntrepriseId(),email:email,nom:nom,mot_de_passe:mdp});
+    if(data.ok)notifOk('Mot de passe de '+nom+' modifié');else notifErr(data.erreur||'Erreur');
+  });
+}
+
+async function chargerTachesPres(){
+  var data=await api('/industrial/taches',{token:getToken(),entreprise_id:getEntrepriseId()},'GET');
+  tousTachesPres=data.taches||[];
+  var el=document.getElementById('p-liste-taches'); if(!el) return;
+  var prior={urgente:'🔴',haute:'🟠',normale:'🟡',basse:'🟢'};
+  var statuts={a_faire:'À faire',en_cours:'En cours',bloque:'Bloqué',termine:'Terminé ✅'};
+  el.innerHTML=tousTachesPres.length?tousTachesPres.map(function(t){
+    return '<div class="row-item"><div style="flex:1">'+
+      '<div class="ri-title">'+(prior[t.priorite]||'🟡')+' '+t.titre+(t.poste_cible?' <span style="font-size:11px;color:var(--ink-dim)">['+t.poste_cible+']</span>':'')+'</div>'+
+      '<div class="ri-meta">'+statuts[t.statut||'a_faire']+(t.deadline?' · '+t.deadline:'')+'</div>'+
+    '</div>'+
+    (t.statut!=='termine'?'<button class="btn-act btn-amber" data-id="'+t.id+'" onclick="terminerTachePres(this.dataset.id)">✓</button>':'')+
+    '</div>';
+  }).join(''):'<div class="empty-state"><div class="es-ic">📋</div>Aucune tâche.</div>';
+}
+function ouvrirModalTachePres(){ouvrirModal('modal-tache-p');}
+async function creerTachePres(){
+  var titre=document.getElementById('pt-titre').value.trim(); if(!titre){notifErr('Titre obligatoire');return;}
+  var data=await api('/industrial/tache/creer',{token:getToken(),entreprise_id:getEntrepriseId(),titre,description:document.getElementById('pt-desc').value,priorite:document.getElementById('pt-priorite').value,poste_cible:document.getElementById('pt-poste').value,deadline:document.getElementById('pt-deadline').value||null});
+  if(data.ok){fermerModal('modal-tache-p');notifOk('Tâche créée');logAction('Tâche créée : '+titre);chargerTachesPres();}
+  else notifErr(data.erreur||'Erreur');
+}
+async function terminerTachePres(id){
+  await api('/industrial/tache/modifier',{token:getToken(),entreprise_id:getEntrepriseId(),tache_id:id,statut:'termine'});
+  notifOk('Tâche terminée');chargerTachesPres();
+}
+
+async function chargerAbsencesPres(){
+  var data=await api('/industrial/absences',{token:getToken(),entreprise_id:getEntrepriseId()},'GET');
+  var abs=data.absences||[];
+  var attente=abs.filter(function(a){return a.statut==='en_attente';});
+  var autres=abs.filter(function(a){return a.statut!=='en_attente';});
+  var statuts={en_attente:'⏳',approuve:'✅',refuse:'❌',annule:'Annulé'};
+  document.getElementById('p-abs-attente').innerHTML=attente.length?attente.map(function(a){
+    return '<div class="row-item"><div style="flex:1"><div class="ri-title">'+a.nom_salarie+' — '+a.type_absence+'</div>'+
+      '<div class="ri-meta">'+a.date_debut+' → '+a.date_fin+'</div></div>'+
+      '<button class="btn-act btn-amber" data-id="'+a.id+'" data-action="approuve" onclick="approuverAbsPres(this.dataset.id,this.dataset.action)">✅</button>'+
+      '<button class="btn-act" style="border:1px solid var(--err);color:var(--err);margin-left:4px" data-id="'+a.id+'" data-action="refuse" onclick="approuverAbsPres(this.dataset.id,this.dataset.action)">❌</button></div>';
+  }).join(''):'<div class="empty-state"><div class="es-ic">📭</div>Aucune demande.</div>';
+  document.getElementById('p-abs-hist').innerHTML=autres.length?autres.map(function(a){
+    return '<div class="row-item"><div class="ri-title">'+a.nom_salarie+' — '+a.type_absence+'</div>'+
+      '<div class="ri-meta">'+a.date_debut+' → '+a.date_fin+' · '+statuts[a.statut]+'</div></div>';
+  }).join(''):'<div class="empty-state"><div class="es-ic">📂</div>Aucun historique.</div>';
+}
+async function approuverAbsPres(id,statut){
+  var data=await api('/industrial/absence/approuver',{token:getToken(),entreprise_id:getEntrepriseId(),absence_id:id,statut});
+  if(data.ok){notifOk(statut==='approuve'?'Absence approuvée':'Absence refusée');chargerDashPres();chargerAbsencesPres();}
+}
+async function approuverBCPres(id,statut){
+  var data=await api('/industrial/bon-commande/approuver',{token:getToken(),entreprise_id:getEntrepriseId(),bc_id:id,statut});
+  if(data.ok){notifOk(statut==='approuve'?'BC approuvé':'BC refusé');chargerDashPres();}
+}
+async function demanderAriaPres(){
+  var q=document.getElementById('p-aria-q').value.trim(); if(!q) return;
+  var el=document.getElementById('p-aria-rep');
+  el.textContent='⏳ Aria analyse...';
+  var rep=await apiAsk('Tu es consultant senior en management multi-sites. '+q,'Vue président multi-sites');
+  el.textContent=rep; logAction('Aria consulté : '+q.slice(0,60));
+}
+
+
+// ════════════════════════════════════════════════
+// JOURNAL DES DÉCISIONS
+// ════════════════════════════════════════════════
+function ouvrirModalDecision() {
+  ['dec-titre','dec-auteur','dec-raison','dec-impact'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.value = '';
+  });
+  document.getElementById('dec-statut').value = 'en_cours';
+  ouvrirModal('modal-decision');
+}
+
+async function sauvegarderDecision() {
+  var titre = document.getElementById('dec-titre').value.trim();
+  if(!titre) { notif('⚠️ Titre obligatoire'); return; }
+  var data = {
+    titre: titre,
+    auteur: document.getElementById('dec-auteur').value.trim(),
+    raison: document.getElementById('dec-raison').value.trim(),
+    impact: document.getElementById('dec-impact').value.trim(),
+    statut: document.getElementById('dec-statut').value,
+    token: getToken(),
+    entreprise_id: getEntrepriseId()
+  };
+  try {
+    var res = await api('/president/decisions/creer', data);
+    if(res && res.ok) {
+      fermerModal('modal-decision');
+      chargerDecisions();
+      notif('✅ Décision enregistrée');
+    } else {
+      notif('❌ ' + (res && res.erreur || 'Erreur serveur'));
+    }
+  } catch(e) { notif('❌ Erreur réseau'); }
+}
+
+async function chargerDecisions() {
+  try {
+    var res = await api('/president/decisions/liste', {token: getToken(), entreprise_id: getEntrepriseId()});
+    var decisions = (res && res.ok && res.decisions) ? res.decisions : [];
+    var enCours = decisions.filter(function(d){ return d.statut === 'en_cours'; });
+    var terminees = decisions.filter(function(d){ return d.statut !== 'en_cours'; });
+
+    var listeEl = document.getElementById('decisions-liste');
+    if(listeEl) {
+      listeEl.innerHTML = enCours.length === 0
+        ? '<div class="empty-state">Aucune décision en cours. Cliquez sur "+ Nouvelle décision" pour commencer.</div>'
+        : enCours.map(function(d){
+            return '<div class="dec-row en_cours">' +
+              '<div class="dec-statut en_cours">🟡 En cours</div>' +
+              '<div style="font-weight:700;color:var(--ink);margin-bottom:4px">' + (d.titre||'') + '</div>' +
+              '<div style="font-size:12px;color:var(--ink-dim);margin-bottom:6px">Par ' + (d.auteur||'—') + ' · ' + new Date(d.date).toLocaleDateString('fr-FR') + '</div>' +
+              (d.raison ? '<div style="font-size:13px;color:var(--ink-dim);margin-bottom:4px">💭 ' + d.raison + '</div>' : '') +
+              (d.impact ? '<div style="font-size:13px;color:var(--amber)">🎯 Impact attendu : ' + d.impact + '</div>' : '') +
+              '<button data-id="' + d.id + '" onclick="cloturerDecision(this.dataset.id)" style="margin-top:8px;background:rgba(46,204,113,.15);color:#2ECC71;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer">✓ Marquer terminée</button>' +
+              '</div>';
+          }).join('');
+    }
+
+    var termEl = document.getElementById('decisions-terminees');
+    if(termEl) {
+      var trecent = terminees.filter(function(d){
+        return (Date.now() - new Date(d.date).getTime()) < 30*24*3600*1000;
+      });
+      termEl.innerHTML = trecent.length === 0
+        ? '<div class="empty-state">Aucune décision terminée ce mois.</div>'
+        : trecent.map(function(d){
+            var cls = d.statut === 'abandonnee' ? 'abandonnee' : 'termine';
+            var ico = cls === 'abandonnee' ? '⛔' : '✅';
+            return '<div class="dec-row ' + cls + '">' +
+              '<span>' + ico + ' ' + (d.titre||'') + '</span>' +
+              '<span style="float:right;font-size:11px;color:var(--ink-dim)">' + new Date(d.date).toLocaleDateString('fr-FR') + '</span>' +
+              '</div>';
+          }).join('');
+    }
+  } catch(e) { console.error('[decisions]', e); }
+}
+
+async function cloturerDecision(id) {
+  try {
+    var res = await api('/president/decisions/statut', {token: getToken(), id: id, statut: 'termine'});
+    if(res && res.ok) { chargerDecisions(); notif('✅ Décision clôturée'); }
+    else notif('❌ ' + (res && res.erreur || 'Erreur'));
+  } catch(e) { notif('❌ Erreur réseau'); }
+}
+
+// ════════════════════════════════════════════════
+// GESTION DES RISQUES
+// ════════════════════════════════════════════════
+function ouvrirModalRisque() {
+  ['risque-desc','risque-responsable','risque-plan'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.value = '';
+  });
+  ouvrirModal('modal-risque');
+}
+
+async function sauvegarderRisque() {
+  var desc = document.getElementById('risque-desc').value.trim();
+  if(!desc) { notif('⚠️ Description obligatoire'); return; }
+  // Criticité calculée : si saisie manuelle → conserver; calcul auto en V2 (prob × impact)
+  var criticite = document.getElementById('risque-criticite').value;
+  var data = {
+    token: getToken(),
+    entreprise_id: getEntrepriseId(),
+    categorie: document.getElementById('risque-categorie').value,
+    description: desc,
+    criticite: criticite,
+    responsable: document.getElementById('risque-responsable').value.trim(),
+    plan: document.getElementById('risque-plan').value.trim()
+  };
+  try {
+    var res = await api('/president/risques/creer', data);
+    if(res && res.ok) {
+      fermerModal('modal-risque');
+      chargerRisques();
+      notif('✅ Risque enregistré');
+    } else { notif('❌ ' + (res && res.erreur || 'Erreur serveur')); }
+  } catch(e) { notif('❌ Erreur réseau'); }
+}
+
+async function chargerRisques() {
+  try {
+    var res = await api('/president/risques/liste', {token: getToken(), entreprise_id: getEntrepriseId()});
+    var risques = (res && res.ok && res.risques) ? res.risques : [];
+    var cats = {'rh':'👥 RH','financier':'💰 Financier','juridique':'⚖️ Juridique','cyber':'🔒 Cyber','fournisseur':'📦 Fournisseurs','production':'🏭 Production','qualite':'✅ Qualité','conformite':'📋 Conformité'};
+    var crit = {'critique':'🔴','eleve':'🟠','modere':'🟡','faible':'🟢'};
+
+    var critique = risques.filter(function(r){ return r.criticite === 'critique'; }).length;
+    var eleve = risques.filter(function(r){ return r.criticite === 'eleve'; }).length;
+    var faible = risques.filter(function(r){ return r.criticite === 'faible' || r.criticite === 'modere'; }).length;
+
+    var el = document.getElementById('risques-critique-count'); if(el) el.textContent = critique;
+    var el2 = document.getElementById('risques-eleve-count'); if(el2) el2.textContent = eleve;
+    var el3 = document.getElementById('risques-faible-count'); if(el3) el3.textContent = faible;
+
+    var liste = document.getElementById('risques-liste');
+    if(liste) {
+      liste.innerHTML = risques.length === 0
+        ? '<div class="empty-state">Aucun risque enregistré. Cliquez sur "+ Nouveau risque" pour commencer.</div>'
+        : risques.sort(function(a,b){ var o={critique:0,eleve:1,modere:2,faible:3}; return (o[a.criticite]||3)-(o[b.criticite]||3); }).map(function(r){
+            return '<div class="risque-row ' + r.criticite + '">' +
+              '<div style="flex-shrink:0;font-size:20px">' + (crit[r.criticite]||'⚪') + '</div>' +
+              '<div style="flex:1">' +
+                '<div style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-bottom:2px">' + (cats[r.categorie]||r.categorie) + '</div>' +
+                '<div style="font-weight:700;color:var(--ink);margin-bottom:4px">' + r.description + '</div>' +
+                (r.responsable ? '<div style="font-size:12px;color:var(--ink-dim)">👤 ' + r.responsable + '</div>' : '') +
+                (r.plan ? '<div style="font-size:12px;color:var(--ink-dim);margin-top:4px">📋 ' + r.plan + '</div>' : '') +
+              '</div>' +
+              '</div>';
+          }).join('');
+    }
+  } catch(e) { console.error('[risques]', e); }
+}
+
+// ════════════════════════════════════════════════
+// VISION FINANCIÈRE CONSOLIDÉE
+// ════════════════════════════════════════════════
+async function actualiserFinancier() {
+  var token = getToken();
+  var eid = getEntrepriseId();
+  if(!token || !eid) return;
+
+  ['fin-tresorerie','fin-marge','fin-resultat','fin-cash-30j'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.textContent = '⏳';
+  });
+
+  try {
+    var res = await api('/president/financier', {token: token, entreprise_id: eid});
+    if(res && res.ok) {
+      var f = res.financier;
+      var el; 
+      el = document.getElementById('fin-tresorerie'); if(el) el.textContent = f.tresorerie || '—';
+      el = document.getElementById('fin-tresorerie-sub'); if(el) el.textContent = f.tresorerie_detail || 'tous sites';
+      el = document.getElementById('fin-marge'); if(el) el.textContent = f.marge || '—';
+      el = document.getElementById('fin-marge-sub'); if(el) el.textContent = f.marge_detail || '';
+      el = document.getElementById('fin-resultat'); if(el) el.textContent = f.resultat || '—';
+      el = document.getElementById('fin-cash-30j'); if(el) el.textContent = f.cash_30j || '—';
+
+      var prevEl = document.getElementById('fin-previsions');
+      if(prevEl && f.previsions) {
+        prevEl.innerHTML = f.previsions.map(function(p){
+          return '<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)">' +
+            '<span style="color:var(--ink-dim)">' + p.label + '</span>' +
+            '<span style="font-weight:700;color:' + (parseFloat(p.valeur) >= 0 ? '#2ECC71' : '#E24B4A') + '">' + p.valeur + '</span>' +
+            '</div>';
+        }).join('');
+      }
+
+      var sitesEl = document.getElementById('fin-par-site');
+      if(sitesEl && f.par_site) {
+        sitesEl.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
+          '<thead><tr style="border-bottom:1px solid var(--line)"><th style="text-align:left;padding:8px;color:var(--ink-dim)">Site</th><th style="text-align:right;padding:8px;color:var(--ink-dim)">CA</th><th style="text-align:right;padding:8px;color:var(--ink-dim)">Marge</th><th style="text-align:right;padding:8px;color:var(--ink-dim)">Trésorerie</th></tr></thead><tbody>' +
+          f.par_site.map(function(s){
+            return '<tr style="border-bottom:1px solid var(--line)"><td style="padding:8px">' + s.nom + '</td><td style="text-align:right;padding:8px">' + (s.ca||'—') + '</td><td style="text-align:right;padding:8px">' + (s.marge||'—') + '</td><td style="text-align:right;padding:8px">' + (s.tresorerie||'—') + '</td></tr>';
+          }).join('') + '</tbody></table>';
+      }
+    } else {
+      var msg = '<div class="empty-state">Données financières non disponibles.<br>Connectez votre comptabilité via le poste Comptabilité.</div>';
+      ['fin-previsions','fin-par-site'].forEach(function(id){ var el = document.getElementById(id); if(el) el.innerHTML = msg; });
+      ['fin-tresorerie','fin-marge','fin-resultat','fin-cash-30j'].forEach(function(id){var el=document.getElementById(id);if(el)el.textContent='—';});
+    }
+  } catch(e) {
+    ['fin-previsions','fin-par-site'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.innerHTML = '<div class="empty-state">Erreur réseau. <a href="#" onclick="actualiserFinancier()" style="color:var(--amber)">Réessayer</a></div>';
+    });
+  }
+}
+
+// ════════════════════════════════════════════════
+// RECOMMANDATIONS ARIA
+// ════════════════════════════════════════════════
+async function chargerRecommandations() {
+  try {
+    var res = await api('/president/recommandations/liste', {token: getToken(), entreprise_id: getEntrepriseId()});
+    var recos = (res && res.ok && res.recommandations) ? res.recommandations : [];
+    var total = recos.length;
+    var acceptees = recos.filter(function(r){ return r.statut === 'acceptee'; }).length;
+    var enCours = recos.filter(function(r){ return r.statut === 'en_cours'; }).length;
+
+    var el;
+    el = document.getElementById('reco-total'); if(el) el.textContent = total || '—';
+    el = document.getElementById('reco-acceptees'); if(el) el.textContent = acceptees || '—';
+    el = document.getElementById('reco-en-cours'); if(el) el.textContent = enCours || '—';
+    el = document.getElementById('reco-impact'); if(el) el.textContent = total > 0 ? Math.round(acceptees/total*100)+'%' : '—';
+
+    var liste = document.getElementById('reco-liste');
+    if(liste) {
+      liste.innerHTML = recos.length === 0
+        ? '<div class="empty-state">Aria enregistrera ici ses recommandations au fur et à mesure de vos échanges dans l\'onglet Consulting.</div>'
+        : recos.map(function(r){
+            return '<div class="reco-row">' +
+              '<span class="reco-badge ' + (r.statut||'en_cours') + '">' + (r.statut === 'acceptee' ? '✓ Acceptée' : r.statut === 'refusee' ? '✗ Refusée' : '⏳ En cours') + '</span>' +
+              '<div style="flex:1">' +
+                '<div style="font-weight:700;color:var(--ink);margin-bottom:4px">' + (r.titre||'') + '</div>' +
+                '<div style="font-size:12px;color:var(--ink-dim)">' + new Date(r.date).toLocaleDateString('fr-FR') + (r.impact ? ' · Impact : ' + r.impact : '') + '</div>' +
+              '</div>' +
+              (r.statut === 'en_cours' ? '<div style="display:flex;gap:6px;flex-shrink:0">' +
+                '<button data-id="' + r.id + '" data-statut="acceptee" onclick="changerStatutReco(this.dataset.id,this.dataset.statut)" style="background:rgba(46,204,113,.15);color:#2ECC71;border:none;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">✓</button>' +
+                '<button data-id="' + r.id + '" data-statut="refusee" onclick="changerStatutReco(this.dataset.id,this.dataset.statut)" style="background:rgba(226,75,74,.12);color:#E24B4A;border:none;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">✗</button>' +
+                '</div>' : '') +
+              '</div>';
+          }).join('');
+    }
+  } catch(e) { console.error('[recos]', e); }
+}
+
+async function changerStatutReco(id, statut) {
+  try {
+    var res = await api('/president/recommandations/statut', {token: getToken(), id: id, statut: statut});
+    if(res && res.ok) chargerRecommandations();
+    else notif('❌ ' + (res && res.erreur || 'Erreur'));
+  } catch(e) { notif('❌ Erreur réseau'); }
+}
+
+// Enregistrer automatiquement une recommandation Aria depuis le consulting
+async function enregistrerRecoAria(titre, impact) {
+  try {
+    await api('/president/recommandations/creer', {
+      token: getToken(), entreprise_id: getEntrepriseId(),
+      titre: titre, impact: impact||'', statut: 'en_cours'
+    });
+  } catch(e) { console.warn('[enregistrerRecoAria]', e); }
+}
+
+// ════════════════════════════════════════════════
+// KPI PERSONNALISABLES
+// ════════════════════════════════════════════════
+var KPI_CATALOGUE = {
+  ca:          { label: "Chiffre d'affaires", ico: '💰', unite: '€' },
+  marge:       { label: 'Marge brute', ico: '📈', unite: '%' },
+  absenteisme: { label: 'Absentéisme', ico: '🏥', unite: '%' },
+  production:  { label: 'Production', ico: '🏭', unite: 'u' },
+  satisfaction:{ label: 'Satisfaction client', ico: '⭐', unite: '/5' },
+  turnover:    { label: 'Turnover', ico: '🔄', unite: '%' },
+  delais:      { label: 'Délais livraison', ico: '📦', unite: 'j' },
+  securite:    { label: 'Accidents travail', ico: '⛑️', unite: '' },
+  tresorerie:  { label: 'Trésorerie', ico: '🏦', unite: '€' },
+};
+
+function ouvrirConfigKPI() {
+  var actifs = JSON.parse(localStorage.getItem('aria_kpi_actifs_' + getEntrepriseId()) || '[]');
+  Object.keys(KPI_CATALOGUE).forEach(function(k){
+    var el = document.getElementById('kpi-toggle-' + k);
+    if(el) el.checked = actifs.includes(k);
+  });
+  var panel = document.getElementById('kpi-config-panel');
+  if(panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleKPI(key) {
+  // Sauvegarde en temps réel
+  var actifs = JSON.parse(localStorage.getItem('aria_kpi_actifs_' + getEntrepriseId()) || '[]');
+  if(actifs.includes(key)) actifs = actifs.filter(function(k){ return k !== key; });
+  else actifs.push(key);
+  localStorage.setItem('aria_kpi_actifs_' + getEntrepriseId(), JSON.stringify(actifs));
+}
+
+function sauvegarderKPI() {
+  chargerKPIPerso();
+  document.getElementById('kpi-config-panel').style.display = 'none';
+  notif('✅ KPI sauvegardés');
+}
+
+async function chargerKPIPerso() {
+  var actifs = JSON.parse(localStorage.getItem('aria_kpi_actifs_' + getEntrepriseId()) || '["ca","marge","tresorerie"]');
+  // Valeurs : alimentées par le backend depuis les autres postes
+  var valeurs = {};
+  try {
+    var res = await api('/president/kpi/valeurs', {token: getToken(), entreprise_id: getEntrepriseId(), kpis: actifs});
+    if(res && res.ok && res.valeurs) valeurs = res.valeurs;
+    else {
+      // Backend indisponible → afficher — (pas de valeur locale périmée)
+      valeurs = {};
+    }
+  } catch(e) {
+    valeurs = {};
+  }
+  var grid = document.getElementById('kpi-perso-grid');
+  if(!grid) return;
+
+  if(actifs.length === 0) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">Aucun KPI sélectionné. Cliquez sur ⚙️ Configurer pour choisir vos indicateurs.</div>';
+    return;
+  }
+
+  grid.innerHTML = actifs.map(function(k){
+    var kpi = KPI_CATALOGUE[k];
+    if(!kpi) return '';
+    var val = valeurs[k] || '—';
+    return '<div class="kpi-card">' +
+      '<div style="font-size:24px;margin-bottom:6px">' + kpi.ico + '</div>' +
+      '<div class="kpi-val" id="kpi-perso-' + k + '">' + val + '</div>' +
+      '<div class="kpi-label">' + kpi.label + '</div>' +
+
+      '</div>';
+  }).join('');
+}
+
+// mettreAJourKPI supprimée — valeurs alimentées par le backend uniquement
+
+// ── Hook : charger toutes les nouvelles vues au changement d'onglet ──
+// Navigation étendue : charge les modules au changement d'onglet
+var changerVue = function(viewId, tabEl) {
+  goToView(viewId, tabEl);
+  if(viewId === 'v-decisions') chargerDecisions();
+  if(viewId === 'v-risques') chargerRisques();
+  if(viewId === 'v-financier') actualiserFinancier();
+  if(viewId === 'v-recommandations') chargerRecommandations();
+  if(viewId === 'v-kpi') chargerKPIPerso();
+};
+
+  function deconnecterPresident() {
+    localStorage.removeItem('aria_industrial_session');
+    localStorage.removeItem('aria_industrial_token');
+    localStorage.removeItem('aria_industrial_entreprise_id');
+    localStorage.removeItem('aria_industrial_nom');
+    window.location.href = '/connexion-industrial.html';
+  }
+
+</script>
+<script src="/aria-i18n.js"></script>
+</body>
+</html>

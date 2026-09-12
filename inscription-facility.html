@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Essai gratuit Aria Facility — FORGEDIS</title>
+<meta name="description" content="Créez votre compte Aria Facility gratuitement. 14 jours d'essai sans engagement, sans carte bancaire.">
+<link rel="icon" href="/favicon.ico">
+<style>
+:root{
+  --bg:#070B18; --bg2:#0C1226; --panel:#111934; --panel2:#162040;
+  --text:#F0F3FB; --soft:#A6B0CC; --dim:#6D7799;
+  --accent:#FF7A59; --accent-dk:#E5623F;
+  --ok:#2ECC71; --line:rgba(255,255,255,0.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden;}
+.bg-glow{position:fixed;top:-200px;left:50%;transform:translateX(-50%);width:800px;height:600px;background:radial-gradient(ellipse,#FF7A5915 0%,transparent 70%);pointer-events:none;z-index:0;}
+.logo{font-family:system-ui,sans-serif;font-weight:800;font-size:1.3rem;color:var(--text);text-decoration:none;margin-bottom:32px;position:relative;z-index:1;}
+.logo span{color:var(--accent);}
+.layout{display:flex;gap:40px;align-items:flex-start;max-width:860px;width:100%;position:relative;z-index:1;}
+.left{flex:1;display:none;}
+@media(min-width:700px){.left{display:block;}}
+.left h1{font-size:1.8rem;font-weight:800;line-height:1.2;margin-bottom:12px;}
+.left h1 span{color:var(--accent);}
+.left p{color:var(--soft);font-size:14px;line-height:1.6;margin-bottom:20px;}
+.features{list-style:none;display:flex;flex-direction:column;gap:8px;}
+.features li{font-size:13px;color:var(--soft);}
+.badge-essai{display:inline-block;background:rgba(46,204,113,.12);border:1px solid rgba(46,204,113,.3);color:#2ECC71;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;margin-bottom:20px;}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:36px;width:100%;max-width:420px;box-shadow:0 24px 64px rgba(0,0,0,0.35);}
+.card-title{font-size:1.4rem;font-weight:800;margin-bottom:6px;}
+.card-sub{color:var(--soft);font-size:13px;margin-bottom:24px;line-height:1.5;}
+.steps{display:flex;gap:6px;margin-bottom:24px;}
+.step{flex:1;height:3px;border-radius:2px;background:var(--line);transition:background .3s;}
+.step.active{background:var(--accent);}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:11px;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;}
+.field input,.field select{width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border .2s;}
+.field input:focus,.field select:focus{border-color:var(--accent);box-shadow:0 0 0 3px #FF7A5915;}
+.field-wrap{position:relative;}
+.field-wrap .eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--dim);font-size:15px;background:none;border:none;padding:4px;}
+.btn-main{width:100%;background:var(--accent);color:#fff;font-weight:700;padding:13px;border-radius:12px;border:none;font-size:15px;cursor:pointer;font-family:inherit;transition:all .15s;margin-top:4px;}
+.btn-main:hover{background:var(--accent-dk);transform:translateY(-1px);}
+.btn-main:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+.msg-error{display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:#f87171;border-radius:10px;padding:10px 13px;font-size:13px;margin-bottom:12px;line-height:1.5;}
+.msg-success{display:none;background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.25);color:var(--ok);border-radius:10px;padding:10px 13px;font-size:13px;margin-bottom:12px;}
+.msg-loading{display:none;text-align:center;color:var(--soft);font-size:13px;padding:6px 0;}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #FF7A5940;border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toggle{text-align:center;font-size:12px;color:var(--dim);margin-top:16px;}
+.toggle a{color:var(--accent);text-decoration:none;font-weight:600;}
+.rgpd{font-size:11px;color:var(--dim);text-align:center;margin-top:12px;line-height:1.5;}
+.rgpd a{color:var(--dim);}
+.onboarding{display:none;text-align:center;padding:8px 0;}
+.onboarding .big-check{font-size:3rem;margin-bottom:12px;}
+.onboarding h2{font-size:1.2rem;font-weight:800;margin-bottom:8px;}
+.onboarding p{color:var(--soft);font-size:13px;margin-bottom:20px;line-height:1.5;}
+.onboarding .btn-go{display:inline-block;background:var(--accent);color:#fff;font-weight:700;padding:13px 28px;border-radius:12px;text-decoration:none;font-size:15px;transition:all .15s;}
+.onboarding .btn-go:hover{background:var(--accent-dk);transform:translateY(-1px);}
+</style>
+<script defer data-domain="forgedis.fr" src="https://plausible.io/js/script.js"></script>
+</head>
+<body>
+<div class="bg-glow"></div>
+<a href="/" class="logo">FORGE<span>DIS</span></a>
+
+<div class="layout">
+  <div class="left">
+    <div class="badge-essai">✓ 14 jours gratuits — sans carte bancaire</div>
+    <h1>Essayez <span>Aria Facility</span><br>gratuitement</h1>
+    <p>L'assistant vocal qui pilote le PC pour vos proches seniors. Installation en 4 étapes, utilisable immédiatement.</p>
+    <ul class="features">
+      <li>✓ Contrôle vocal du PC depuis le smartphone</li>
+<li>✓ Navigation web, emails, vidéos par la voix</li>
+<li>✓ Rapports quotidiens envoyés à la famille</li>
+<li>✓ Protection anti-arnaques en temps réel</li>
+<li>✓ Sans abonnement pendant 14 jours</li>
+    </ul>
+  </div>
+
+  <div class="card" id="card-form">
+    <div class="card-title" id="card-title">Créer mon compte</div>
+    <div class="card-sub" id="card-sub">14 jours gratuits, sans engagement, sans carte bancaire.</div>
+
+    <div class="steps">
+      <div class="step active" id="step1"></div>
+      <div class="step" id="step2"></div>
+      <div class="step" id="step3"></div>
+    </div>
+
+    <div id="msg-error" class="msg-error"></div>
+    <div id="msg-success" class="msg-success"></div>
+    <div id="msg-loading" class="msg-loading"><span class="spinner"></span> <span id="loading-text">Création du compte...</span></div>
+
+    <form id="auth-form" onsubmit="event.preventDefault(); valider();">
+      <div class="field">
+        <label>Adresse email</label>
+        <input type="email" id="f-email" placeholder="votre@email.com" autocomplete="email" required>
+      </div>
+      <div class="field" id="field-mdp">
+        <label>Mot de passe</label>
+        <div class="field-wrap">
+          <input type="password" id="f-mdp" placeholder="8 caractères minimum" autocomplete="new-password" minlength="8">
+          <button type="button" class="eye" onclick="toggleMdp()">👁</button>
+        </div>
+      </div>
+      <div class="field" id="field-mdp2">
+        <label>Confirmer le mot de passe</label>
+        <div class="field-wrap">
+          <input type="password" id="f-mdp2" placeholder="••••••••" autocomplete="new-password">
+        </div>
+      </div>
+      <button type="submit" class="btn-main" id="btn-main">Démarrer mon essai gratuit →</button>
+    </form>
+
+    <div class="toggle">Déjà un compte ? <a href="/connexion.html">Se connecter</a></div>
+    <p class="rgpd">En créant un compte, vous acceptez nos <a href="/cgv.html">CGV</a> et notre <a href="/confidentialite.html">politique de confidentialité</a>. Vos données ne sont jamais stockées. Traitement transitoire, sans archivage.</p>
+  </div>
+
+  <div class="card onboarding" id="card-onboarding">
+    <div class="big-check">🎉</div>
+    <h2>Votre essai est activé !</h2>
+    <p id="onboarding-msg">Votre compte est créé. Vous avez <strong>14 jours</strong> pour explorer Aria Facility sans engagement.</p>
+    <a href="/connexion.html" class="btn-go" id="btn-go">Accéder à Aria Facility →</a>
+  </div>
+</div>
+
+<script>
+var SUPABASE_URL = 'https://dvlrilklbspuckbplglz.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2bHJpbGtsYnNwdWNrYnBsZ2x6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NjExNDAsImV4cCI6MjA2ODQzNzE0MH0.bwzFE8B4KGJJhZd9iiLcwGFp1vJTpYq9JVHOjYqnHbU';
+var RELAY        = 'https://aria-forgelis.onrender.com';
+var FORFAIT      = 'facility_essai';
+var ENDPOINT     = '/inscription-facility';
+var REDIRECT     = '/connexion.html';
+
+function esc(s){var d=document.createElement('div');d.appendChild(document.createTextNode(String(s===null||s===undefined?'':s)));return d.innerHTML;}
+function toggleMdp(){var i=document.getElementById('f-mdp');i.type=i.type==='password'?'text':'password';}
+function showError(m){var e=document.getElementById('msg-error');e.textContent=m;e.style.display='block';document.getElementById('msg-success').style.display='none';document.getElementById('msg-loading').style.display='none';document.getElementById('btn-main').disabled=false;}
+function showLoading(m){document.getElementById('msg-error').style.display='none';document.getElementById('msg-loading').style.display='block';document.getElementById('loading-text').textContent=m||'Création du compte...';document.getElementById('btn-main').disabled=true;document.getElementById('step2').classList.add('active');}
+function showOnboarding(){document.getElementById('card-form').style.display='none';document.getElementById('card-onboarding').style.display='block';document.getElementById('step3').classList.add('active');}
+
+function valider(){
+  var email = document.getElementById('f-email').value.trim().toLowerCase();
+  var mdp   = document.getElementById('f-mdp').value;
+  var mdp2  = document.getElementById('f-mdp2').value;
+  if(!email||!email.includes('@')){showError('Email invalide.');return;}
+  if(!mdp||mdp.length<8){showError('Le mot de passe doit contenir au moins 8 caractères.');return;}
+  if(mdp!==mdp2){showError('Les mots de passe ne correspondent pas.');return;}
+  sInscrire(email,mdp);
+}
+
+function sInscrire(email,mdp){
+  showLoading('Création du compte...');
+  fetch(SUPABASE_URL+'/auth/v1/signup',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
+    body:JSON.stringify({email:email,password:mdp,data:{forfait:FORFAIT,essai:true,essai_debut:new Date().toISOString()}})
+  })
+  .then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};})})
+  .then(function(res){
+    if(!res.ok){
+      var msg=res.d.msg||res.d.error_description||'Erreur lors de la création du compte.';
+      if(msg.includes('already registered')){msg='Un compte existe déjà avec cet email. <a href="/'+REDIRECT+'" style="color:inherit">Se connecter</a>';document.getElementById('msg-error').innerHTML=esc(msg).replace('&lt;a','<a').replace('&lt;/a&gt;','</a>');document.getElementById('msg-error').style.display='block';document.getElementById('msg-loading').style.display='none';document.getElementById('btn-main').disabled=false;return;}
+      showError(msg);return;
+    }
+    // Activer essai via relay
+    activerEssai(email, res.d.access_token);
+  })
+  .catch(function(){showError('Erreur réseau. Réessayez.');});
+}
+
+function activerEssai(email, token){
+  showLoading('Activation de votre essai...');
+  fetch(RELAY+ENDPOINT,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email:email,token:token,forfait:FORFAIT})
+  })
+  .then(function(r){return r.json();})
+  .then(function(data){
+    // Sauvegarder email pour la prochaine page
+    localStorage.setItem('aria_email',email);
+    if(token) localStorage.setItem('aria_access_token',token);
+    showOnboarding();
+  })
+  .catch(function(){
+    // Même si le relay échoue, le compte est créé — onboarding quand même
+    localStorage.setItem('aria_email',email);
+    showOnboarding();
+  });
+}
+
+// Pré-remplir email si passé en URL ?email=...
+(function(){
+  var params=new URLSearchParams(window.location.search);
+  var e=params.get('email');
+  if(e) document.getElementById('f-email').value=e;
+  var m=params.get('mode');
+  if(m==='connexion') window.location.href='/'+REDIRECT+'?email='+encodeURIComponent(e||'');
+})();
+</script>
+</body>
+</html>

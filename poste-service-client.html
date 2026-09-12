@@ -1,0 +1,1238 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aria Industrial — Service Client</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#14161C;--panel:#1B1E27;--panel2:#22252F;--panel3:#282C38;--line:#2E3240;--line2:#3A3F4E;--ink:#EDEFF3;--ink-dim:#9096A8;--ink-faint:#5E6479;--amber:#E8873A;--amber-dim:#3A2E20;--ok:#4FBF8B;--ok-dim:#1C2E27;--wait:#E0B23C;--wait-dim:#332C1A;--blocked:#E15B5B;--blocked-dim:#331E1E;--radius:12px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:'Space Grotesk',system-ui,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased;display:flex;align-items:flex-start}
+.mono{font-family:'JetBrains Mono',monospace}
+.sidebar{width:230px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:20px 0;position:sticky;top:0;height:100vh;overflow-y:auto}
+.brand{padding:0 20px 18px;display:flex;align-items:center;gap:9px}
+.brand-mark{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--amber),#C8622A);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#14161C}
+.brand-name{font-weight:700;font-size:14px}.brand-name span{color:var(--amber)}
+.poste-tag{margin:0 20px 10px;background:var(--panel2);border:1px solid var(--line2);padding:7px 11px;border-radius:9px;font-size:11.5px;font-weight:600;color:var(--ink-dim)}
+.nav-section{padding:12px 20px 6px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ink-faint)}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 20px;color:var(--ink-dim);font-size:12.5px;font-weight:500;cursor:pointer;border-left:2px solid transparent}
+.nav-item:hover{background:var(--panel2);color:var(--ink)}.nav-item.active{background:var(--panel2);color:var(--ink);border-left-color:var(--amber)}
+.nav-icon{width:15px;text-align:center;font-size:12.5px;flex-shrink:0}
+.nav-group{display:flex;align-items:center;gap:9px;padding:9px 20px;margin-top:4px;color:var(--ink);font-size:13px;font-weight:700;cursor:pointer}
+.nav-group:hover{background:var(--panel2)}
+.grp-arrow{margin-left:auto;font-size:10px;color:var(--ink-faint);transition:transform .15s}
+.nav-group.collapsed .grp-arrow{transform:rotate(-90deg)}
+.nav-group-body{overflow:hidden;max-height:900px;transition:max-height .25s ease}
+.nav-group-body.collapsed{max-height:0}
+.nav-subhead{padding:8px 20px 4px 30px;font-size:9.5px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--ink-faint)}
+.nav-group-body .nav-item{padding-left:30px}
+.main{flex:1;min-width:0;padding:26px 30px 80px;max-width:1080px}
+.view{display:none}.view.active{display:block}
+.view-head{margin-bottom:22px}.view-head h1{font-size:19px;font-weight:700;margin-bottom:5px}
+.view-head p{font-size:12.5px;color:var(--ink-dim);max-width:640px;line-height:1.5}
+.aria-bar{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:15px 17px;display:flex;align-items:center;gap:13px;margin-bottom:16px}
+.orb{width:40px;height:40px;border-radius:50%;flex-shrink:0;cursor:pointer;background:radial-gradient(circle at 35% 30%,#3A2E20,#14161C 70%);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;font-size:16px;animation:pulseOrb 2.6s ease-in-out infinite}
+@keyframes pulseOrb{0%,100%{box-shadow:0 0 0 0 rgba(232,135,58,.25)}50%{box-shadow:0 0 0 9px rgba(232,135,58,0)}}
+.aria-input-wrap{flex:1;display:flex;align-items:center;background:var(--panel2);border:1px solid var(--line2);border-radius:100px;padding:4px 4px 4px 15px}
+.aria-input-wrap input{flex:1;background:none;border:none;outline:none;color:var(--ink);font-family:inherit;font-size:13px}
+.aria-input-wrap input::placeholder{color:var(--ink-faint)}
+.aria-send{width:32px;height:32px;border-radius:50%;background:var(--amber);color:#181008;border:none;font-weight:700;cursor:pointer;flex-shrink:0}
+.aria-response{display:none;margin-top:10px;padding:13px 17px;background:var(--panel2);border-radius:10px;font-size:13px;line-height:1.55;color:var(--ink-dim)}
+.aria-response.show{display:block}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:24px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:15px 16px}
+.kpi-label{font-size:10.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.6px;font-weight:600;margin-bottom:6px}
+.kpi-val{font-family:'JetBrains Mono',monospace;font-size:21px;font-weight:600}
+.kpi-val.ok{color:var(--ok)}.kpi-val.warn{color:var(--wait)}.kpi-val.crit{color:var(--blocked)}
+.section{margin-bottom:28px}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}
+.section-head h2{font-size:14.5px;font-weight:700}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:17px}
+.row-item{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;display:flex;align-items:center;gap:13px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
+.row-item:hover{border-color:var(--amber)}
+.ri-body{flex:1;min-width:0}.ri-title{font-size:13px;font-weight:600;margin-bottom:2px}.ri-meta{font-size:11px;color:var(--ink-dim)}
+.btn-act{background:var(--amber);color:#181008;border:none;padding:8px 14px;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;white-space:nowrap}
+.btn-act:disabled{background:var(--panel3);color:var(--ink-faint);cursor:default}
+.btn-act.ghost{background:var(--panel2);color:var(--ink-dim);border:1px solid var(--line2)}
+.btn-act.ok-btn{background:var(--ok-dim);color:var(--ok);border:1px solid var(--ok)}
+.btn-act.danger{background:var(--blocked-dim);color:var(--blocked);border:1px solid var(--blocked)}
+.tag{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:6px;text-transform:uppercase;letter-spacing:.4px}
+.tag.ok{background:var(--ok-dim);color:var(--ok)}.tag.wait{background:var(--wait-dim);color:var(--wait)}.tag.blocked{background:var(--blocked-dim);color:var(--blocked)}.tag.amber{background:var(--amber-dim);color:var(--amber)}
+.alert-row{background:var(--wait-dim);border:1px solid #4A3D22;border-radius:var(--radius);padding:12px 15px;display:flex;align-items:center;gap:11px;margin-bottom:8px;font-size:12px;color:#F0D9A0}
+.alert-row.crit{background:var(--blocked-dim);border-color:#5A2222;color:#F5B0B0}
+.alert-row .act{margin-left:auto;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
+.journal-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.journal-time{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-faint);width:56px;flex-shrink:0;padding-top:1px}
+.journal-txt{font-size:12.5px;color:var(--ink-dim)}
+.cmdk-overlay{display:none;position:fixed;inset:0;background:rgba(10,11,15,.7);z-index:1000;align-items:flex-start;justify-content:center;padding-top:14vh}
+.cmdk-overlay.open{display:flex}
+.cmdk-box{width:520px;max-width:90vw;background:var(--panel);border:1px solid var(--line2);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.5);overflow:hidden}
+.cmdk-box input{width:100%;background:none;border:none;outline:none;padding:16px 18px;color:var(--ink);font-family:'Space Grotesk',sans-serif;font-size:15px;border-bottom:1px solid var(--line)}
+.cmdk-box input::placeholder{color:var(--ink-faint)}
+#cmdk-results{max-height:280px;overflow-y:auto}
+.cmdk-item{padding:11px 18px;font-size:13px;color:var(--ink-dim);cursor:pointer;display:flex;align-items:center;gap:10px}
+.cmdk-item.sel{background:var(--panel2);color:var(--ink)}
+.cmdk-hint{padding:9px 18px;font-size:10.5px;color:var(--ink-faint);border-top:1px solid var(--line)}
+.role-banner{margin-bottom:20px;padding:10px 15px;border-radius:10px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px}
+.role-banner.agent{background:rgba(79,191,139,.1);border:1px solid rgba(79,191,139,.3);color:var(--ok)}
+.role-banner.responsable{background:rgba(232,135,58,.1);border:1px solid rgba(232,135,58,.3);color:var(--amber)}
+.role-banner.dirigeant{background:rgba(155,140,255,.1);border:1px solid rgba(155,140,255,.3);color:#9B8CFF}
+.empty-state{text-align:center;padding:34px 16px;color:var(--ink-faint);font-size:12.5px;background:var(--panel2);border:1px dashed var(--line2);border-radius:var(--radius)}
+.empty-state .es-ic{font-size:22px;margin-bottom:8px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);color:var(--ink-faint);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+td{padding:10px 12px;border-bottom:1px solid var(--line);color:var(--ink-dim);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--panel2);color:var(--ink)}
+.prog-bar{height:6px;background:var(--panel2);border-radius:4px;overflow:hidden;width:80px;display:inline-block}
+.prog-bar span{display:block;height:100%;border-radius:4px}
+.chat-msg{padding:10px 13px;border-radius:10px;margin-bottom:8px;max-width:80%;font-size:13px;line-height:1.5}
+.chat-msg.sent{background:var(--amber-dim);border:1px solid rgba(232,135,58,.3);margin-left:auto}
+.chat-msg.recv{background:var(--panel2);border:1px solid var(--line)}
+.chat-msg-meta{font-size:10px;color:var(--ink-faint);margin-bottom:4px}
+#login-gate{min-height:100vh;width:100%;display:flex;align-items:center;justify-content:center}
+.login-box{width:380px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:32px;text-align:center}
+.hamburger{display:none;position:fixed;top:12px;left:12px;z-index:200;background:var(--panel);border:1px solid var(--line);border-radius:8px;width:38px;height:38px;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:var(--ink)}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:150}
+@media(max-width:768px){body{flex-direction:column}.hamburger{display:flex}.sidebar{position:fixed;left:-260px;top:0;z-index:160;transition:left .25s ease;height:100vh;width:240px}.sidebar.open{left:0}.sidebar-overlay.open{display:block}.main{padding:56px 16px 80px;width:100%}.kpi-row{grid-template-columns:repeat(2,1fr)}}
+.mobile-bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(10,13,26,.97);backdrop-filter:blur(12px);border-top:1px solid rgba(255,255,255,.06);z-index:9000;padding:6px 0 env(safe-area-inset-bottom,6px);justify-content:space-around;align-items:center}
+.mbn-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 10px;color:#6D7799;font-size:9px;font-weight:700;border:none;background:none;font-family:inherit;-webkit-tap-highlight-color:transparent}
+.mbn-item .mbn-ico{font-size:18px}.mbn-item.active{color:var(--amber)}
+@media(max-width:640px){.mobile-bottom-nav{display:flex}.sidebar{display:none!important}main,.main{padding:16px 14px 80px!important}.hamburger{display:none!important}.sidebar-overlay{display:none!important}}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-box{background:var(--panel);border-radius:16px;padding:28px;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;border:1px solid var(--line2)}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.modal-head h3{font-size:17px;font-weight:700}
+.modal-head button{background:none;border:none;font-size:22px;color:var(--ink-dim);cursor:pointer;line-height:1}
+.input-field{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--ink);font-size:13px;font-family:inherit;outline:none}
+.input-field:focus{border-color:var(--amber)}.input-field option{background:var(--panel)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</head>
+<body>
+<div class="hamburger" id="hamburger" onclick="toggleSidebar()">&#9776;</div>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<div id="login-gate">
+  <div class="login-box">
+    <div class="brand" style="justify-content:center;margin-bottom:20px"><div class="brand-mark">A</div><div class="brand-name">Aria <span>Industrial</span></div></div>
+    <p style="font-size:12.5px;color:var(--ink-dim)">Verification de la session...</p>
+  </div>
+</div>
+
+<div id="app-content" style="display:none;width:100%">
+<div class="cmdk-overlay" id="cmdk-overlay">
+  <div class="cmdk-box">
+    <input type="text" id="cmdk-input" placeholder="Aller a... (ex. tickets, SLA, equipe)" autocomplete="off">
+    <div id="cmdk-results"></div>
+    <div class="cmdk-hint">Haut/Bas naviguer - Entree selectionner - Echap fermer</div>
+  </div>
+</div>
+
+<div class="sidebar" id="app-sidebar">
+  <div class="brand"><div class="brand-mark">A</div><div class="brand-name">Aria <span>Industrial</span></div></div>
+  <div id="entreprise-nom-affiche" style="display:none;padding:0 20px 14px;margin-top:-10px;font-size:11.5px;font-weight:700;color:var(--ink-dim)"></div>
+  <div class="poste-tag" id="poste-info-tag">Service Client</div>
+  <div class="poste-tag" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" onclick="ouvrirPalette()">Aller a... <span class="mono" style="color:var(--ink-faint)">Ctrl K</span></div>
+  <div class="nav-section">Vue generale</div>
+  <div class="nav-item active" data-view="v-dash"><span class="nav-icon">&#9830;</span>Tableau de bord</div>
+  <div class="nav-group" onclick="toggleGroup(this)"><span class="nav-icon">&#127911;</span>Mes tickets <span class="grp-arrow">&#9660;</span></div>
+  <div class="nav-group-body">
+    <div class="nav-item" data-view="v-tickets"><span class="nav-icon">&#128442;</span>Mes tickets</div>
+    <div class="nav-item" data-view="v-appel"><span class="nav-icon">&#128222;</span>Assistance en direct</div>
+    <div class="nav-item" data-view="v-connaissance"><span class="nav-icon">&#128218;</span>Base de connaissance</div>
+  </div>
+  <div class="nav-group" id="nav-grp-pilotage" style="display:none" onclick="toggleGroup(this)"><span class="nav-icon">&#128202;</span>Pilotage <span class="grp-arrow">&#9660;</span></div>
+  <div class="nav-group-body" id="nav-body-pilotage" style="display:none">
+    <div class="nav-item" data-view="v-tous-tickets" id="nav-tous-tickets" style="display:none"><span class="nav-icon">&#128203;</span>Tous les tickets</div>
+    <div class="nav-item" data-view="v-equipe" id="nav-equipe" style="display:none"><span class="nav-icon">&#128101;</span>Mon equipe</div>
+    <div class="nav-item" data-view="v-sla" id="nav-sla" style="display:none"><span class="nav-icon">&#9201;</span>SLA et escalades</div>
+    <div class="nav-item" data-view="v-routage" id="nav-routage" style="display:none"><span class="nav-icon">&#128256;</span>Routage et assignation</div>
+    <div class="nav-item" data-view="v-satisfaction" id="nav-satisfaction" style="display:none"><span class="nav-icon">&#128522;</span>Satisfaction client</div>
+  </div>
+  <div class="nav-section">Mon espace</div>
+  <div class="nav-item" data-view="v-pointage"><span class="nav-icon">&#128336;</span>Mon pointage</div>
+  <div class="nav-item" data-view="v-taches"><span class="nav-icon">&#128203;</span>Mes taches</div>
+  <div class="nav-item" data-view="v-mes-conges"><span class="nav-icon">&#127958;</span>Mes conges</div>
+  <div class="nav-item" data-view="v-mes-droits"><span class="nav-icon">&#9878;</span>Mes droits</div>
+  <div class="nav-item" data-view="v-formation-qcm"><span class="nav-icon">&#127891;</span>Formation quotidienne</div>
+  <div class="nav-section">Outils</div>
+  <div class="nav-item" data-view="v-chat"><span class="nav-icon">&#128172;</span>Chat equipe</div>
+  <div class="nav-item" data-view="v-briefing-poste"><span class="nav-icon">&#9728;</span>Mon briefing</div>
+  <div class="nav-item" data-view="v-journal"><span class="nav-icon">&#128220;</span>Journal Aria</div>
+  <div class="nav-item" data-view="v-clients"><span class="nav-icon">&#128101;</span>Clients</div>
+<div class="nav-item" data-view="v-integrations"><span class="nav-icon">&#128268;</span>Integrations</div>
+  <div style="margin-top:auto;padding:16px 20px">
+    <button class="btn-act ghost" style="width:100%;font-size:12px" onclick="deconnexion()">Deconnexion</button>
+  </div>
+</div>
+
+<div class="main" id="main-content">
+
+<!-- DASHBOARD -->
+<div class="view active" id="v-dash">
+  <div class="view-head"><h1>Service Client</h1><p id="dash-desc">Chargement...</p></div>
+  <div id="role-banner-zone"></div>
+  <div class="aria-bar">
+    <div class="orb" onclick="document.getElementById('aria-dash-input').focus()">&#127897;</div>
+    <div class="aria-input-wrap">
+      <input type="text" id="aria-dash-input" placeholder="Posez une question a Aria sur vos tickets..." onkeydown="if(event.key==='Enter')envoyerAriaDash()">
+      <button class="aria-send" onclick="envoyerAriaDash()">&#8594;</button>
+    </div>
+  </div>
+  <div class="aria-response" id="aria-dash-rep"></div>
+  <div class="kpi-row" id="dash-kpi">
+    <div class="kpi"><div class="kpi-label">Mes tickets ouverts</div><div class="kpi-val" id="kpi-ouverts">--</div></div>
+    <div class="kpi"><div class="kpi-label">En cours</div><div class="kpi-val warn" id="kpi-en-cours">--</div></div>
+    <div class="kpi"><div class="kpi-label">Resolus aujourd'hui</div><div class="kpi-val ok" id="kpi-resolus">--</div></div>
+    <div class="kpi"><div class="kpi-label">Urgents</div><div class="kpi-val crit" id="kpi-urgents">--</div></div>
+  </div>
+  <div id="dash-kpi-resp" style="display:none">
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">Tickets equipe</div><div class="kpi-val" id="kpi-equipe-total">--</div></div>
+      <div class="kpi"><div class="kpi-label">Non assignes</div><div class="kpi-val warn" id="kpi-non-assignes">--</div></div>
+      <div class="kpi"><div class="kpi-label">SLA depasses</div><div class="kpi-val crit" id="kpi-sla-breach">--</div></div>
+      <div class="kpi"><div class="kpi-label">Satisfaction moy.</div><div class="kpi-val ok" id="kpi-sat-avg">--</div></div>
+    </div>
+  </div>
+  <div class="section" id="dash-alertes-sla-section" style="display:none">
+    <div class="section-head"><h2>Alertes SLA</h2><button class="btn-act ghost" onclick="goToView('v-sla')">Voir tout</button></div>
+    <div id="dash-alertes-sla"></div>
+  </div>
+  <div class="section">
+    <div class="section-head"><h2 id="dash-tickets-title">Mes derniers tickets</h2><button class="btn-act ghost" onclick="goToView('v-tickets')">Voir tout</button></div>
+    <div id="dash-tickets-recents"></div>
+  </div>
+</div>
+
+<!-- MES TICKETS -->
+<div class="view" id="v-tickets">
+  <div class="view-head"><h1>Mes tickets</h1><p>Tickets qui vous sont assignes ou crees par vous.</p></div>
+  <div class="aria-bar">
+    <div class="orb">&#127897;</div>
+    <div class="aria-input-wrap">
+      <input type="text" id="aria-tk-input" placeholder="Aide Aria sur un ticket..." onkeydown="if(event.key==='Enter')envoyerAriaTickets()">
+      <button class="aria-send" onclick="envoyerAriaTickets()">&#8594;</button>
+    </div>
+  </div>
+  <div class="aria-response" id="aria-tk-rep"></div>
+  <div class="card">
+    <div class="section-head"><h2>Mes tickets</h2><button class="btn-act" onclick="ouvrirModalNouveauTicket()">+ Nouveau ticket</button></div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      <button class="btn-act ghost" onclick="filtrerTicketsMes('')">Tous</button>
+      <button class="btn-act ghost" onclick="filtrerTicketsMes('ouvert')">Ouverts</button>
+      <button class="btn-act ghost" onclick="filtrerTicketsMes('en_cours')">En cours</button>
+      <button class="btn-act ghost" onclick="filtrerTicketsMes('attente_client')">Attente client</button>
+      <button class="btn-act ghost" onclick="filtrerTicketsMes('resolu')">Resolus</button>
+      <button class="btn-act ghost" onclick="filtrerTicketsMes('ferme')">Fermes</button>
+    </div>
+    <div id="liste-mes-tickets"></div>
+  </div>
+</div>
+
+<!-- TOUS LES TICKETS (RESPONSABLE) -->
+<div class="view" id="v-tous-tickets">
+  <div class="view-head"><h1>Tous les tickets</h1><p>Vue globale des tickets de votre equipe.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Tickets de l'equipe</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn-act ghost" onclick="filtrerTousTickets('non_assigne')">Non assignes</button>
+        <button class="btn-act" onclick="ouvrirModalNouveauTicket()">+ Nouveau ticket</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      <button class="btn-act ghost" onclick="filtrerTousTickets('')">Tous</button>
+      <button class="btn-act ghost" onclick="filtrerTousTickets('ouvert')">Ouverts</button>
+      <button class="btn-act ghost" onclick="filtrerTousTickets('en_cours')">En cours</button>
+      <button class="btn-act ghost" onclick="filtrerTousTickets('attente_client')">Attente client</button>
+      <button class="btn-act ghost" onclick="filtrerTousTickets('urgente')">Urgents</button>
+      <button class="btn-act ghost" onclick="filtrerTousTickets('resolu')">Resolus</button>
+    </div>
+    <div id="liste-tous-tickets"></div>
+  </div>
+</div>
+
+<!-- ASSISTANCE EN DIRECT -->
+<div class="view" id="v-appel">
+  <div class="view-head"><h1>Assistance en direct</h1><p>Gerez les appels et chats avec l'aide d'Aria.</p></div>
+  <div style="display:grid;grid-template-columns:1fr 300px;gap:16px">
+    <div>
+      <div class="card" style="border:2px solid var(--amber);margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <div style="width:9px;height:9px;border-radius:50%;background:var(--ok);animation:blink 1.2s infinite"></div>
+          <span style="font-weight:700">Session active</span>
+          <button class="btn-act ghost" style="margin-left:auto;font-size:11px" onclick="terminerSession()">Terminer</button>
+        </div>
+        <div style="padding:12px;background:var(--panel2);border-radius:9px;margin-bottom:12px">
+          <div style="font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;margin-bottom:6px">Suggestion Aria</div>
+          <div style="font-size:12.5px;line-height:1.6;color:var(--ink-dim)" id="appel-suggestion">Decrivez la situation pour qu'Aria vous aide.</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-head"><h2>Creer un ticket depuis cet appel</h2></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Nom client</label><input type="text" id="appel-nom" class="input-field"></div>
+          <div><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Canal</label>
+            <select id="appel-canal" class="input-field"><option value="telephone">Telephone</option><option value="chat">Chat</option><option value="email">Email</option></select>
+          </div>
+          <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Objet</label><input type="text" id="appel-sujet" class="input-field"></div>
+          <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Notes</label><textarea id="appel-notes" class="input-field" style="height:70px;resize:vertical"></textarea></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn-act ghost" onclick="obtenirSuggestionAppel()">Aide Aria</button>
+          <button class="btn-act" onclick="creerTicketDepuisAppel()">Creer le ticket</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:12px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px">Recherche rapide</div>
+        <input type="text" class="input-field" id="appel-search" placeholder="Rechercher dans la base..." oninput="rechercheBaseAppel(this.value)" style="margin-bottom:10px">
+        <div id="appel-search-results" style="font-size:12.5px;color:var(--ink-dim)">Tapez pour chercher...</div>
+      </div>
+      <div class="card">
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px">Historique recent</div>
+        <div id="appel-historique" style="font-size:12px;color:var(--ink-dim)">Chargement...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BASE DE CONNAISSANCE -->
+<div class="view" id="v-connaissance">
+  <div class="view-head"><h1>Base de connaissance</h1><p>Trouvez rapidement une reponse ou un article.</p></div>
+  <div class="aria-bar">
+    <div class="orb">&#127897;</div>
+    <div class="aria-input-wrap">
+      <input type="text" id="aria-bc-input" placeholder="Demandez a Aria de trouver un article..." onkeydown="if(event.key==='Enter')rechercheAriaBC()">
+      <button class="aria-send" onclick="rechercheAriaBC()">&#8594;</button>
+    </div>
+  </div>
+  <div class="aria-response" id="aria-bc-rep"></div>
+  <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+    <input type="text" class="input-field" id="bc-search" placeholder="Rechercher un article..." oninput="filtrerBC(this.value)" style="flex:1;min-width:180px">
+    <select class="input-field" id="bc-categorie" style="width:180px" onchange="filtrerBC(document.getElementById('bc-search').value)">
+      <option value="">Toutes categories</option>
+      <option value="retour">Retours et remboursements</option>
+      <option value="livraison">Livraison</option>
+      <option value="compte">Compte client</option>
+      <option value="commande">Commandes</option>
+      <option value="technique">Technique</option>
+      <option value="facturation">Facturation</option>
+    </select>
+    <button class="btn-act" id="btn-nouvel-article" style="display:none" onclick="ouvrirModalNouvelArticle()">+ Article</button>
+  </div>
+  <div id="liste-articles-bc"></div>
+</div>
+
+<!-- MON EQUIPE (RESPONSABLE) -->
+<div class="view" id="v-equipe">
+  <div class="view-head"><h1>Mon equipe - Service Client</h1><p>Charge de travail et performance de chaque agent.</p></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Agent</th><th>Tickets ouverts</th><th>En cours</th><th>Urgents</th><th>Retards SLA</th><th>Non traites</th><th>Charge</th><th>Action</th></tr></thead>
+      <tbody id="equipe-tbody"></tbody>
+    </table>
+  </div>
+  <div style="margin-top:20px" class="card">
+    <div class="section-head"><h2>Tickets non assignes</h2><button class="btn-act" onclick="goToView('v-routage')">Assigner</button></div>
+    <div id="tickets-non-assignes"></div>
+  </div>
+</div>
+
+<!-- SLA ET ESCALADES (RESPONSABLE) -->
+<div class="view" id="v-sla">
+  <div class="view-head"><h1>SLA et Escalades</h1><p>Suivi des delais de reponse et resolution.</p></div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Delai moy. 1ere reponse</div><div class="kpi-val ok" id="sla-kpi-rep">--</div></div>
+    <div class="kpi"><div class="kpi-label">Delai moy. resolution</div><div class="kpi-val warn" id="sla-kpi-res">--</div></div>
+    <div class="kpi"><div class="kpi-label">SLA depasses</div><div class="kpi-val crit" id="sla-kpi-breach">--</div></div>
+    <div class="kpi"><div class="kpi-label">Escalades ouvertes</div><div class="kpi-val warn" id="sla-kpi-esc">--</div></div>
+  </div>
+  <div class="card section">
+    <div class="section-head"><h2>Tickets SLA depasses</h2></div>
+    <div id="sla-breached"></div>
+  </div>
+  <div class="card section">
+    <div class="section-head"><h2>Tickets proches du depassement</h2></div>
+    <div id="sla-warning"></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Escalades en cours</h2><button class="btn-act" onclick="ouvrirModalEscalade()">+ Escalade manuelle</button></div>
+    <div id="liste-escalades"></div>
+  </div>
+</div>
+
+<!-- ROUTAGE (RESPONSABLE) -->
+<div class="view" id="v-routage">
+  <div class="view-head"><h1>Routage et Assignation</h1><p>Assignez et reassignez les tickets.</p></div>
+  <div style="display:grid;grid-template-columns:1fr 300px;gap:16px">
+    <div>
+      <div class="card section">
+        <div class="section-head"><h2>Tickets a assigner</h2></div>
+        <div id="routage-a-assigner"></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px">Charge par agent</div>
+        <div id="routage-charge-agents"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <div class="section-head"><h2>Tickets recemment assignes</h2></div>
+    <div id="routage-assignes"></div>
+  </div>
+</div>
+
+<!-- SATISFACTION (RESPONSABLE) -->
+<div class="view" id="v-satisfaction">
+  <div class="view-head"><h1>Satisfaction client</h1><p>Notes clients reelles, tendances et reclamations.</p></div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Note moyenne</div><div class="kpi-val ok" id="sat-note-avg">--</div></div>
+    <div class="kpi"><div class="kpi-label">Evaluations ce mois</div><div class="kpi-val" id="sat-count">--</div></div>
+    <div class="kpi"><div class="kpi-label">Notes inf. a 3</div><div class="kpi-val crit" id="sat-negative">--</div></div>
+    <div class="kpi"><div class="kpi-label">Reclamations ouvertes</div><div class="kpi-val warn" id="sat-reclamations">--</div></div>
+  </div>
+  <div class="card section">
+    <div class="section-head"><h2>Dernieres evaluations</h2></div>
+    <div id="sat-liste"></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Analyse Aria - Tendances</h2><button class="btn-act" onclick="analyserSatisfaction()">Analyser</button></div>
+    <div id="sat-aria-analyse" style="font-size:13px;line-height:1.6;color:var(--ink-dim)">Cliquez sur Analyser pour obtenir une analyse Aria.</div>
+  </div>
+</div>
+
+<!-- POINTAGE -->
+<div class="view" id="v-pointage">
+  <div class="view-head"><h1>Mon pointage</h1><p>Enregistrez vos heures.</p></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="section-head"><h2>Aujourd'hui</h2></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <button class="btn-act" onclick="pointerWeb('arrivee')">Pointer arrivee</button>
+      <button class="btn-act ghost" onclick="pointerWeb('pause_debut')">Debut pause</button>
+      <button class="btn-act ghost" onclick="pointerWeb('pause_fin')">Fin pause</button>
+      <button class="btn-act ghost" onclick="pointerWeb('depart')">Pointer depart</button>
+    </div>
+    <div id="pointage-msg" style="font-size:13px;color:var(--ok)"></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Historique recent</h2></div>
+    <div id="pointage-historique" style="font-size:13px;color:var(--ink-dim)">Chargement...</div>
+  </div>
+</div>
+
+<!-- TACHES -->
+<div class="view" id="v-taches">
+  <div class="view-head"><h1>Mes taches</h1><p>Suivez vos taches liees au service client.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Taches en cours</h2><button class="btn-act" onclick="ouvrirModalTache()">+ Nouvelle tache</button></div>
+    <div id="liste-taches-poste"></div>
+  </div>
+</div>
+
+<!-- CONGES -->
+<div class="view" id="v-mes-conges">
+  <div class="view-head"><h1>Mes conges et absences</h1><p>Deposez vos demandes d'absence.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Mes demandes</h2><button class="btn-act" onclick="ouvrirModal('modal-conge')">+ Demande</button></div>
+    <div id="mes-absences-poste"></div>
+  </div>
+</div>
+
+<!-- DROITS -->
+<div class="view" id="v-mes-droits">
+  <div class="view-head"><h1>Mes droits</h1><p>Posez vos questions sur vos droits a Aria.</p></div>
+  <div class="card">
+    <textarea id="droits-question-p" class="input-field" style="width:100%;height:80px;resize:vertical;margin-bottom:10px" placeholder="Ex: Ai-je droit a la mutuelle ?"></textarea>
+    <button class="btn-act" onclick="demanderDroitsPoste()">Demander a Aria</button>
+    <div id="droits-reponse-p" style="margin-top:14px;font-size:13px;line-height:1.7"></div>
+  </div>
+</div>
+
+<!-- FORMATION QCM -->
+<div class="view" id="v-formation-qcm">
+  <div class="view-head"><h1>Formation quotidienne</h1><p>3 questions sur les bonnes pratiques service client.</p></div>
+  <div class="card"><div id="qcm-zone-p"><button class="btn-act" onclick="lancerQCMPoste()">Demarrer la formation du jour</button></div></div>
+</div>
+
+<!-- CHAT EQUIPE -->
+<div class="view" id="v-chat">
+  <div class="view-head"><h1>Chat equipe</h1><p>Echangez avec vos collegues.</p></div>
+  <div class="card" style="height:420px;display:flex;flex-direction:column">
+    <div id="chat-messages" style="flex:1;overflow-y:auto;padding-bottom:12px"></div>
+    <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--line)">
+      <input type="text" id="chat-input" class="input-field" style="flex:1" placeholder="Votre message..." onkeydown="if(event.key==='Enter')envoyerMessage()">
+      <button class="btn-act" onclick="envoyerMessage()">Envoyer</button>
+    </div>
+  </div>
+</div>
+
+<!-- BRIEFING -->
+<div class="view" id="v-briefing-poste">
+  <div class="view-head"><h1>Mon briefing</h1><p>Resume Aria de votre journee service client.</p></div>
+  <div class="card">
+    <button class="btn-act" style="margin-bottom:16px" onclick="genererBriefing()">Generer le briefing du jour</button>
+    <div id="briefing-contenu" style="font-size:13px;line-height:1.8;color:var(--ink-dim)">Cliquez sur Generer.</div>
+  </div>
+</div>
+
+<!-- JOURNAL -->
+<div class="view" id="v-journal">
+  <div class="view-head"><h1>Journal Aria</h1><p>Historique de vos actions de la session.</p></div>
+  <div class="card">
+    <div class="empty-state" id="journal-empty"><div class="es-ic">&#128220;</div>Journal vide.</div>
+    <div id="journal-list"></div>
+  </div>
+</div>
+
+<!-- INTEGRATIONS -->
+
+<!-- CLIENTS -->
+<div class="view" id="v-clients">
+  <div class="view-head"><h1>Base clients</h1><p>Referencez vos clients et creez des taches directement depuis leur fiche.</p></div>
+  <div class="card" id="clients-liste-panel">
+    <div class="section-head"><h2>Clients</h2>
+      <button class="btn-act btn-amber btn-sm" onclick="afficherFormulaireClient()">+ Nouveau client</button>
+    </div>
+    <input type="text" class="input-field" placeholder="Rechercher un client..." oninput="rechercherClients(this.value)" style="margin-bottom:10px">
+    <div id="clients-liste"><div style="color:var(--muted);font-size:13px">Chargement...</div></div>
+  </div>
+  <div class="card" id="client-fiche-panel" style="display:none">
+    <div style="margin-bottom:10px">
+      <button class="btn-act btn-ghost btn-sm" onclick="fermerFicheClient()">&larr; Retour</button>
+    </div>
+    <div id="client-fiche-contenu"></div>
+  </div>
+  <div class="card" id="client-form-panel" style="display:none">
+    <div class="section-head"><h2>Nouveau client</h2></div>
+    <div id="client-form-contenu"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn-act btn-amber" onclick="sauvegarderClient()">Enregistrer</button>
+      <button class="btn-act btn-ghost" onclick="annulerFormClient()">Annuler</button>
+    </div>
+  </div>
+</div>
+<div class="view" id="v-integrations">
+  <div class="view-head"><h1>Integrations</h1><p>Connectez des outils externes a votre poste.</p></div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px" id="liste-integrations"></div>
+</div>
+
+</div><!-- /main -->
+
+<nav class="mobile-bottom-nav">
+  <button class="mbn-item active" onclick="goToView('v-dash')"><span class="mbn-ico">&#9830;</span>Accueil</button>
+  <button class="mbn-item" onclick="goToView('v-tickets')"><span class="mbn-ico">&#128442;</span>Tickets</button>
+  <button class="mbn-item" onclick="goToView('v-connaissance')"><span class="mbn-ico">&#128218;</span>Base KC</button>
+  <button class="mbn-item" onclick="goToView('v-taches')"><span class="mbn-ico">&#128203;</span>Taches</button>
+  <button class="mbn-item" onclick="goToView('v-briefing-poste')"><span class="mbn-ico">&#9728;</span>Briefing</button>
+</nav>
+
+<!-- MODALS -->
+
+<!-- TICKET DETAIL -->
+<div class="modal-overlay" id="modal-ticket-detail" style="display:none">
+  <div class="modal-box" style="max-width:680px">
+    <div class="modal-head"><h3 id="td-sujet">Ticket</h3><button onclick="fermerModal('modal-ticket-detail')">x</button></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px" id="td-badges"></div>
+    <div style="font-size:12.5px;color:var(--ink-dim);margin-bottom:14px" id="td-infos"></div>
+    <div id="td-messages" style="max-height:260px;overflow-y:auto;padding:10px;background:var(--panel2);border-radius:10px;margin-bottom:14px"></div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:10.5px;color:var(--ink-faint);display:block;margin-bottom:5px;text-transform:uppercase;font-weight:600">Votre reponse</label>
+      <textarea id="td-reponse" class="input-field" style="width:100%;height:90px;resize:vertical" placeholder="Redigez votre reponse..."></textarea>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-act" onclick="repondreTicket('en_cours')">Repondre</button>
+      <button class="btn-act ok-btn" onclick="repondreTicket('resolu')">Resoudre</button>
+      <button class="btn-act ghost" onclick="repondreTicket('attente_client')">Attente client</button>
+      <button class="btn-act ghost" onclick="cloturerTicket()">Cloturer</button>
+      <button class="btn-act ghost" onclick="reouvrir()">Rouvrir</button>
+      <button class="btn-act ghost" style="border:1px solid var(--amber);color:var(--amber)" onclick="demanderAidaTicket()">Aide Aria</button>
+      <button class="btn-act ghost" id="btn-reassigner" style="display:none" onclick="reassignerTicket()">Reassigner</button>
+      <button class="btn-act ghost" id="btn-escalader" style="display:none" onclick="escaladerTicket()">Escalader</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOUVEAU TICKET -->
+<div class="modal-overlay" id="modal-nouveau-ticket" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Nouveau ticket</h3><button onclick="fermerModal('modal-nouveau-ticket')">x</button></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Canal</label>
+        <select id="ntk-canal" class="input-field"><option value="telephone">Telephone</option><option value="email">Email</option><option value="chat">Chat</option><option value="formulaire">Formulaire web</option><option value="manuel">Manuel</option></select></div>
+      <div><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Priorite</label>
+        <select id="ntk-priorite" class="input-field"><option value="normale">Normale</option><option value="haute">Haute</option><option value="urgente">Urgente</option><option value="basse">Basse</option></select></div>
+      <div><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Nom client *</label><input type="text" id="ntk-nom" class="input-field"></div>
+      <div><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Email client</label><input type="email" id="ntk-email" class="input-field"></div>
+      <div><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Telephone</label><input type="tel" id="ntk-tel" class="input-field"></div>
+      <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Sujet *</label><input type="text" id="ntk-sujet" class="input-field"></div>
+      <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Description</label><textarea id="ntk-desc" class="input-field" style="height:80px;resize:vertical"></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-act ghost" onclick="fermerModal('modal-nouveau-ticket')">Annuler</button>
+      <button class="btn-act" onclick="creerTicket()">Creer le ticket</button>
+    </div>
+  </div>
+</div>
+
+<!-- REASSIGNER -->
+<div class="modal-overlay" id="modal-reassigner" style="display:none">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-head"><h3>Reassigner le ticket</h3><button onclick="fermerModal('modal-reassigner')">x</button></div>
+    <label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:6px">Selectionner un agent</label>
+    <select id="reassign-agent" class="input-field" style="margin-bottom:12px"></select>
+    <label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:6px">Commentaire</label>
+    <textarea id="reassign-comment" class="input-field" style="height:60px;resize:vertical;margin-bottom:14px" placeholder="Raison de la reassignation..."></textarea>
+    <div style="display:flex;gap:8px">
+      <button class="btn-act ghost" onclick="fermerModal('modal-reassigner')">Annuler</button>
+      <button class="btn-act" onclick="confirmerReassignation()">Reassigner</button>
+    </div>
+  </div>
+</div>
+
+<!-- ESCALADE -->
+<div class="modal-overlay" id="modal-escalade" style="display:none">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-head"><h3>Escalade manuelle</h3><button onclick="fermerModal('modal-escalade')">x</button></div>
+    <label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:6px">Ticket</label>
+    <select id="esc-ticket" class="input-field" style="margin-bottom:12px"></select>
+    <label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:6px">Raison</label>
+    <textarea id="esc-raison" class="input-field" style="height:80px;resize:vertical;margin-bottom:14px"></textarea>
+    <div style="display:flex;gap:8px">
+      <button class="btn-act ghost" onclick="fermerModal('modal-escalade')">Annuler</button>
+      <button class="btn-act" onclick="confirmerEscalade()">Escalader</button>
+    </div>
+  </div>
+</div>
+
+<!-- ARTICLE KC -->
+<div class="modal-overlay" id="modal-article-kc" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Nouvel article</h3><button onclick="fermerModal('modal-article-kc')">x</button></div>
+    <div style="display:grid;gap:12px">
+      <div><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Titre *</label><input type="text" id="kc-titre" class="input-field"></div>
+      <div><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Categorie</label>
+        <select id="kc-categorie" class="input-field"><option value="retour">Retours</option><option value="livraison">Livraison</option><option value="compte">Compte client</option><option value="commande">Commandes</option><option value="technique">Technique</option><option value="facturation">Facturation</option></select></div>
+      <div><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Contenu *</label><textarea id="kc-contenu" class="input-field" style="height:120px;resize:vertical"></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-act ghost" onclick="fermerModal('modal-article-kc')">Annuler</button>
+      <button class="btn-act" onclick="creerArticleKC()">Publier l'article</button>
+    </div>
+  </div>
+</div>
+
+<!-- TACHE -->
+<div class="modal-overlay" id="modal-tache-p" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Nouvelle tache</h3><button onclick="fermerModal('modal-tache-p')">x</button></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Titre *</label><input type="text" id="tp-titre" class="input-field"></div>
+      <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Description</label><textarea id="tp-desc" class="input-field" style="height:70px;resize:vertical"></textarea></div>
+      <div><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Priorite</label>
+        <select id="tp-priorite" class="input-field"><option value="normale">Normale</option><option value="haute">Haute</option><option value="urgente">Urgente</option><option value="basse">Basse</option></select></div>
+      <div><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Deadline</label><input type="date" id="tp-deadline" class="input-field"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-act ghost" onclick="fermerModal('modal-tache-p')">Annuler</button>
+      <button class="btn-act" onclick="creerTachePoste()">Creer</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONGE -->
+<div class="modal-overlay" id="modal-conge" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Demande d'absence</h3><button onclick="fermerModal('modal-conge')">x</button></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Type</label>
+        <select id="cg-type" class="input-field"><option value="conges_payes">Conges payes</option><option value="maladie">Maladie</option><option value="accident_travail">Accident du travail</option><option value="maternite">Maternite</option><option value="paternite">Paternite</option><option value="sans_solde">Sans solde</option><option value="formation">Formation</option><option value="autre">Autre</option></select></div>
+      <div><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Du</label><input type="date" id="cg-debut" class="input-field"></div>
+      <div><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Au</label><input type="date" id="cg-fin" class="input-field"></div>
+      <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px">Commentaire</label><textarea id="cg-comment" class="input-field" style="height:60px;resize:vertical"></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-act ghost" onclick="fermerModal('modal-conge')">Annuler</button>
+      <button class="btn-act" onclick="soumettreCongePoste()">Envoyer</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app-content -->
+<script>
+var RELAY='https://aria-forgelis.onrender.com';
+var SESSION={};var ROLE='agent';
+var POSTE_COURANT = 'service_client';
+var tousTickets=[];var mesTickets=[];var ticketActif=null;
+var journal=[];var chatMessages=[];var articlesBC=[];
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtDate(d){if(!d)return '--';try{return new Date(d).toLocaleDateString('fr-FR');}catch(e){return d;}}
+function fmtDateTime(d){if(!d)return '--';try{return new Date(d).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch(e){return d;}}
+function getSession(){try{return JSON.parse(localStorage.getItem('aria_industrial_session')||'{}');}catch(e){return {};}}
+function getToken(){return SESSION.salarie_id||'';}
+function getEntrepriseId(){return SESSION.entreprise_id||'';}
+function getNom(){return SESSION.nom||'';}
+
+async function api(endpoint,body,method){
+  method=method||(body?'POST':'GET');var url=RELAY+endpoint;
+  if(method==='GET'&&body){url+='?'+new URLSearchParams(body).toString();body=null;}
+  try{var r=await fetch(url,{method:method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});return r.json();}
+  catch(e){return {erreur:'Erreur reseau'};}
+}
+
+async function apiAsk(prompt,contexte){
+  try{
+    var r=await fetch(RELAY+'/ask-industrial',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({token:getToken(),message:(contexte?'[CONTEXTE] '+contexte+'\n\n':'')+prompt,poste:'service-client',max_tokens:2000})});
+    var d=await r.json();return d.reponse||d.message||'';
+  }catch(e){return 'Erreur de connexion.';}
+}
+
+// SESSION
+function verifierSession(){
+  SESSION=getSession();
+  var actif=localStorage.getItem('aria_session_active');
+  if(!SESSION.salarie_id||actif!=='service-client'){window.location.href='connexion-industrial.html';return;}
+  ROLE=SESSION.role||'agent';
+  var estResp=(ROLE==='responsable'||ROLE==='dirigeant');
+
+  // Pilotage nav
+  if(estResp){
+    document.getElementById('nav-grp-pilotage').style.display='flex';
+    document.getElementById('nav-body-pilotage').style.display='block';
+    ['nav-tous-tickets','nav-equipe','nav-sla','nav-routage','nav-satisfaction'].forEach(function(id){
+      var el=document.getElementById(id);if(el)el.style.display='flex';
+    });
+    document.getElementById('dash-kpi-resp').style.display='block';
+    document.getElementById('dash-alertes-sla-section').style.display='block';
+    document.getElementById('dash-tickets-title').textContent="Tickets recents de l'equipe";
+    var ba=document.getElementById('btn-reassigner');if(ba)ba.style.display='inline-flex';
+    var be=document.getElementById('btn-escalader');if(be)be.style.display='inline-flex';
+    var bn=document.getElementById('btn-nouvel-article');if(bn)bn.style.display='inline-flex';
+  }
+
+  var roleLabel=ROLE==='dirigeant'?'Dirigeant':(estResp?'Responsable Service Client':'Agent Service Client');
+  document.getElementById('poste-info-tag').textContent='Service Client - '+roleLabel;
+  var ent=document.getElementById('entreprise-nom-affiche');
+  if(SESSION.entreprise_nom){ent.textContent=esc(SESSION.entreprise_nom);ent.style.display='block';}
+
+  document.getElementById('login-gate').style.display='none';
+  document.getElementById('app-content').style.display='block';
+  var banner=document.getElementById('role-banner-zone');
+  banner.innerHTML='<div class="role-banner '+ROLE+'">'+esc(roleLabel)+' - Session active</div>';
+  initPoste();
+}
+
+// NAVIGATION
+function goToView(viewId){
+  document.querySelectorAll('.nav-item[data-view]').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active');});
+  document.querySelectorAll('.mbn-item').forEach(function(b){b.classList.remove('active');});
+  var n=document.querySelector('.nav-item[data-view="'+viewId+'"]');if(n)n.classList.add('active');
+  var v=document.getElementById(viewId);if(v){v.classList.add('active');chargerVue(viewId);}
+  window.scrollTo(0,0);closeSidebar();
+}
+
+function chargerVue(id){
+  var map={
+    'v-clients':chargerClients,
+    'v-dash':chargerDash,'v-tickets':chargerMesTickets,'v-tous-tickets':chargerTousTickets,
+    'v-appel':initAppel,'v-connaissance':chargerBaseConnaissance,
+    'v-equipe':chargerEquipe,'v-sla':chargerSLA,'v-routage':chargerRoutage,
+    'v-satisfaction':chargerSatisfaction,'v-pointage':chargerPointageHisto,
+    'v-taches':chargerTachesPoste,'v-mes-conges':chargerMesCongesPoste,
+    'v-chat':chargerChat,'v-integrations':chargerIntegrations
+  };
+  if(map[id])map[id]();
+}
+
+function toggleGroup(el){el.classList.toggle('collapsed');el.nextElementSibling.classList.toggle('collapsed');}
+function toggleSidebar(){document.getElementById('app-sidebar').classList.toggle('open');document.getElementById('sidebar-overlay').classList.toggle('open');}
+function closeSidebar(){document.getElementById('app-sidebar').classList.remove('open');document.getElementById('sidebar-overlay').classList.remove('open');}
+document.querySelectorAll('.nav-item[data-view]').forEach(function(item){item.addEventListener('click',function(){goToView(item.dataset.view);});});
+
+// UI UTILS
+function notifOk(msg){toast(msg,'#2ECC71');}
+function notifErr(msg){toast(msg,'#E24B4A');}
+function toast(msg,color){
+  var el=document.createElement('div');
+  el.style.cssText='position:fixed;bottom:24px;right:24px;background:'+color+';color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.3);max-width:320px';
+  el.textContent=msg;document.body.appendChild(el);setTimeout(function(){el.remove();},3500);
+}
+
+function logAction(t){
+  var h=new Date();var hh=String(h.getHours()).padStart(2,'0')+':'+String(h.getMinutes()).padStart(2,'0');
+  journal.unshift({heure:hh,texte:t});
+  var l=document.getElementById('journal-list');if(!l)return;
+  var e=document.getElementById('journal-empty');if(e)e.style.display='none';
+  l.innerHTML=journal.map(function(j){return '<div class="journal-item"><div class="journal-time">'+j.heure+'</div><div class="journal-txt">'+esc(j.texte)+'</div></div>';}).join('');
+}
+
+function ouvrirModal(id){document.getElementById(id).style.display='flex';}
+function fermerModal(id){document.getElementById(id).style.display='none';}
+function deconnexion(){['aria_industrial_email','aria_industrial_poste','aria_industrial_nom','aria_session_active','aria_industrial_token','aria_industrial_entreprise_id','aria_industrial_role','aria_industrial_session'].forEach(function(k){try{localStorage.removeItem(k);}catch(e){}});window.location.href='connexion-industrial.html';}
+
+// COULEURS STATUTS
+var PRIO_COLOR={basse:'#6D7799',normale:'#E8873A',haute:'#FF7A59',urgente:'#E15B5B'};
+var STAT_COLOR={ouvert:'#E8873A',en_cours:'#9B8CFF',attente_client:'#E0B23C',resolu:'#4FBF8B',ferme:'#6D7799',reouvert:'#FF7A59'};
+var STAT_LABEL={ouvert:'Ouvert',en_cours:'En cours',attente_client:'Attente client',resolu:'Resolu',ferme:'Ferme',reouvert:'Rouvert'};
+function badgeStatut(s){var c=STAT_COLOR[s]||'#999';var l=STAT_LABEL[s]||s;return '<span style="padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;background:'+c+'22;color:'+c+'">'+esc(l)+'</span>';}
+function badgePrio(p){var c=PRIO_COLOR[p]||'#999';return '<span style="padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;background:'+c+'22;color:'+c+'">'+esc(p||'--')+'</span>';}
+
+function slaStatus(t){
+  if(t.statut==='ferme'||t.statut==='resolu')return null;
+  var limits={urgente:24,haute:48,normale:72,basse:120};
+  var limit=(limits[t.priorite]||72)*3600000;
+  var age=Date.now()-new Date(t.created_at).getTime();
+  if(age>limit)return {cls:'crit',label:'SLA depasse'};
+  if(age>limit*0.8)return {cls:'warn',label:'SLA proche'};
+  return null;
+}
+
+function renderTicketRow(t,clickable){
+  var sla=slaStatus(t);
+  var slaSpan=sla?'<span style="padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;background:'+(sla.cls==='crit'?'rgba(225,91,91,.15)':'rgba(224,178,60,.15)')+';color:'+(sla.cls==='crit'?'var(--blocked)':'var(--wait)')+'">'+sla.label+'</span>':'';
+  return '<div class="row-item" '+(clickable?'onclick="ouvrirTicketDetail("+t.id+")"':'')+'>'+
+    '<div class="ri-body">'+
+    '<div class="ri-title">'+esc(t.sujet)+'</div>'+
+    '<div class="ri-meta">'+esc(t.client_nom||'Anonyme')+' - '+esc(t.canal||'--')+' - '+fmtDate(t.created_at)+(t.agent_nom?' - '+esc(t.agent_nom):'')+'</div>'+
+    '</div>'+
+    '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+badgePrio(t.priorite)+badgeStatut(t.statut)+slaSpan+'</div></div>';
+}
+
+// INIT
+function initPoste(){chargerDash();}
+
+// DASHBOARD
+async function chargerDash(){
+  document.getElementById('dash-desc').textContent=(ROLE==='responsable'||ROLE==='dirigeant')?'Vue Responsable Service Client':'Vue Agent Service Client';
+  var today=new Date().toISOString().slice(0,10);
+  var params={token:getToken(),entreprise_id:getEntrepriseId()};
+  if(ROLE==='agent')params.agent_id=getToken();
+  var data=await api('/industrial/tickets',params,'GET');
+  var tks=data.tickets||[];
+  var mesTks=(ROLE==='agent')?tks:tks.filter(function(t){return t.agent_id===getToken();});
+  document.getElementById('kpi-ouverts').textContent=mesTks.filter(function(t){return t.statut==='ouvert';}).length;
+  document.getElementById('kpi-en-cours').textContent=mesTks.filter(function(t){return t.statut==='en_cours';}).length;
+  document.getElementById('kpi-resolus').textContent=mesTks.filter(function(t){return t.statut==='resolu'&&(t.resolu_at||'').startsWith(today);}).length;
+  document.getElementById('kpi-urgents').textContent=mesTks.filter(function(t){return t.priorite==='urgente'&&t.statut!=='ferme';}).length;
+  if(ROLE==='responsable'||ROLE==='dirigeant'){
+    document.getElementById('kpi-equipe-total').textContent=tks.length;
+    document.getElementById('kpi-non-assignes').textContent=tks.filter(function(t){return !t.agent_id&&t.statut!=='ferme';}).length;
+    var now=Date.now();var slaLimits={urgente:24,haute:48,normale:72,basse:120};
+    var breach=tks.filter(function(t){if(t.statut==='ferme'||t.statut==='resolu')return false;var l=(slaLimits[t.priorite]||72)*3600000;return (now-new Date(t.created_at).getTime())>l;});
+    document.getElementById('kpi-sla-breach').textContent=breach.length;
+    document.getElementById('kpi-sat-avg').textContent='--';
+    var alertZone=document.getElementById('dash-alertes-sla');
+    alertZone.innerHTML=breach.length?breach.slice(0,3).map(function(t){return '<div class="alert-row crit"><strong>'+esc(t.sujet)+'</strong> - '+esc(t.client_nom||'?')+'<span class="act" onclick="ouvrirTicketDetail("+t.id+")">Voir</span></div>';}).join(''):'<div style="color:var(--ok);font-size:12.5px">Aucun depassement SLA</div>';
+  }
+  var recent=(ROLE==='agent')?mesTks:tks;
+  document.getElementById('dash-tickets-recents').innerHTML=recent.slice(0,5).map(function(t){return renderTicketRow(t,true);}).join('')||'<div class="empty-state"><div class="es-ic">&#127943;</div>Aucun ticket recent.</div>';
+  mesTickets=mesTks;tousTickets=tks;
+}
+
+// MES TICKETS
+async function chargerMesTickets(){
+  var params={token:getToken(),entreprise_id:getEntrepriseId()};
+  if(ROLE==='agent')params.agent_id=getToken();
+  var data=await api('/industrial/tickets',params,'GET');
+  mesTickets=data.tickets||[];afficherMesTickets(mesTickets);
+}
+function afficherMesTickets(liste){
+  document.getElementById('liste-mes-tickets').innerHTML=liste.length?liste.map(function(t){return renderTicketRow(t,true);}).join(''):'<div class="empty-state"><div class="es-ic">&#127943;</div>Aucun ticket.</div>';
+}
+function filtrerTicketsMes(filtre){
+  var liste=mesTickets;
+  if(filtre==='urgente')liste=liste.filter(function(t){return t.priorite==='urgente';});
+  else if(filtre)liste=liste.filter(function(t){return t.statut===filtre;});
+  afficherMesTickets(liste);
+}
+
+// TOUS LES TICKETS
+async function chargerTousTickets(){
+  var data=await api('/industrial/tickets',{token:getToken(),entreprise_id:getEntrepriseId()},'GET');
+  tousTickets=data.tickets||[];afficherTousTickets(tousTickets);
+}
+function afficherTousTickets(liste){
+  document.getElementById('liste-tous-tickets').innerHTML=liste.length?liste.map(function(t){return renderTicketRow(t,true);}).join(''):'<div class="empty-state"><div class="es-ic">&#127943;</div>Aucun ticket.</div>';
+}
+function filtrerTousTickets(filtre){
+  var liste=tousTickets;
+  if(filtre==='non_assigne')liste=liste.filter(function(t){return !t.agent_id&&t.statut!=='ferme';});
+  else if(filtre==='urgente')liste=liste.filter(function(t){return t.priorite==='urgente'&&t.statut!=='ferme';});
+  else if(filtre)liste=liste.filter(function(t){return t.statut===filtre;});
+  afficherTousTickets(liste);
+}
+
+// TICKET DETAIL
+function ouvrirTicketDetail(id){
+  var pool=tousTickets.concat(mesTickets);
+  ticketActif=pool.find(function(t){return t.id===id;});
+  if(!ticketActif)return;
+  document.getElementById('td-sujet').textContent=ticketActif.sujet||'--';
+  document.getElementById('td-badges').innerHTML=badgePrio(ticketActif.priorite)+' '+badgeStatut(ticketActif.statut);
+  document.getElementById('td-infos').innerHTML='Client : <strong>'+esc(ticketActif.client_nom||'Anonyme')+'</strong>'+(ticketActif.client_email?' - '+esc(ticketActif.client_email):'')+(ticketActif.agent_nom?' - Agent : '+esc(ticketActif.agent_nom):'')+(ticketActif.created_at?' - Cree le '+fmtDate(ticketActif.created_at):'');
+  var msgs=ticketActif.messages||[];
+  document.getElementById('td-messages').innerHTML=msgs.length?msgs.map(function(m){return '<div style="margin-bottom:8px;padding:10px;background:var(--panel);border-radius:8px"><div style="font-size:10.5px;color:var(--ink-dim);margin-bottom:4px">'+fmtDateTime(m.date)+(m.auteur?' - '+esc(m.auteur):'')+'</div><div style="font-size:13px">'+esc(m.texte)+'</div></div>';}).join(''):'<div style="text-align:center;padding:16px;color:var(--ink-faint);font-size:12.5px">Aucun echange pour ce ticket.</div>';
+  document.getElementById('td-reponse').value='';
+  var estResp=(ROLE==='responsable'||ROLE==='dirigeant');
+  var ba=document.getElementById('btn-reassigner');if(ba)ba.style.display=estResp?'inline-flex':'none';
+  var be=document.getElementById('btn-escalader');if(be)be.style.display=estResp?'inline-flex':'none';
+  ouvrirModal('modal-ticket-detail');
+}
+
+async function repondreTicket(statut){
+  var texte=document.getElementById('td-reponse').value.trim();if(!texte){notifErr('Saisissez une reponse');return;}
+  var data=await api('/industrial/ticket/repondre',{token:getToken(),entreprise_id:getEntrepriseId(),ticket_id:ticketActif.id,texte:texte,statut:statut});
+  if(data.ok){notifOk('Reponse envoyee');logAction('Ticket repondu : '+ticketActif.sujet);document.getElementById('td-reponse').value='';fermerModal('modal-ticket-detail');chargerMesTickets();if(ROLE!=='agent')chargerTousTickets();chargerDash();}
+  else notifErr(data.erreur||'Erreur');
+}
+async function cloturerTicket(){
+  var data=await api('/industrial/ticket/cloturer',{token:getToken(),entreprise_id:getEntrepriseId(),ticket_id:ticketActif.id});
+  if(data.ok){notifOk('Ticket cloture');logAction('Cloture : '+ticketActif.sujet);fermerModal('modal-ticket-detail');chargerMesTickets();chargerDash();}else notifErr(data.erreur||'Erreur');
+}
+async function reouvrir(){
+  var data=await api('/industrial/ticket/repondre',{token:getToken(),entreprise_id:getEntrepriseId(),ticket_id:ticketActif.id,texte:'Ticket rouvert.',statut:'reouvert'});
+  if(data.ok){notifOk('Ticket rouvert');fermerModal('modal-ticket-detail');chargerMesTickets();chargerDash();}
+}
+async function demanderAidaTicket(){
+  if(!ticketActif)return;
+  var zone=document.getElementById('td-reponse');zone.value='...Aria redige une reponse...';
+  var rep=await apiAsk('Un client contacte le service client avec ce probleme : "'+ticketActif.sujet+'" - '+(ticketActif.description||'')+'. Propose une reponse professionnelle, empathique et efficace en moins de 150 mots.','Service client');
+  zone.value=rep;
+}
+
+// NOUVEAU TICKET
+function ouvrirModalNouveauTicket(){ouvrirModal('modal-nouveau-ticket');}
+async function creerTicket(){
+  var sujet=document.getElementById('ntk-sujet').value.trim();var nom=document.getElementById('ntk-nom').value.trim();
+  if(!sujet||!nom){notifErr('Sujet et nom client obligatoires');return;}
+  var data=await api('/industrial/ticket/creer',{token:getToken(),entreprise_id:getEntrepriseId(),canal:document.getElementById('ntk-canal').value,priorite:document.getElementById('ntk-priorite').value,client_nom:nom,client_email:document.getElementById('ntk-email').value,client_telephone:document.getElementById('ntk-tel').value,sujet:sujet,description:document.getElementById('ntk-desc').value});
+  if(data.ok){fermerModal('modal-nouveau-ticket');notifOk('Ticket cree');logAction('Ticket cree : '+sujet);chargerMesTickets();chargerDash();}else notifErr(data.erreur||'Erreur');
+}
+
+// REASSIGNATION
+async function reassignerTicket(){
+  fermerModal('modal-ticket-detail');
+  var data=await api('/industrial/equipe',{token:getToken(),entreprise_id:getEntrepriseId()},'GET');
+  var agents=data.agents||[];
+  var sel=document.getElementById('reassign-agent');
+  sel.innerHTML=agents.map(function(a){return '<option value="'+esc(a.id)+'">'+esc(a.nom)+'</option>';}).join('');
+  ouvrirModal('modal-reassigner');
+}
+async function confirmerReassignation(){
+  var agentId=document.getElementById('reassign-agent').value;
+  var data=await api('/industrial/ticket/assigner',{token:getToken(),entreprise_id:getEntrepriseId(),ticket_id:ticketActif.id,agent_id:agentId,commentaire:document.getElementById('reassign-comment').value});
+  if(data.ok){fermerModal('modal-reassigner');notifOk('Ticket reassigne');logAction('Ticket reassigne : '+ticketActif.sujet);chargerTousTickets();}else notifErr(data.erreur||'Erreur');
+}
+
+// ESCALADE
+function ouvrirModalEscalade(){
+  var sel=document.getElementById('esc-ticket');
+  var ouvert=tousTickets.filter(function(t){return t.statut!=='ferme'&&t.statut!=='resolu';});
+  sel.innerHTML=ouvert.map(function(t){return '<option value="'+esc(t.id)+'">'+esc(t.sujet)+'</option>';}).join('');
+  ouvrirModal('modal-escalade');
+}
+function escaladerTicket(){fermerModal('modal-ticket-detail');ouvrirModalEscalade();if(ticketActif)document.getElementById('esc-ticket').value=ticketActif.id;}
+async function confirmerEscalade(){
+  var ticketId=document.getElementById('esc-ticket').value;var raison=document.getElementById('esc-raison').value.trim();
+  if(!raison){notifErr('Saisissez une raison');return;}
+  var data=await api('/industrial/ticket/escalader',{token:getToken(),entreprise_id:getEntrepriseId(),ticket_id:ticketId,raison:raison});
+  if(data.ok){fermerModal('modal-escalade');notifOk('Ticket escalade');logAction('Escalade : '+raison);chargerSLA();}else notifErr(data.erreur||'Erreur');
+}
+
+// EQUIPE
+async function chargerEquipe(){
+  if(!tousTickets.length){var d=await api('/industrial/tickets',{token:getToken(),entreprise_id:getEntrepriseId()},'GET');tousTickets=d.tickets||[];}
+  var data=await api('/industrial/equipe',{token:getToken(),entreprise_id:getEntrepriseId()},'GET');
+  var agents=data.agents||[];var now=Date.now();var slaLimits={urgente:24,haute:48,normale:72,basse:120};
+  var tbody=document.getElementById('equipe-tbody');
+  tbody.innerHTML=agents.length?agents.map(function(a){
+    var atks=tousTickets.filter(function(t){return t.agent_id===a.id;});
+    var ouverts=atks.filter(function(t){return t.statut==='ouvert';}).length;
+    var enCours=atks.filter(function(t){return t.statut==='en_cours';}).length;
+    var urgents=atks.filter(function(t){return t.priorite==='urgente'&&t.statut!=='ferme';}).length;
+    var retards=atks.filter(function(t){if(t.statut==='ferme'||t.statut==='resolu')return false;return (now-new Date(t.created_at).getTime())>(slaLimits[t.priorite]||72)*3600000;}).length;
+    var nonTraites=atks.filter(function(t){return t.statut==='ouvert'&&!t.vu;}).length;
+    var total=ouverts+enCours;var p=Math.min(100,Math.round((total/10)*100));
+    var c=p>80?'var(--blocked)':p>50?'var(--wait)':'var(--ok)';
+    return '<tr><td style="font-weight:600">'+esc(a.nom)+'</td><td>'+ouverts+'</td><td>'+enCours+'</td>'+
+      '<td>'+(urgents?'<strong style="color:var(--blocked)">'+urgents+'</strong>':'0')+'</td>'+
+      '<td>'+(retards?'<strong style="color:var(--blocked)">'+retards+'</strong>':'0')+'</td>'+
+      '<td>'+(nonTraites?'<strong style="color:var(--wait)">'+nonTraites+'</strong>':'0')+'</td>'+
+      '<td><div class="prog-bar"><span style="width:'+p+'%;background:'+c+'"></span></div></td>'+
+      '<td><button class="btn-act ghost" style="font-size:11px" onclick="chargerRoutageAgent("+esc(a.id)+")">Assigner</button></td></tr>';
+  }).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--ink-faint)">Aucun agent.</td></tr>';
+  var nonAssignes=tousTickets.filter(function(t){return !t.agent_id&&t.statut!=='ferme';});
+  document.getElementById('tickets-non-assignes').innerHTML=nonAssignes.length?nonAssignes.map(function(t){return renderTicketRow(t,true);}).join(''):'<div class="empty-state"><div class="es-ic">ok</div>Tous les tickets sont assignes.</div>';
+}
+
+function chargerRoutageAgent(id){goToView('v-routage');}
+
+// SLA
+async function chargerSLA(){
+  if(!tousTickets.length){var d=await api('/industrial/tickets',{token:getToken(),entreprise_id:getEntrepriseId()},'GET');tousTickets=d.tickets||[];}
+  var now=Date.now();var slaLimits={urgente:24,haute:48,normale:72,basse:120};
+  var breach=tousTickets.filter(function(t){if(t.statut==='ferme'||t.statut==='resolu')return false;return (now-new Date(t.created_at).getTime())>(slaLimits[t.priorite]||72)*3600000;});
+  var warning=tousTickets.filter(function(t){if(t.statut==='ferme'||t.statut==='resolu')return false;var l=(slaLimits[t.priorite]||72)*3600000;var age=now-new Date(t.created_at).getTime();return age>l*0.7&&age<=l;});
+  document.getElementById('sla-kpi-rep').textContent='--';document.getElementById('sla-kpi-res').textContent='--';
+  document.getElementById('sla-kpi-breach').textContent=breach.length;
+  document.getElementById('sla-breached').innerHTML=breach.length?breach.map(function(t){var age=Math.round((now-new Date(t.created_at).getTime())/3600000);return '<div class="alert-row crit" style="cursor:pointer" onclick="ouvrirTicketDetail("+t.id+")"><strong>'+esc(t.sujet)+'</strong> ('+esc(t.client_nom||'?')+') - '+age+'h<span class="act">Voir</span></div>';}).join(''):'<div style="color:var(--ok);padding:12px;font-size:12.5px">Aucun depassement SLA</div>';
+  document.getElementById('sla-warning').innerHTML=warning.length?warning.map(function(t){var age=Math.round((now-new Date(t.created_at).getTime())/3600000);return '<div class="alert-row" style="cursor:pointer" onclick="ouvrirTicketDetail("+t.id+")"><strong>'+esc(t.sujet)+'</strong> - '+age+'h<span class="act">Voir</span></div>';}).join(''):'<div style="color:var(--ok);padding:12px;font-size:12.5px">Aucun ticket proche du depassement</div>';
+  var dataEsc=await api('/industrial/escalades',{token:getToken(),entreprise_id:getEntrepriseId()},'GET');
+  var escs=dataEsc.escalades||[];
+  document.getElementById('sla-kpi-esc').textContent=escs.filter(function(e){return e.statut!=='resolu';}).length;
+  document.getElementById('liste-escalades').innerHTML=escs.length?escs.map(function(e){return '<div class="row-item"><div class="ri-body"><div class="ri-title">'+esc(e.ticket_sujet||'Ticket')+'</div><div class="ri-meta">'+esc(e.raison||'--')+' - '+fmtDate(e.created_at)+'</div></div>'+badgeStatut(e.statut||'ouvert')+'</div>';}).join(''):'<div class="empty-state"><div class="es-ic">ok</div>Aucune escalade.</div>';
+}
+
+// ROUTAGE
+async function chargerRoutage(){
+  if(!tousTickets.length){var d=await api('/industrial/tickets',{token:getToken(),entreprise_id:getEntrepriseId()},'GET');tousTickets=d.tickets||[];}
+  var aAssigner=tousTickets.filter(function(t){return !t.agent_id&&t.statut!=='ferme'&&t.statut!=='resolu';});
+  var raContainer=document.getElementById('routage-a-assigner');if(aAssigner.length){raContainer.innerHTML='';aAssigner.forEach(function(t){var d=document.createElement('div');d.className='row-item';d.innerHTML='<div class="ri-body"><div class="ri-title">'+esc(t.sujet)+'</div><div class="ri-meta">'+esc(t.client_nom||'Anonyme')+' - '+fmtDate(t.created_at)+'</div></div>'+badgePrio(t.priorite)+'<button class="btn-act" style="font-size:11px">Assigner</button>';d.querySelector('button').addEventListener('click',(function(tid){return function(){ticketActif=tousTickets.find(function(tk){return tk.id===tid;});reassignerTicket();};})(t.id));raContainer.appendChild(d);});}else{raContainer.innerHTML='<div class="empty-state"><div class="es-ic">ok</div>Tous assignes.</div>';}
+  var dataEq=await api('/industrial/equipe',{token:getToken(),entreprise_id:getEntrepriseId()},'GET');
+  var agents=dataEq.agents||[];
+  document.getElementById('routage-charge-agents').innerHTML=agents.map(function(a){var cnt=tousTickets.filter(function(t){return t.agent_id===a.id&&t.statut!=='ferme';}).length;var p=Math.min(100,Math.round((cnt/10)*100));var c=p>80?'var(--blocked)':p>50?'var(--wait)':'var(--ok)';return '<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px"><span>'+esc(a.nom)+'</span><span style="color:var(--ink-dim)">'+cnt+' tickets</span></div><div class="prog-bar"><span style="width:'+p+'%;background:'+c+'"></span></div></div>';}).join('');
+  var assigns=tousTickets.filter(function(t){return t.agent_id&&t.statut!=='ferme';}).slice(0,8);
+  document.getElementById('routage-assignes').innerHTML=assigns.length?assigns.map(function(t){return '<div class="row-item" onclick="ouvrirTicketDetail("+t.id+")"><div class="ri-body"><div class="ri-title">'+esc(t.sujet)+'</div><div class="ri-meta">'+esc(t.agent_nom||'Agent')+'</div></div>'+badgeStatut(t.statut)+'</div>';}).join(''):'<div class="empty-state"><div class="es-ic">&#128203;</div>Aucun ticket assigne.</div>';
+}
+
+// SATISFACTION
+async function chargerSatisfaction(){
+  var data=await api('/industrial/satisfaction',{token:getToken(),entreprise_id:getEntrepriseId()},'GET');
+  var evals=data.evaluations||[];
+  var notes=evals.map(function(e){return e.note||0;}).filter(function(n){return n>0;});
+  var avg=notes.length?(notes.reduce(function(a,b){return a+b;},0)/notes.length).toFixed(1):'--';
+  document.getElementById('sat-note-avg').textContent=avg!=='--'?avg+'/5':'--';
+  document.getElementById('sat-count').textContent=evals.length;
+  document.getElementById('sat-negative').textContent=evals.filter(function(e){return e.note&&e.note<3;}).length;
+  document.getElementById('sat-reclamations').textContent=data.reclamations||0;
+  document.getElementById('sat-liste').innerHTML=evals.length?evals.map(function(e){var stars='&#11088;'.repeat(e.note||0);var sc=(e.note||0)>=4?'var(--ok)':(e.note||0)>=3?'var(--wait)':'var(--blocked)';return '<div class="row-item"><div class="ri-body"><div class="ri-title" style="color:'+sc+'">'+stars+'</div><div class="ri-meta">'+esc(e.client_nom||'Client')+(e.ticket_sujet?' - '+esc(e.ticket_sujet):'')+(e.commentaire?' - "'+esc(e.commentaire)+'"':'')+'</div></div><div style="font-size:11px;color:var(--ink-faint)">'+fmtDate(e.created_at)+'</div></div>';}).join(''):'<div class="empty-state"><div class="es-ic">&#128522;</div>Aucune evaluation recue.</div>';
+}
+async function analyserSatisfaction(){
+  var zone=document.getElementById('sat-aria-analyse');zone.textContent='Aria analyse les tendances...';
+  var data=await api('/industrial/satisfaction',{token:getToken(),entreprise_id:getEntrepriseId()},'GET');
+  var evals=data.evaluations||[];
+  var resume='Evaluations : '+evals.length+'. Notes : '+evals.map(function(e){return e.note+'/5';}).join(', ');
+  var rep=await apiAsk("Analyse ces donnees de satisfaction client et donne des recommandations pour ameliorer le service en 200 mots max. Identifie les points forts et axes d'amelioration. "+resume,'Service client satisfaction');
+  zone.textContent=rep;logAction('Analyse satisfaction');
+}
+
+// BASE DE CONNAISSANCE
+async function chargerBaseConnaissance(){
+  var data=await api('/industrial/base-connaissance',{token:getToken(),entreprise_id:getEntrepriseId()},'GET');
+  articlesBC=data.articles||[];afficherArticles(articlesBC);
+}
+function afficherArticles(liste){
+  document.getElementById('liste-articles-bc').innerHTML=liste.length?liste.map(function(a){return '<div class="row-item" style="flex-direction:column;align-items:flex-start"><div style="display:flex;justify-content:space-between;width:100%;margin-bottom:6px"><div class="ri-title">'+esc(a.titre)+'</div><span class="tag amber">'+esc(a.categorie||'--')+'</span></div><div style="font-size:12px;color:var(--ink-dim);line-height:1.5">'+esc((a.contenu||'').substring(0,200))+'</div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn-act ghost" style="font-size:11px" onclick="copierArticle("+a.id+")">Copier</button>'+(ROLE!=='agent'?'<button class="btn-act ghost" style="font-size:11px" onclick="">Modifier</button>':'')+'</div></div>';}).join(''):'<div class="empty-state"><div class="es-ic">&#128218;</div>Aucun article.</div>';
+}
+function filtrerBC(query){
+  var cat=document.getElementById('bc-categorie').value;var q=(query||'').toLowerCase();
+  afficherArticles(articlesBC.filter(function(a){var mq=!q||((a.titre||'').toLowerCase().includes(q)||(a.contenu||'').toLowerCase().includes(q));var mc=!cat||(a.categorie===cat);return mq&&mc;}));
+}
+function copierArticle(id){var a=articlesBC.find(function(x){return x.id===id;});if(!a)return;try{navigator.clipboard.writeText(a.contenu||a.titre);notifOk('Article copie');}catch(e){notifOk('Copiez manuellement');}logAction('Article copie : '+a.titre);}
+async function rechercheAriaBC(){
+  var q=document.getElementById('aria-bc-input').value.trim();if(!q)return;
+  var zone=document.getElementById('aria-bc-rep');zone.textContent='Aria cherche...';zone.classList.add('show');
+  var rep=await apiAsk('Recherche dans la base de connaissance et propose une reponse claire pour : '+q,'Base de connaissance service client');
+  zone.textContent=rep;logAction('Recherche KC : '+q);
+}
+function ouvrirModalNouvelArticle(){ouvrirModal('modal-article-kc');}
+async function creerArticleKC(){
+  var titre=document.getElementById('kc-titre').value.trim();var contenu=document.getElementById('kc-contenu').value.trim();
+  if(!titre||!contenu){notifErr('Titre et contenu obligatoires');return;}
+  var data=await api('/industrial/base-connaissance/creer',{token:getToken(),entreprise_id:getEntrepriseId(),titre:titre,categorie:document.getElementById('kc-categorie').value,contenu:contenu});
+  if(data.ok){fermerModal('modal-article-kc');notifOk('Article publie');logAction('Article KC cree : '+titre);chargerBaseConnaissance();}else notifErr(data.erreur||'Erreur');
+}
+
+// APPEL EN DIRECT
+function initAppel(){chargerHistoriqueAppel();if(articlesBC.length===0)chargerBaseConnaissance();}
+async function obtenirSuggestionAppel(){
+  var sujet=document.getElementById('appel-sujet').value.trim()||document.getElementById('appel-notes').value.trim();
+  var zone=document.getElementById('appel-suggestion');zone.textContent='Aria analyse...';
+  var rep=await apiAsk('Un client appelle avec ce probleme : "'+sujet+'". Suggere une reponse rapide en moins de 100 mots.','Service client appel direct');
+  zone.textContent=rep;
+}
+async function creerTicketDepuisAppel(){
+  var sujet=document.getElementById('appel-sujet').value.trim();var nom=document.getElementById('appel-nom').value.trim();
+  if(!sujet||!nom){notifErr('Nom client et objet obligatoires');return;}
+  var data=await api('/industrial/ticket/creer',{token:getToken(),entreprise_id:getEntrepriseId(),canal:document.getElementById('appel-canal').value,priorite:'normale',client_nom:nom,sujet:sujet,description:document.getElementById('appel-notes').value});
+  if(data.ok){notifOk('Ticket cree depuis l\'appel');logAction('Ticket cree (appel) : '+sujet);document.getElementById('appel-sujet').value='';document.getElementById('appel-nom').value='';document.getElementById('appel-notes').value='';chargerMesTickets();}else notifErr(data.erreur||'Erreur');
+}
+function rechercheBaseAppel(q){
+  if(!q||q.length<3){document.getElementById('appel-search-results').textContent='Tapez pour chercher...';return;}
+  var matches=articlesBC.filter(function(a){return (a.titre||'').toLowerCase().includes(q.toLowerCase())||(a.contenu||'').toLowerCase().includes(q.toLowerCase());});
+  var srEl=document.getElementById('appel-search-results');
+  if(!matches.length){srEl.innerHTML='<div style="color:var(--ink-faint);font-size:12.5px">Aucun article trouve.</div>';return;}
+  srEl.innerHTML='';
+  matches.slice(0,4).forEach(function(a){
+    var d=document.createElement('div');
+    d.style.cssText='padding:8px;margin-bottom:6px;background:var(--panel);border-radius:8px;cursor:pointer';
+    d.innerHTML='<div style="font-weight:600;font-size:12.5px">'+esc(a.titre)+'</div><div style="font-size:11px;color:var(--ink-dim)">'+esc((a.contenu||'').substring(0,80))+'...</div>';
+    d.addEventListener('click',function(){var n=document.getElementById('appel-notes');n.value+=(n.value?'\n':'')+esc(a.titre);});
+    srEl.appendChild(d);
+  });
+}
+async function chargerHistoriqueAppel(){
+  var data=await api('/industrial/tickets',{token:getToken(),entreprise_id:getEntrepriseId()},'GET');
+  var tks=(data.tickets||[]).filter(function(t){return t.canal==='telephone';}).slice(0,5);
+  document.getElementById('appel-historique').innerHTML=tks.length?tks.map(function(t){return '<div style="margin-bottom:6px;padding:8px;background:var(--panel);border-radius:8px"><div style="font-size:12.5px;font-weight:600">'+esc(t.sujet)+'</div><div style="font-size:11px;color:var(--ink-dim)">'+esc(t.client_nom||'--')+' - '+fmtDate(t.created_at)+'</div></div>';}).join(''):'<div style="color:var(--ink-faint);font-size:12px">Aucun appel recent.</div>';
+}
+function terminerSession(){notifOk('Session terminee');logAction('Session d\'assistance terminee');}
+
+// POINTAGE
+async function pointerWeb(type){
+  var labels={arrivee:'Arrivee',depart:'Depart',pause_debut:'Debut pause',pause_fin:'Fin pause'};
+  var s=getSession();
+  var data=await api('/industrial/pointer',{salarie_id:getToken(),entreprise_id:getEntrepriseId(),nom_salarie:getNom(),poste:s.poste||'service-client',equipe_id:s.equipe_id,responsable_id:s.responsable_id,type:type});
+  var msg=document.getElementById('pointage-msg');
+  if(data.ok){var h=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});if(msg){msg.textContent=labels[type]+' pointe a '+h;msg.style.color='var(--ok)';}notifOk(labels[type]+' pointe a '+h);logAction('Pointage '+labels[type]+' a '+h);chargerPointageHisto();}
+  else{if(msg){msg.textContent=data.erreur||'Erreur';msg.style.color='var(--blocked)';}notifErr(data.erreur||'Erreur pointage');}
+}
+async function chargerPointageHisto(){
+  var data=await api('/industrial/pointages',{token:getToken(),entreprise_id:getEntrepriseId()},'GET');
+  var pts=data.pointages||[];var el=document.getElementById('pointage-historique');if(!el)return;
+  var labels={arrivee:'Arrivee',depart:'Depart',pause_debut:'Debut pause',pause_fin:'Fin pause'};
+  el.innerHTML=pts.length?pts.slice(0,10).map(function(p){return '<div class="row-item"><div class="ri-body"><div class="ri-title">'+esc(labels[p.type]||p.type)+'</div><div class="ri-meta">'+fmtDateTime(p.created_at)+'</div></div></div>';}).join(''):'<div class="empty-state"><div class="es-ic">&#128336;</div>Aucun pointage.</div>';
+}
+
+// TACHES
+async function chargerTachesPoste(){
+  var s=getSession();var data=await api('/industrial/taches',{token:getToken(),entreprise_id:getEntrepriseId(),poste:s.poste||'service-client'},'GET');
+  var taches=data.taches||[];var el=document.getElementById('liste-taches-poste');if(!el)return;
+  var prior={urgente:'🔴',haute:'🟠',normale:'🟡',basse:'🟢'};var statuts={a_faire:'A faire',en_cours:'En cours',bloque:'Bloque',termine:'Termine',annule:'Annule'};
+  el.innerHTML=taches.length?taches.map(function(t){return '<div class="row-item"><div class="ri-body"><div class="ri-title">'+(prior[t.priorite]||'🟡')+' '+esc(t.titre)+'</div><div class="ri-meta">'+esc(statuts[t.statut||'a_faire'])+(t.deadline?' - Deadline : '+fmtDate(t.deadline):'')+'</div></div>'+(t.statut!=='termine'?'<button class="btn-act ok-btn" onclick="terminerTachePoste("+t.id+")">Done</button>':'')+'</div>';}).join(''):'<div class="empty-state"><div class="es-ic">&#128203;</div>Aucune tache.</div>';
+}
+function ouvrirModalTache(){ouvrirModal('modal-tache-p');}
+async function creerTachePoste(){
+  var titre=document.getElementById('tp-titre').value.trim();if(!titre){notifErr('Titre obligatoire');return;}
+  var s=getSession();
+  var data=await api('/industrial/tache/creer',{token:getToken(),entreprise_id:getEntrepriseId(),titre:titre,description:document.getElementById('tp-desc').value,priorite:document.getElementById('tp-priorite').value,deadline:document.getElementById('tp-deadline').value||null,poste_cible:s.poste||'service-client'});
+  if(data.ok){fermerModal('modal-tache-p');notifOk('Tache creee');logAction('Tache creee : '+titre);chargerTachesPoste();}else notifErr(data.erreur||'Erreur');
+}
+async function terminerTachePoste(id){
+  await api('/industrial/tache/modifier',{token:getToken(),entreprise_id:getEntrepriseId(),tache_id:id,statut:'termine'});
+  notifOk('Tache terminee');chargerTachesPoste();
+}
+
+// CONGES
+async function chargerMesCongesPoste(){
+  var data=await api('/industrial/absences',{token:getToken(),entreprise_id:getEntrepriseId()},'GET');
+  var abs=data.absences||[];var el=document.getElementById('mes-absences-poste');if(!el)return;
+  var labels={conges_payes:'Conges payes',maladie:'Maladie',accident_travail:'Accident travail',maternite:'Maternite',paternite:'Paternite',sans_solde:'Sans solde',formation:'Formation',autre:'Autre'};
+  var statuts={en_attente:'En attente',approuve:'Approuve',refuse:'Refuse',annule:'Annule'};
+  el.innerHTML=abs.length?abs.map(function(a){return '<div class="row-item"><div class="ri-body"><div class="ri-title">'+esc(labels[a.type_absence]||a.type_absence)+'</div><div class="ri-meta">'+fmtDate(a.date_debut)+' vers '+fmtDate(a.date_fin)+'</div></div><span>'+esc(statuts[a.statut]||a.statut)+'</span></div>';}).join(''):'<div class="empty-state"><div class="es-ic">&#127958;</div>Aucune demande.</div>';
+}
+async function soumettreCongePoste(){
+  var debut=document.getElementById('cg-debut').value;var fin=document.getElementById('cg-fin').value;
+  if(!debut||!fin){notifErr('Dates obligatoires');return;}
+  var data=await api('/industrial/absence/creer',{token:getToken(),entreprise_id:getEntrepriseId(),type_absence:document.getElementById('cg-type').value,date_debut:debut,date_fin:fin,commentaire:document.getElementById('cg-comment').value});
+  if(data.ok){fermerModal('modal-conge');notifOk('Demande envoyee');logAction('Absence soumise');chargerMesCongesPoste();}else notifErr(data.erreur||'Erreur');
+}
+
+// DROITS
+async function demanderDroitsPoste(){
+  var q=document.getElementById('droits-question-p').value.trim();if(!q)return;
+  var el=document.getElementById('droits-reponse-p');el.textContent='Aria consulte la legislation...';
+  var rep=await apiAsk("Tu es expert en droit du travail francais. Reponds clairement a cette question d'un salarie : "+q+". Cite les textes applicables si possible.","Droits salarie");
+  el.textContent=rep;logAction('Question droits : '+q);
+}
+
+// QCM
+async function lancerQCMPoste(){
+  var zone=document.getElementById('qcm-zone-p');zone.innerHTML='<div style="text-align:center;padding:20px;color:var(--ink-dim)">Aria prepare vos questions...</div>';
+  var rep=await apiAsk('Genere 3 questions QCM sur les bonnes pratiques du service client. Format JSON uniquement, sans markdown : [{"q":"question","options":["A...","B...","C...","D..."],"rep":"A"}]');
+  try{var s=rep.indexOf('[');var e=rep.lastIndexOf(']');var questions=JSON.parse(rep.slice(s,e+1));var html='<div>';
+    questions.forEach(function(q,i){html+='<div style="margin-bottom:16px;padding:14px;background:var(--panel2);border-radius:10px"><div style="font-weight:600;margin-bottom:10px">'+(i+1)+'. '+esc(q.q)+'</div>'+q.options.map(function(opt,j){var l=['A','B','C','D'][j];return '<button onclick="repQCMPoste(this,\''+l+'\',\''+esc(q.rep)+'\')" style="display:block;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--ink);cursor:pointer;margin-bottom:4px;font-size:13px;font-family:inherit">'+l+'. '+esc(opt)+'</button>';}).join('')+'</div>';});html+='</div>';zone.innerHTML=html;}
+  catch(e){zone.innerHTML='<div class="empty-state"><div class="es-ic">Erreur</div>Erreur.<button class="btn-act" onclick="lancerQCMPoste()">Reessayer</button></div>';}
+}
+function repQCMPoste(btn,rep,bonne){
+  btn.parentElement.querySelectorAll('button').forEach(function(b){b.disabled=true;});
+  btn.style.background=rep===bonne?'rgba(79,191,139,.2)':' rgba(225,91,91,.2)';btn.style.borderColor=rep===bonne?'var(--ok)':' var(--blocked)';
+  if(rep!==bonne){btn.parentElement.querySelectorAll('button').forEach(function(b){if(b.textContent.trim().startsWith(bonne)){b.style.background='rgba(79,191,139,.2)';b.style.borderColor='var(--ok)';}});}
+}
+
+// CHAT
+async function chargerChat(){
+  var data=await api('/industrial/chat',{token:getToken(),entreprise_id:getEntrepriseId()},'GET');
+  chatMessages=data.messages||[];afficherChat();
+}
+function afficherChat(){
+  var el=document.getElementById('chat-messages');
+  el.innerHTML=chatMessages.map(function(m){var isSelf=(m.auteur_id===getToken());return '<div class="chat-msg '+(isSelf?'sent':'recv')+'"><div class="chat-msg-meta">'+esc(m.auteur_nom||'?')+ ' - '+fmtDateTime(m.created_at)+'</div>'+esc(m.texte)+'</div>';}).join('');
+  el.scrollTop=el.scrollHeight;
+}
+async function envoyerMessage(){
+  var texte=document.getElementById('chat-input').value.trim();if(!texte)return;
+  document.getElementById('chat-input').value='';
+  var data=await api('/industrial/chat/envoyer',{token:getToken(),entreprise_id:getEntrepriseId(),texte:texte,poste:'service-client'});
+  if(data.ok){logAction('Message equipe envoye');chargerChat();}else notifErr(data.erreur||'Erreur');
+}
+
+// BRIEFING
+async function genererBriefing(){
+  var zone=document.getElementById('briefing-contenu');zone.textContent='Aria prepare votre briefing...';
+  var ctx='Poste : Service Client. Nom : '+getNom()+'. Role : '+ROLE+'.';
+  var rep=await apiAsk('Genere un briefing de debut de journee pour un agent service client en 150 mots. Inclut : priorites, conseils communication client, rappel SLA, conseil motivation. Ton professionnel et bienveillant.',ctx);
+  zone.textContent=rep;logAction('Briefing genere');
+}
+
+// ARIA BARS
+async function envoyerAriaDash(){
+  var q=document.getElementById('aria-dash-input').value.trim();if(!q)return;
+  var zone=document.getElementById('aria-dash-rep');zone.textContent='...';zone.classList.add('show');
+  var rep=await apiAsk(q,'Dashboard service client');zone.textContent=rep;logAction('Question Aria : '+q);
+}
+async function envoyerAriaTickets(){
+  var q=document.getElementById('aria-tk-input').value.trim();if(!q)return;
+  var zone=document.getElementById('aria-tk-rep');zone.textContent='...';zone.classList.add('show');
+  var rep=await apiAsk(q,'Gestion de tickets service client');zone.textContent=rep;
+}
+
+// INTEGRATIONS
+function chargerIntegrations(){
+  var ints=[{ic:'Email',desc:'Synchronisation boite mail support'},{ic:'Live Chat',desc:'Chat en temps reel'},{ic:'Telephonie VoIP',desc:'Appels entrants'},{ic:'Ticketing',desc:'Import/export tickets tiers'},{ic:'CRM',desc:'Donnees clients'},{ic:'SMS',desc:'Notifications clients'}];
+  document.getElementById('liste-integrations').innerHTML=ints.map(function(i){return '<div class="card"><div style="font-weight:700;font-size:13px;margin-bottom:6px">'+i.ic+'</div><div style="font-size:11px;color:var(--ink-faint);margin-bottom:10px">'+i.desc+'</div><button class="btn-act ghost" style="width:100%;font-size:12px">Configurer</button></div>';}).join('');
+}
+
+// COMMAND PALETTE
+var cmdkViews=[
+  {label:'Tableau de bord',view:'v-dash'},{label:'Mes tickets',view:'v-tickets'},{label:'Assistance en direct',view:'v-appel'},{label:'Base de connaissance',view:'v-connaissance'},
+  {label:'Mon pointage',view:'v-pointage'},{label:'Mes taches',view:'v-taches'},{label:'Mes conges',view:'v-mes-conges'},{label:'Mes droits',view:'v-mes-droits'},{label:'Formation',view:'v-formation-qcm'},{label:'Chat equipe',view:'v-chat'},{label:'Mon briefing',view:'v-briefing-poste'},{label:'Journal Aria',view:'v-journal'},{label:'Integrations',view:'v-integrations'},
+];
+var cmdkRespViews=[
+  {label:'Tous les tickets',view:'v-tous-tickets'},{label:'Mon equipe',view:'v-equipe'},{label:'SLA et escalades',view:'v-sla'},{label:'Routage et assignation',view:'v-routage'},{label:'Satisfaction client',view:'v-satisfaction'},
+];
+var cmdkSel=0;
+function ouvrirPalette(){document.getElementById('cmdk-overlay').classList.add('open');document.getElementById('cmdk-input').value='';setTimeout(function(){document.getElementById('cmdk-input').focus();},80);renderCmdk('');}
+function fermerPalette(){document.getElementById('cmdk-overlay').classList.remove('open');}
+function renderCmdk(q){
+  var all=cmdkViews.concat((ROLE!=='agent')?cmdkRespViews:[]);
+  var filtered=q?all.filter(function(v){return v.label.toLowerCase().includes(q.toLowerCase());}):all;
+  cmdkSel=0;
+  document.getElementById('cmdk-results').innerHTML=filtered.map(function(v,i){return '<div class="cmdk-item'+(i===0?' sel':'')+'" data-view="'+v.view+'" onclick="goToView(\''+v.view+'\');fermerPalette()">'+v.label+'</div>';}).join('');
+}
+document.getElementById('cmdk-input').addEventListener('input',function(){renderCmdk(this.value);});
+document.getElementById('cmdk-input').addEventListener('keydown',function(e){
+  var items=document.querySelectorAll('.cmdk-item');var n=items.length;
+  if(e.key==='ArrowDown'){cmdkSel=(cmdkSel+1)%n;}else if(e.key==='ArrowUp'){cmdkSel=(cmdkSel-1+n)%n;}
+  else if(e.key==='Enter'&&items[cmdkSel]){goToView(items[cmdkSel].dataset.view);fermerPalette();return;}
+  else if(e.key==='Escape'){fermerPalette();return;}
+  items.forEach(function(el,i){el.classList.toggle('sel',i===cmdkSel);});
+});
+document.getElementById('cmdk-overlay').addEventListener('click',function(e){if(e.target===this)fermerPalette();});
+document.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();ouvrirPalette();}});
+
+verifierSession();
+
+<script src="/clients_module.js"></script>
+</script>
+</body>
+</html>
