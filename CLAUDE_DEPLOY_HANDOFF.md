@@ -1,35 +1,74 @@
-# FORGEDIS public redesign — handoff Claude
+# FORGEDIS PUBLIC REDESIGN — HANDOFF CLAUDE
 
-Branch préparée par Charlie : `forgedis-public-redesign`.
+Branch de travail : `forgedis-public-redesign`
 
-## Ce qui est déjà préparé
+## AUTORITÉ VISUELLE ABSOLUE
 
-- `index.html` : nouvelle Home FORGEDIS, Consulting prioritaire, ARIA présenté comme technologie propriétaire.
-- `consulting.html` : nouvelle page Consulting + tarifs vérifiés + interface NEXORA de qualification/devis.
-- `facility.html` : nouvelle page Facility selon la maquette validée.
-- `kids.html` : nouvelle page Kids orientée cours/progression + tarifs Solo/Famille vérifiés.
-- `industrial.html` : nouvelle page Industrial + interface de création de devis avec ARIA et aperçu en direct.
-- `mentions-legales.html` : même texte GitHub existant, nouvelle identité visuelle.
-- `confidentialite.html` : même texte GitHub existant, nouvelle identité visuelle.
-- `forgedis-v2.css` : design system public commun Jour/Nuit.
-- `forgedis-v2.js` : thème Jour/Nuit + menu mobile.
-- `nexora-quote.js` : scaffold frontend sûr pour la qualification NEXORA, sans hallucination de prix.
+Les cinq maquettes validées par Victor sont la référence visuelle absolue : Home, Consulting, ARIA Facility, ARIA Kids, ARIA Industrial.
 
-## Règles de vérité
+RÈGLE D’OR : **le site doit reproduire les maquettes, pas les réinterpréter.**
 
-1. Ne pas réinventer le design : cette branche est la base d'intégration.
-2. NEXORA apparaît uniquement dans Consulting.
-3. Facility, Kids et Industrial utilisent ARIA, jamais NEXORA.
-4. Ne pas inventer prix, témoignages, intégrations, clients, certifications ou métriques.
-5. Industrial : conserver/réutiliser le moteur de devis réel présent dans l'application déployée. Ne pas recréer une logique concurrente.
-6. Kids : conserver la logique réelle de cours/progression. Ne pas transformer le produit en chatbot générique.
-7. Les actions sensibles Industrial restent soumises aux permissions existantes.
+Ne pas refaire le design. Ne pas moderniser à ta manière. Ne pas remplacer une composition par un template. Ne pas simplifier un bloc parce qu’un composant standard serait plus facile.
 
-## Tarifs autorisés
+Les photographies peuvent être remplacées par des images HD différentes uniquement si elles produisent le même effet visuel : même sujet, cadrage comparable, position du personnage comparable, direction du regard compatible, même équilibre texte/image, ambiance et lumière proches.
+
+INTERDIT : utiliser les maquettes aplaties comme grandes images de page, découper/étirer des morceaux basse définition des maquettes, ou déformer une photo pour la faire rentrer.
+
+Le HTML/CSS doit rester réel : textes, boutons, interfaces, cartes, chats, devis, tarifs et navigation sont des éléments DOM accessibles et responsive.
+
+## FICHIERS DE DESIGN À CONSERVER
+
+- `forgedis-v3.css` : système visuel principal de la refonte.
+- `forgedis-v3-fixes.css` : corrections responsive, thème sombre et reduced-motion.
+- `forgedis-v2.js` : gestion thème/menu ; il charge les fixes V3 sur les pages V3.
+- `nexora-quote.js` : scaffold frontend sécurisé de NEXORA Consulting.
+
+Ne pas revenir au rendu abstrait de `forgedis-v2.css`.
+
+## PAGES PUBLIQUES PRÉPARÉES
+
+- `index.html` : Home correspondant à la maquette validée.
+- `consulting.html` : Consulting + NEXORA.
+- `facility.html` : ARIA Facility.
+- `kids.html` : ARIA Kids, orienté cours/progression.
+- `industrial.html` : ARIA Industrial avec démonstration de création de devis.
+- `confidentialite.html` : politique complète actuellement connue, restylée dans la nouvelle identité.
+- `mentions-legales.html` : texte légal conservé, nouvelle identité.
+
+## RÈGLE DE NON-RÉGRESSION
+
+L’ancien HTML est une source de fonctions et de contenu. Aucun accès utile ne doit disparaître sous prétexte de design.
+
+Éléments obligatoires à préserver :
+
+- `Se connecter` → `portail.html` ;
+- accès ARIA Facility `/senior` ;
+- accès ARIA Kids `/kids` ;
+- accès ARIA Industrial `/industrial` ;
+- paiements/Stripe existants dans les applications ;
+- authentification ;
+- Supabase ;
+- formulaires Netlify ;
+- changement de langue si présent dans les applications ;
+- routes, redirections et fonctionnalités produit existantes ;
+- contenus juridiques plus récents présents en production.
+
+Si une fonction existante ne rentre pas naturellement dans la composition, l’intégrer sans casser la maquette. Ne jamais la supprimer silencieusement.
+
+## ARCHITECTURE DE MARQUE
+
+- FORGEDIS = masterbrand.
+- FORGEDIS Consulting = activité de conseil/service.
+- ARIA = famille produit : Facility / Kids / Industrial.
+- NEXORA = **Consulting uniquement**.
+
+INTERDIT : mettre NEXORA dans Facility, Kids ou Industrial.
+
+## TARIFS AUTORISÉS
 
 ### Consulting
 - Diagnostic : 290 €
-- Sites/outils : dès 590 €
+- Sites / outils : dès 590 €
 - Automatisations : dès 590 €
 - Solutions IA : dès 990 €
 - Outils métier : dès 1 490 €
@@ -44,65 +83,162 @@ Branch préparée par Charlie : `forgedis-public-redesign`.
 - Solo : 9,99 €/mois
 - Famille : 14,99 €/mois
 - 14 jours gratuits
-- Ne pas afficher « jusqu'à 4 profils » ou d'autres différences de forfait non confirmées.
+- Synchronisation cloud chiffrée optionnelle pour Famille : confirmée.
+- Ne pas inventer un nombre de profils, de limites de compte ou d’inclusions non vérifiées.
 
 ### Industrial
-- Dès 64 €/mois
-- Selon effectifs
+- dès 64 €/mois
+- selon effectifs
 - 14 jours gratuits
-- Ne pas inventer de grille supplémentaire.
+- ne pas inventer de grille supplémentaire.
 
-## Blocage principal avant mise en ligne
+## NEXORA — CONSULTING
 
-Le dépôt GitHub canonique ne contient actuellement pas les fichiers applicatifs référencés par `_redirects` :
+L’interface publique doit rester un assistant de qualification/devis et non exposer arbitrairement l’outil interne complet.
+
+Règles :
+
+1. Toujours permettre une réponse libre.
+2. Toujours proposer `Autre — décrire mon projet`.
+3. Prix automatique uniquement si une règle tarifaire vérifiée correspond.
+4. Hors catalogue / complexe : `Sur étude` ou validation humaine.
+5. Victor / FORGEDIS conserve l’autorité finale sur les devis non standards.
+6. Ne jamais halluciner un prix.
+7. Les valeurs de projets visibles dans la maquette/dashboard sont des exemples visuels, pas des clients réels.
+
+Si une API NEXORA réelle existe, connecter l’interface à celle-ci sans retirer ces garde-fous.
+
+## ARIA INDUSTRIAL — CRITIQUE
+
+Le dépôt GitHub ne contient pas actuellement `aria_industrial_v1.html`, alors que `/industrial` y redirige.
+
+Victor a confirmé que **le vrai moteur de devis Industrial est directement codé dans le HTML de l’application**.
+
+Donc :
+
+- ne pas considérer la démonstration de `industrial.html` comme moteur métier ;
+- récupérer et auditer le `aria_industrial_v1.html` actuellement déployé ;
+- réutiliser son moteur de devis, ses permissions, validations et logique métier ;
+- ne pas créer de moteur concurrent ;
+- conserver le contrôle humain pour les actions sensibles.
+
+Les noms, dates, montants et société visibles dans la vitrine de démonstration sont des données fictives de présentation.
+
+## ARIA KIDS
+
+Ne pas transformer Kids en chatbot générique.
+
+Conserver le fonctionnement réel autour des cours, exercices, devoirs, progression, scanner et contrôle parental.
+
+Ne pas inventer de différences Solo/Famille non confirmées.
+
+## ARIA FACILITY
+
+Conserver les fonctions existantes utiles : pilotage vocal, aide à la navigation, anti-arnaques, accompagnement famille et rappels si elles sont présentes dans l’application réelle.
+
+## PAGES JURIDIQUES
+
+La politique de confidentialité complète a été réintégrée dans `confidentialite.html`.
+
+Avant publication, comparer encore avec la version actuellement en production. Si la production contient un texte juridique plus récent ou une page réglementaire supplémentaire :
+
+- conserver le texte le plus récent ;
+- appliquer seulement la présentation FORGEDIS ;
+- ne supprimer aucune section ;
+- ne modifier aucun engagement juridique sans validation humaine.
+
+Même règle pour CGV, CGU ou autres pages publiques réglementaires éventuellement présentes uniquement en production.
+
+## BLOCAGE ABSOLU AVANT DÉPLOIEMENT
+
+Le dépôt GitHub canonique ne contient pas au minimum :
 
 - `aria_senior_v2.html`
 - `aria_kids_v2.html`
 - `aria_industrial_v1.html`
 
-Ils peuvent encore exister dans le déploiement Netlify de production. Avant tout déploiement :
+et certains fichiers `/portail` / `/admin` peuvent également exister uniquement dans le déploiement Netlify actuel.
 
-1. Inventorier la production Netlify actuelle.
-2. Récupérer/sauvegarder ces trois fichiers et tout fichier associé qui n'existe pas dans GitHub.
-3. Réintégrer ces fichiers dans le paquet de déploiement ou dans le dépôt si approprié.
-4. Ne jamais lancer un déploiement qui supprimerait ces applications.
+**NE PAS DÉPLOYER LE CONTENU DU DÉPÔT TEL QUEL EN PRODUCTION.**
 
-## Important — pages juridiques
+Un déploiement incomplet pourrait supprimer les applications actuellement accessibles.
 
-La version publique actuellement indexée de la politique de confidentialité est plus complète que le fichier GitHub historique : elle contient notamment bases légales, sous-traitants, transferts hors UE, sécurité, spécificités Facility/Kids/Industrial et droits RGPD détaillés.
+Avant tout déploiement :
 
-Au moment de la mise en ligne :
+1. Inventorier intégralement le déploiement Netlify de production actuel.
+2. Récupérer/sauvegarder tous les fichiers présents en production mais absents de GitHub.
+3. Identifier `portail.html`, `admin.html` et tous les fichiers applicatifs associés.
+4. Comparer leurs dépendances JS/CSS/assets/API.
+5. Réintégrer les fichiers nécessaires dans le paquet final sans modifier leur logique métier avant audit.
+6. Vérifier `_redirects` et `_headers`.
 
-- conserver le DESIGN de `confidentialite.html` préparé dans cette branche ;
-- mais reprendre le TEXTE COMPLET de la version juridique actuellement en production s'il est toujours plus récent ;
-- ne supprimer aucune section juridique existante ;
-- ne changer aucun engagement RGPD sans validation humaine.
+## IMAGES
 
-Même règle pour toute CGV/CGU ou page légale présente en production mais absente du dépôt actuel : préserver le texte, appliquer uniquement le design FORGEDIS.
+Les URLs photo actuellement présentes dans les vitrines servent d’assets HD de remplacement sélectionnés pour conserver l’effet des maquettes.
 
-## NEXORA Consulting
+Pour la production, il est préférable de :
 
-`nexora-quote.js` est volontairement un scaffold frontend de qualification. Il sait :
+1. télécharger légalement les sources utilisées ;
+2. conserver une copie source HD ;
+3. générer AVIF/WebP aux dimensions adaptées ;
+4. utiliser `srcset` / `sizes` ;
+5. préserver exactement le cadrage visuel validé (`object-fit`, `object-position`) ;
+6. ne jamais étirer une image ;
+7. ne jamais substituer une autre photographie sans nécessité.
 
-- recueillir un besoin libre ;
-- sélectionner une catégorie de prestation ;
-- afficher uniquement les prix vérifiés ;
-- afficher « Sur étude » pour Autre ;
-- construire une synthèse provisoire.
+L’optimisation ne doit pas changer la composition.
 
-Il ne prétend pas être le moteur IA final. Si une API NEXORA réelle existe, connecter l'interface à cette API sans supprimer les garde-fous tarifaires.
+## PROCÉDURE DE VALIDATION — OBLIGATOIRE
 
-## Industrial devis
+### Étape A — récupération
 
-La page vitrine préparée montre :
+Récupérer la production actuelle et reconstruire un paquet complet qui contient à la fois :
 
-client → discussion avec ARIA → devis en construction → contrôle → validation → envoi → suivi.
+- vitrines redesignées ;
+- applications existantes ;
+- portail/auth ;
+- assets ;
+- fichiers légaux ;
+- redirects/headers.
 
-La maquette ne doit pas devenir la source de vérité du moteur métier. Le vrai `aria_industrial_v1.html` doit être audité et son système de devis réutilisé/adapté.
+### Étape B — PREVIEW UNIQUEMENT
 
-## Tests obligatoires avant production
+Créer d’abord un **Netlify Deploy Preview / déploiement non-production**.
 
-Vérifier au minimum :
+NE PAS publier sur `forgedis.fr` à cette étape.
+
+### Étape C — contrôle visuel
+
+À 1024 px de largeur desktop, réaliser une capture pleine page de :
+
+- Home
+- Consulting
+- Facility
+- Kids
+- Industrial
+
+Comparer chaque capture côte à côte avec sa maquette de référence.
+
+Contrôler :
+
+- hauteur et ordre de chaque section ;
+- positions et proportions ;
+- photographie et cadrage ;
+- taille/retours à la ligne des titres ;
+- espaces blancs ;
+- couleurs ;
+- CTA ;
+- cards ;
+- NEXORA ;
+- interface Kids ;
+- chatbot/devis Industrial ;
+- footer.
+
+Si un écart important existe, corriger le site. **Ne pas modifier la maquette pour justifier l’écart.**
+
+### Étape D — contrôle fonctionnel
+
+Tester au minimum :
 
 - `/`
 - `/consulting.html`
@@ -113,18 +249,51 @@ Vérifier au minimum :
 - `/kids`
 - `/industrial`
 - `/portail`
-- `/admin`
+- `/admin` si présent
 - `/confidentialite.html`
 - `/mentions-legales.html`
 
-Tester : Jour/Nuit, desktop, mobile, clavier, reduced motion, formulaires Netlify, Stripe, authentification, Supabase, routes, console, 404, SEO/canonical.
+Tester :
 
-## Déploiement
+- `Se connecter` ;
+- authentification ;
+- Stripe ;
+- Supabase ;
+- formulaires Netlify ;
+- moteur de devis Industrial ;
+- navigation ;
+- mobile ;
+- clavier ;
+- thème Jour/Nuit ;
+- reduced motion ;
+- console navigateur ;
+- 404 ;
+- canonical/SEO ;
+- absence de liens morts.
 
-Ne déployer qu'après audit complet du paquet de production actuel. La mission de Claude est maintenant principalement :
+### Étape E — contrôle qualité
 
-1. récupérer les fichiers applicatifs manquants ;
-2. connecter les interfaces préparées aux fonctions existantes ;
-3. préserver les textes juridiques plus récents de production ;
-4. tester ;
-5. publier sans perte de fonctionnalité.
+- aucune image étirée ;
+- aucune maquette utilisée comme capture géante ;
+- aucun texte inventé présenté comme fait ;
+- aucune fausse recommandation client ;
+- aucun prix non vérifié ;
+- pas de NEXORA hors Consulting ;
+- pas de régression juridique ;
+- responsive propre ;
+- images optimisées ;
+- WCAG 2.2 AA dans la mesure applicable ;
+- performance raisonnable ;
+- aucune erreur console.
+
+### Étape F — production
+
+La production n’est autorisée qu’après validation du preview et des contrôles ci-dessus.
+
+Ne jamais lancer directement un déploiement production depuis la branche sans récupération préalable des applications absentes du dépôt.
+
+## PRINCIPE FINAL
+
+**Le code s’adapte à la maquette. La maquette ne s’adapte pas au code.**
+
+Et la refonte visuelle ne doit jamais provoquer une perte de fonction existante.
