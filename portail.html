@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -347,8 +347,38 @@ function redirecter(email, forfait) {
     window.location.href = '/admin.html';
     return;
   }
-  // Facility → portail Aria Facility
-  window.location.href = '/dashboard-facility.html';
+  // Routing multi-produit via RPC get_portal_context (Phase E)
+  var jwt = null;
+  for (var k in localStorage) {
+    var v = localStorage.getItem(k);
+    if (typeof v === 'string' && v.indexOf('"access_token"') !== -1) {
+      try { var obj = JSON.parse(v); jwt = obj.access_token || (obj.currentSession && obj.currentSession.access_token); } catch(e){}
+      if (jwt) break;
+    }
+  }
+  function fallbackRouting(f) {
+    if (f === 'kids_solo' || f === 'kids_famille') { window.location.href = '/kids'; return; }
+    if (f === 'industrial') { window.location.href = '/industrial'; return; }
+    window.location.href = '/dashboard-facility.html';
+  }
+  if (jwt) {
+    fetch('https://dvlrilklbspuckbplglz.supabase.co/rest/v1/rpc/get_portal_context', {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + jwt, 'Content-Type': 'application/json' },
+      body: '{}'
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(ctx) {
+      var products = (ctx && ctx.products) ? ctx.products : [];
+      var product = products.length > 0 ? products[0].product : null;
+      if (product === 'kids')       { window.location.href = '/kids'; return; }
+      if (product === 'industrial') { window.location.href = '/industrial'; return; }
+      window.location.href = '/dashboard-facility.html';
+    })
+    .catch(function() { fallbackRouting(forfait); });
+  } else {
+    fallbackRouting(forfait);
+  }
 }
 
 // ── VALIDER ──
