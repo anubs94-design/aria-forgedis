@@ -937,7 +937,6 @@ async def verifier_acces(token: str, product: str, capability: str = "") -> tupl
                         ent = ents[0]
 
                         ent_status = ent.get("status","active")
-
                         # Verifier ends_at
 
                         import datetime as _dt_va
@@ -2360,19 +2359,8 @@ async def stripe_webhook(request: Request):
                         sub_status_real, date_debut_real, date_fin_real = _project_stripe_sub_data(
                             _sub_obj, PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
                         if sub_status_real is None or date_fin_real is None:
-                            await _fail(hc_sub := hc if "hc" in dir() else _sa2, f"projection_failed_status={_stripe_status}")
-                            # retourner 503 sera géré par le bloc extérieur
-                        if _trial_end:
-
-                            date_fin_real = _dt_m.datetime.fromtimestamp(_trial_end).isoformat()
-
-                        elif _period_end:
-
-                            date_fin_real = _dt_m.datetime.fromtimestamp(_period_end).isoformat()
-
-                        if _period_start:
-
-                            date_debut_real = _dt_m.datetime.fromtimestamp(_period_start).isoformat()
+                            await _fail(client, f"projection_failed_status={_stripe_status}")
+                            return JSONResponse(status_code=503, content={"erreur": "stripe_projection_failed"})
 
                     else:
 
@@ -2510,7 +2498,9 @@ async def stripe_webhook(request: Request):
 
                 return JSONResponse(status_code=503, content={"erreur": "entitlement_creation_failed"})
 
-            await _complete(client)
+            ok_c = await _complete(client)
+            if not ok_c:
+                return JSONResponse(status_code=503, content={"erreur": "complete_failed_checkout"})
 
             print(f"[stripe-webhook] checkout ok: {email} forfait={forfait} action={action} reason={reason}")
 
@@ -2528,10 +2518,11 @@ async def stripe_webhook(request: Request):
 
         email     = data_obj.get("customer_email", "") or ""
 
-        period_end= data_obj.get("current_period_end")
-
-        ends_at   = _dt_m.datetime.fromtimestamp(period_end).isoformat() if period_end else None
-
+        # Stripe 2026 : projection unifiée via _project_stripe_sub_data
+        # data_obj est l'objet subscription Stripe complet
+        status_mapped_sc, starts_at_sc, ends_at_sc = _project_stripe_sub_data(
+            data_obj, PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
+        # Si la projection échoue, utiliser le statut brut et ne pas inventer ends_at
         price_ids = [(item.get("price") or {}).get("id", "")
 
                      for item in (data_obj.get("items", {}).get("data") or [])
@@ -2548,16 +2539,13 @@ async def stripe_webhook(request: Request):
 
             return JSONResponse({"status": "refus", "raison": "produit_inconnu"})
 
-        if status_str not in STRIPE_STATUS_MAP:
-
-            async with httpx.AsyncClient(timeout=5.0) as hc:
-
-                await _fail(hc, f"stripe_status_inconnu:{status_str}")
-
-            return JSONResponse(status_code=503, content={"erreur": "stripe_status_inconnu"})
-
-        status_mapped = STRIPE_STATUS_MAP[status_str]
-
+        # Statut depuis projection Stripe unifiée
+        status_used = status_mapped_sc
+        if status_used is None:
+            # Projection incomplète (statut inconnu ou Price ID non mappé)
+            async with httpx.AsyncClient(timeout=5.0) as _hf:
+                await _fail(_hf, f"sub_created_projection_failed:{status_str}")
+            return JSONResponse(status_code=503, content={"erreur": "projection_failed_sub_created"})
         async with httpx.AsyncClient(timeout=10.0) as client:
 
             resolved_email = email
@@ -2616,12 +2604,14 @@ async def stripe_webhook(request: Request):
 
         status_str= data_obj.get("status", "")
 
-        period_end= data_obj.get("current_period_end")
-
-        ends_at   = _dt_m.datetime.fromtimestamp(period_end).isoformat() if period_end else None
-
-        status_mapped = STRIPE_STATUS_MAP.get(status_str, "past_due")
-
+        # Stripe 2026 : projection unifiée (pas de current_period_end direct)
+        status_mapped, starts_at_su, ends_at = _project_stripe_sub_data(
+            data_obj, PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
+        if status_mapped is None:
+            # Statut inconnu (pas de Price ID mappé ni statut valide) -> fail
+            async with httpx.AsyncClient(timeout=5.0) as _hf:
+                await _fail(_hf, f"sub_updated_projection_failed:{status_str}")
+            return JSONResponse(status_code=503, content={"erreur": "projection_failed_sub_updated"})
         async with httpx.AsyncClient(timeout=10.0) as client:
 
             if sub_id:
@@ -2816,6 +2806,11 @@ async def _check_president(token):
     """Verifie token + role president via profiles/salaries/entreprises."""
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
         return False, None, "Service indisponible."
+    # Vérifier d'abord l'entitlement Industrial actif
+    ok_ind, _msg_ind, _forf_ind = await verifier_acces(token, "industrial")
+    if not ok_ind:
+        return False, None, _msg_ind or "Entitlement Industrial requis (past_due/canceled/expired refuse)."
+
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             r = await client.get(
