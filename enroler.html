@@ -1,0 +1,210 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Activation Aria PC — FORGEDIS</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#070B18;--panel:#11172A;--border:#232B45;--text:#F0F3FB;--soft:#A6B0CC;--coral:#FF7A59;--green:#34D399;--red:#E5484D;--cyan:#5BE3D8}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI",sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:40px 36px;width:100%;max-width:420px;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.logo{color:var(--coral);font-weight:900;font-size:22px;letter-spacing:.12em;margin-bottom:6px}
+h1{font-size:17px;font-weight:600;margin-bottom:6px}
+.sub{font-size:13px;color:var(--soft);margin-bottom:28px;line-height:1.5}
+label{font-size:12px;color:var(--soft);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px}
+input{width:100%;padding:12px 14px;border-radius:8px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:14px;margin-bottom:16px;outline:none;transition:border-color .2s}
+input:focus{border-color:var(--coral)}
+.btn{width:100%;padding:13px;border-radius:8px;border:none;background:var(--coral);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s;margin-bottom:10px}
+.btn:hover{opacity:.88}.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-google{width:100%;padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:border-color .2s;margin-bottom:10px}
+.btn-google:hover{border-color:var(--coral)}
+.btn-reset{width:100%;padding:11px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--soft);font-size:13px;font-weight:600;cursor:pointer;transition:border-color .2s;margin-bottom:0}
+.btn-reset:hover{border-color:var(--coral);color:var(--coral)}
+.divider{display:flex;align-items:center;gap:10px;margin:12px 0;color:var(--soft);font-size:12px}
+.divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--border)}
+.msg{margin-top:18px;padding:12px 14px;border-radius:8px;font-size:13px;display:none;line-height:1.5;white-space:pre-line}
+.msg.ok{background:rgba(52,211,153,.12);border:1px solid var(--green);color:var(--green)}
+.msg.err{background:rgba(229,72,77,.12);border:1px solid var(--red);color:var(--red)}
+.msg.info{background:rgba(91,227,216,.08);border:1px solid var(--cyan);color:var(--cyan)}
+.step{font-size:12px;color:var(--soft);margin-top:24px;border-top:1px solid var(--border);padding-top:16px}
+.step span{color:var(--coral);font-weight:700}
+#zone-reset{display:none;margin-bottom:10px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">FORGEDIS</div>
+  <h1>Activation Aria PC</h1>
+  <p class="sub">Connectez-vous pour activer Aria sur cet ordinateur.</p>
+
+  <!-- Connexion email + mdp -->
+  <label for="email">Email</label>
+  <input type="email" id="email" placeholder="votre@email.fr" autocomplete="email">
+  <label for="mdp">Mot de passe</label>
+  <input type="password" id="mdp" placeholder="••••••••" autocomplete="current-password">
+  <button class="btn" id="btn-activer" onclick="activer()">Activer Aria sur cet ordinateur</button>
+
+  <!-- Google (navigateur uniquement) -->
+  <div id="zone-google">
+    <div class="divider">ou</div>
+    <button class="btn-google" onclick="activerGoogle()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continuer avec Google
+    </button>
+  </div>
+
+  <!-- Mot de passe oublie -->
+  <div class="divider">ou</div>
+  <button class="btn-reset" onclick="toggleReset()">Mot de passe oublié ?</button>
+  <div id="zone-reset">
+    <br>
+    <label>Email pour réinitialiser</label>
+    <input type="email" id="email-reset" placeholder="votre@email.fr">
+    <button class="btn" style="background:var(--border)" onclick="envoyerReset()">Envoyer le lien</button>
+  </div>
+
+  <div class="msg" id="msg"></div>
+  <div class="step">
+    <span>1</span> Connectez-vous &nbsp;&bull;&nbsp;
+    <span>2</span> Aria s'active &nbsp;&bull;&nbsp;
+    <span>3</span> Redémarrez Aria si demandé
+  </div>
+</div>
+
+<script>
+const SB_URL  = "https://dvlrilklbspuckbplglz.supabase.co";
+const SB_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2bHJpbGtsYnNwdWNrYnBsZ2x6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNzYyNjIsImV4cCI6MjA5Njk1MjI2Mn0.lC1rt8bvfIpi1c78L8OWGXjjYhXzqzNkIgykHTle6eM";
+const RELAY   = "https://aria-forgelis.onrender.com";
+const WS_LOC  = "ws://127.0.0.1:8766";
+const isWebView = () => !!(window.ReactNativeWebView);
+
+const sb = supabase.createClient(SB_URL, SB_ANON);
+
+// Cacher Google dans WebView
+if(isWebView()) document.getElementById("zone-google").style.display = "none";
+
+function esc(s){var d=document.createElement('div');d.appendChild(document.createTextNode(String(s===null||s===undefined?'':s)));return d.innerHTML;}
+function msg(t,c){const e=document.getElementById("msg");e.textContent=t;e.className="msg "+c;e.style.display="block"}
+
+function toggleReset(){
+  const z = document.getElementById("zone-reset");
+  z.style.display = z.style.display === "block" ? "none" : "block";
+  const email = document.getElementById("email").value;
+  if(email) document.getElementById("email-reset").value = email;
+}
+
+async function envoyerReset(){
+  const email = document.getElementById("email-reset").value.trim().toLowerCase();
+  if(!email){msg("Entrez votre email.","err");return}
+  msg("Envoi en cours…","info");
+  const{error} = await sb.auth.resetPasswordForEmail(email,{redirectTo:"https://forgedis.fr/reset-password.html"});
+  if(error){msg("Erreur : "+error.message,"err");return}
+  msg("Lien envoyé ! Vérifiez votre boîte mail.","ok");
+  document.getElementById("zone-reset").style.display = "none";
+}
+
+async function activerGoogle(){
+  msg("Redirection vers Google…","info");
+  const{error} = await sb.auth.signInWithOAuth({
+    provider:"google",
+    options:{redirectTo:"https://forgedis.fr/enroler.html"}
+  });
+  if(error) msg("Erreur Google : "+error.message,"err");
+}
+
+// Apres retour du redirect Google - detecter la session dans l URL
+async function verifierSessionGoogle(){
+  // Gerer les deux modes Supabase : implicit (hash) et PKCE (code dans URL)
+  const hash = window.location.hash;
+  const search = window.location.search;
+  const hasOAuthCallback = hash.includes("access_token") || search.includes("code=");
+  if(!hasOAuthCallback) return;
+  // Attendre que Supabase traite le callback
+  await new Promise(r => setTimeout(r, 800));
+  const{data:{session}} = await sb.auth.getSession();
+  if(session){
+    await lancerEnrolement(session.access_token);
+  }
+}
+
+async function activer(){
+  const email = document.getElementById("email").value.trim().toLowerCase();
+  const mdp   = document.getElementById("mdp").value;
+  const btn   = document.getElementById("btn-activer");
+  if(!email||!mdp){msg("Remplissez tous les champs.","err");return}
+  btn.disabled = true;
+  msg("Connexion…","info");
+  const{data,error} = await sb.auth.signInWithPassword({email,password:mdp});
+  if(error||!data.session){msg("Email ou mot de passe incorrect.","err");btn.disabled=false;return}
+  await lancerEnrolement(data.session.access_token);
+  btn.disabled = false;
+}
+
+async function lancerEnrolement(jwt){
+  if(!jwt){ msg("Erreur : session vide. Reconnectez-vous.","err"); return; }
+  console.log("[ENROL] JWT debut:", jwt.substring(0,20));
+  msg("Connecté. Enrôlement en cours…","info");
+  let d;
+  try{
+    const r = await fetch(RELAY+"/enroler-installation",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+jwt}});
+    d = await r.json();
+  }catch(ex){msg("Impossible de joindre le serveur. Vérifiez votre connexion.","err");return}
+  if(d.erreur){msg("Erreur : "+d.erreur,"err");return}
+
+  // Envoyer a Aria PC via WebSocket local
+  if(!isWebView()){
+    try{
+      const ws = new WebSocket(WS_LOC);
+      await new Promise((res,rej)=>{
+        ws.onopen = ()=>ws.send(JSON.stringify({type:"enrolement",token_installation:d.token_installation,token:d.token,email:d.email,forfait:d.forfait}));
+        ws.onmessage = evt=>{
+          const r2 = JSON.parse(evt.data);
+          if(r2.type==="enrolement_result"){
+            msg(r2.ok?"✅ "+r2.message:"Erreur : "+r2.erreur, r2.ok?"ok":"err");
+            ws.close(); res();
+          }
+        };
+        ws.onerror = ()=>rej(new Error("inaccessible"));
+        setTimeout(()=>rej(new Error("timeout")),8000);
+      });
+      return;
+    }catch(we){
+      msg("Aria n'est pas démarré sur cet ordinateur.\nOuvrez Aria PC, puis réessayez.","err");
+      return;
+    }
+  }
+
+  // Mobile WebView : envoyer les tokens a l application
+  // Double methode : postMessage + navigation URL de secours
+  const payload = JSON.stringify({
+    type:"enrolement_success",
+    token:d.token,
+    installation_token:d.token_installation,
+    forfait:d.forfait,
+    email:d.email
+  });
+  console.log("[ENROL] payload:", payload);
+  console.log("[ENROL] isWebView:", isWebView(), "ReactNativeWebView:", !!window.ReactNativeWebView);
+  
+  if(d.token){
+    msg("Enrôlement réussi ! Aria démarre…","ok");
+    // Methode 1 : postMessage standard
+    if(window.ReactNativeWebView){
+      window.ReactNativeWebView.postMessage(payload);
+    }
+    // Methode 2 : navigation URL custom (fallback)
+    setTimeout(()=>{
+      window.location.href = "aria://enrolement?" + encodeURIComponent(payload);
+    }, 300);
+  }else{
+    msg("Enrôlement incomplet : token manquant côté serveur. Réessayez.","err");
+  }
+}
+
+// Au chargement : verifier si retour redirect Google
+window.addEventListener("load", verifierSessionGoogle);
+</script>
+</body>
+</html>

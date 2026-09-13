@@ -1,0 +1,2255 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aria Industrial — Achats</title>
+<style>
+:root{
+  --bg:#14161C;--panel:#1B1E27;--panel2:#22252F;--panel3:#282C38;
+  --line:#2E3240;--line2:#3A3F4E;
+  --ink:#EDEFF3;--ink-dim:#9096A8;--ink-faint:#5E6479;
+  --amber:#E8873A;--amber-dim:#3A2E20;
+  --ok:#4FBF8B;--ok-dim:#1C2E27;
+  --wait:#E0B23C;--wait-dim:#332C1A;
+  --blocked:#E15B5B;--blocked-dim:#331E1E;
+  --radius:12px;--err:var(--blocked);--bg2:var(--panel2);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;min-height:100vh;display:flex;flex-direction:column}
+.app-shell{display:flex;flex:1;min-height:0}
+.sidebar{width:220px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.brand{padding:20px 16px 12px;border-bottom:1px solid var(--line)}
+.brand-logo{font-size:18px;font-weight:800;color:var(--amber)}
+.brand-sub{font-size:11px;color:var(--ink-dim);margin-top:2px}
+.nav-group{padding:6px 0}
+.nav-group-label{padding:6px 16px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-faint)}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;color:var(--ink-dim);font-size:13px;transition:background .15s,color .15s;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:var(--panel2);color:var(--ink)}
+.nav-item.active{background:var(--amber-dim);color:var(--amber);font-weight:600}
+.nav-item-ico{font-size:15px;width:20px;text-align:center}
+.nav-sep{height:1px;background:var(--line);margin:4px 0}
+.main-content{flex:1;overflow-y:auto;padding:24px;max-width:1200px}
+.topbar{background:var(--panel);border-bottom:1px solid var(--line);padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.poste-tag{background:var(--amber-dim);color:var(--amber);border-radius:8px;padding:4px 12px;font-size:12px;font-weight:700}
+.btn-icon{background:none;border:1px solid var(--line);border-radius:8px;color:var(--ink-dim);padding:6px 10px;cursor:pointer;font-size:13px;transition:border-color .15s,color .15s}
+.btn-icon:hover{border-color:var(--amber);color:var(--amber)}
+.view{display:none;animation:fadeIn .2s}
+.view.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.view-head{margin-bottom:20px}
+.view-head h1{font-size:22px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.view-head p{color:var(--ink-dim);font-size:13px}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;text-align:center}
+.stat-val{font-size:24px;font-weight:800;color:var(--amber);margin-bottom:4px}
+.stat-val.ok{color:var(--ok)}.stat-val.warn{color:var(--wait)}.stat-val.err{color:var(--blocked)}
+.stat-lbl{font-size:11px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.05em}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px;flex-wrap:wrap}
+.section-head h2{font-size:15px;font-weight:700;color:var(--ink)}
+.row-item{background:var(--panel2);border-radius:10px;padding:14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px}
+.ri-main{flex:1;min-width:0}
+.ri-title{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:3px}
+.ri-sub{font-size:12px;color:var(--ink-dim)}
+.ri-actions{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;align-items:flex-start}
+.empty-state{text-align:center;padding:40px 20px;color:var(--ink-dim)}
+.es-ic{font-size:32px;margin-bottom:8px}
+.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap}
+.badge-ok{background:rgba(79,191,139,.15);color:var(--ok)}
+.badge-warn{background:rgba(224,178,60,.15);color:var(--wait)}
+.badge-err{background:rgba(225,91,91,.15);color:var(--blocked)}
+.badge-amber{background:var(--amber-dim);color:var(--amber)}
+.badge-blue{background:rgba(74,134,232,.15);color:#4A86E8}
+.btn-act{border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:600;transition:opacity .15s;white-space:nowrap}
+.btn-act:hover{opacity:.85}
+.btn-amber{background:var(--amber);color:#fff}
+.btn-ok{background:var(--ok);color:#fff}
+.btn-err{background:var(--blocked);color:#fff}
+.btn-ghost{background:transparent;border:1px solid var(--line2);color:var(--ink-dim)}
+.btn-ghost:hover{border-color:var(--ink-dim)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.input-field{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-size:13px;padding:9px 12px;outline:none;transition:border-color .15s;font-family:inherit}
+.input-field:focus{border-color:var(--amber)}
+.input-field option{background:var(--panel)}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:14px}
+.form-group label{display:block;font-size:11px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.table-wrap{overflow-x:auto}
+table.dt{width:100%;border-collapse:collapse;font-size:13px}
+table.dt th{background:var(--panel2);color:var(--ink-dim);font-size:11px;font-weight:700;text-transform:uppercase;padding:10px 12px;text-align:left;border-bottom:1px solid var(--line)}
+table.dt td{padding:10px 12px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:top}
+table.dt tr:last-child td{border-bottom:none}
+table.dt tr:hover td{background:var(--panel2)}
+.score-bar{height:6px;background:var(--line2);border-radius:3px;overflow:hidden;margin-top:3px}
+.score-fill{height:100%;border-radius:3px;transition:width .4s}
+.sf-ok{background:var(--ok)}.sf-warn{background:var(--wait)}.sf-err{background:var(--blocked)}
+.risk-card{border-left:3px solid;border-radius:0 10px 10px 0;padding:12px 14px;margin-bottom:8px;background:var(--panel2)}
+.risk-critique{border-color:var(--blocked)}.risk-eleve{border-color:var(--wait)}.risk-modere{border-color:var(--amber)}.risk-faible{border-color:var(--ok)}
+.rp-steps{display:flex;align-items:center;gap:8px;margin:8px 0;flex-wrap:wrap}
+.rp-step{font-size:12px;padding:4px 10px;border-radius:6px;font-weight:600}
+.st-ok{background:var(--ok-dim);color:var(--ok)}.st-miss{background:var(--blocked-dim);color:var(--blocked)}.st-warn{background:var(--wait-dim);color:var(--wait)}
+.rp-row{background:var(--panel2);border-radius:10px;padding:14px;margin-bottom:8px}
+.rp-ok{border-left:3px solid var(--ok)}.rp-alert{border-left:3px solid var(--blocked)}.rp-warn{border-left:3px solid var(--wait)}
+.alert-item{border-left:3px solid var(--wait);background:var(--wait-dim);border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:8px}
+.alert-crit{border-color:var(--blocked)!important;background:var(--blocked-dim)!important}
+.alert-ok{border-color:var(--ok)!important;background:var(--ok-dim)!important}
+.alert-title{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px}
+.alert-desc{font-size:12px;color:var(--ink-dim)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-box{background:var(--panel);border-radius:16px;padding:28px;width:100%;max-width:640px;max-height:92vh;overflow-y:auto;border:1px solid var(--line)}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.modal-head h3{font-size:18px;font-weight:700;color:var(--ink)}
+.modal-close{background:none;border:none;font-size:20px;color:var(--ink-dim);cursor:pointer}
+.aria-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .18s}
+.aria-modal-overlay.open{opacity:1;pointer-events:all}
+.aria-modal{background:var(--panel2);border:1px solid var(--line2);border-radius:var(--radius);padding:28px 28px 22px;width:min(420px,90vw);box-shadow:0 20px 60px rgba(0,0,0,.5);transform:translateY(8px);transition:transform .18s}
+.aria-modal-overlay.open .aria-modal{transform:translateY(0)}
+.aria-modal-ico{font-size:28px;text-align:center;margin-bottom:12px}
+.aria-modal-title{font-size:16px;font-weight:700;color:var(--ink);text-align:center;margin-bottom:6px}
+.aria-modal-msg{font-size:13px;color:var(--ink-dim);text-align:center;margin-bottom:18px;line-height:1.5}
+.aria-modal-input{width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-size:14px;padding:10px 14px;outline:none;transition:border-color .15s;box-sizing:border-box;margin-bottom:16px}
+.aria-modal-input:focus{border-color:var(--amber)}
+.aria-modal-actions{display:flex;gap:10px;justify-content:flex-end}
+.aria-modal-cancel{background:transparent;border:1px solid var(--line2);color:var(--ink-dim);border-radius:8px;padding:8px 18px;cursor:pointer;font-size:13px}
+.aria-modal-confirm{border:none;border-radius:8px;padding:8px 18px;cursor:pointer;font-size:13px;font-weight:600}
+.aria-modal-confirm.danger{background:var(--blocked);color:#fff}
+.aria-modal-confirm.primary{background:var(--amber);color:#fff}
+.consult-ia{background:var(--panel3);border-radius:10px;padding:14px;font-size:13px;line-height:1.7;color:var(--ink-dim);white-space:pre-wrap;min-height:60px}
+.sourcing-card{background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:10px}
+.src-criteria{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:8px}
+.src-crit{font-size:12px;color:var(--ink-dim)}
+.src-crit span{display:block;font-weight:700;color:var(--ink);font-size:13px}
+.nego-ba{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;margin:10px 0}
+.nego-val{text-align:center;padding:10px;background:var(--panel3);border-radius:8px}
+.nego-val-lbl{font-size:10px;color:var(--ink-faint);text-transform:uppercase;margin-bottom:4px}
+.nego-val-num{font-size:17px;font-weight:800}
+.nego-val-num.strike{text-decoration:line-through;color:var(--ink-dim)}
+.nego-val-num.saved{color:var(--ok)}
+.journal-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.journal-item:last-child{border-bottom:none}
+.journal-time{font-size:11px;color:var(--ink-faint);white-space:nowrap;padding-top:1px;min-width:40px}
+.journal-txt{font-size:13px;color:var(--ink-dim)}
+@media(max-width:768px){.sidebar{display:none}.main-content{padding:16px}.stats-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<!-- Modale Aria -->
+<div class="aria-modal-overlay" id="aria-modal-overlay" onclick="if(event.target===this)_ariaModalCancel()">
+  <div class="aria-modal">
+    <div class="aria-modal-ico" id="aria-modal-ico">⚠️</div>
+    <div class="aria-modal-title" id="aria-modal-title"></div>
+    <div class="aria-modal-msg" id="aria-modal-msg"></div>
+    <input class="aria-modal-input" id="aria-modal-input" type="text" style="display:none">
+    <div class="aria-modal-actions">
+      <button class="aria-modal-cancel" onclick="_ariaModalCancel()">Annuler</button>
+      <button class="aria-modal-confirm primary" id="aria-modal-confirm" onclick="_ariaModalConfirm()">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <button class="btn-icon" onclick="toggleSidebar()">☰</button>
+    <span style="font-size:15px;font-weight:700;color:var(--ink)">Aria Industrial</span>
+  </div>
+  <div class="topbar-right">
+    <div class="poste-tag" id="poste-tag">📦 Achats</div>
+    <button class="btn-icon" onclick="deconnexion()">Déconnexion</button>
+  </div>
+</div>
+
+<div class="app-shell">
+<!-- Sidebar -->
+<div class="sidebar" id="app-sidebar">
+  <div class="brand"><div class="brand-logo">Aria</div><div class="brand-sub">Poste Achats</div></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Achats</div>
+    <button class="nav-item active" data-view="v-dash" onclick="goToView('v-dash',this)"><span class="nav-item-ico">📊</span>Tableau de bord</button>
+    <button class="nav-item" data-view="v-demandes" onclick="goToView('v-demandes',this)"><span class="nav-item-ico">📝</span>Demandes d'achat</button>
+    <button class="nav-item" data-view="v-commandes" onclick="goToView('v-commandes',this)"><span class="nav-item-ico">📦</span>Bons de commande</button>
+    <button class="nav-item" data-view="v-reception" onclick="goToView('v-reception',this)"><span class="nav-item-ico">📥</span>Réception</button>
+  </div>
+  <div class="nav-sep"></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Fournisseurs</div>
+    <button class="nav-item" data-view="v-fournisseurs" onclick="goToView('v-fournisseurs',this)"><span class="nav-item-ico">🏭</span>Carnet fournisseurs</button>
+    <button class="nav-item" data-view="v-sourcing" onclick="goToView('v-sourcing',this)"><span class="nav-item-ico">🔍</span>Sourcing & Comparaison</button>
+    <button class="nav-item data-role-resp" data-view="v-evaluation" onclick="goToView('v-evaluation',this)"><span class="nav-item-ico">⭐</span>Score fournisseur</button>
+    <button class="nav-item" data-view="v-contrats" onclick="goToView('v-contrats',this)"><span class="nav-item-ico">📄</span>Contrats</button>
+    <button class="nav-item data-role-resp" data-view="v-risques-fourn" onclick="goToView('v-risques-fourn',this)"><span class="nav-item-ico">⚠️</span>Risques fournisseurs</button>
+  </div>
+  <div class="nav-sep"></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Stratégie</div>
+    <button class="nav-item" data-view="v-consultations" onclick="goToView('v-consultations',this)"><span class="nav-item-ico">📋</span>Appels d'offres</button>
+    <button class="nav-item" data-view="v-negociation" onclick="goToView('v-negociation',this)"><span class="nav-item-ico">🤝</span>Négociation</button>
+    <button class="nav-item data-role-resp" data-view="v-economies" onclick="goToView('v-economies',this)"><span class="nav-item-ico">💰</span>Économies achats</button>
+    <button class="nav-item data-role-resp" data-view="v-anticipation" onclick="goToView('v-anticipation',this)"><span class="nav-item-ico">🔮</span>Anticipation ruptures</button>
+  </div>
+  <div class="nav-sep"></div>
+  <div class="nav-group nav-group-resp" style="display:none">
+    <div class="nav-group-label" style="color:var(--amber)">Supervision équipe</div>
+    <button class="nav-item data-role-resp" data-view="v-equipe" onclick="goToView('v-equipe',this)"><span class="nav-item-ico">👥</span>Mon équipe</button>
+    <button class="nav-item data-role-resp" data-view="v-rapprochement" onclick="goToView('v-rapprochement',this)"><span class="nav-item-ico">🔗</span>Rapprochement 3 pts</button>
+    <button class="nav-item data-role-resp" data-view="v-budget" onclick="goToView('v-budget',this)"><span class="nav-item-ico">📈</span>Budget & Analyse</button>
+  </div>
+  <div class="nav-sep"></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Outils</div>
+    <button class="nav-item" data-view="v-consulting" onclick="goToView('v-consulting',this)"><span class="nav-item-ico">🧠</span>Consulting Aria</button>
+    <button class="nav-item" data-view="v-journal" onclick="goToView('v-journal',this)"><span class="nav-item-ico">📜</span>Journal</button>
+  </div>
+  <div class="nav-sep"></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Mon poste</div>
+    <button class="nav-item" data-view="v-pointage" onclick="goToView('v-pointage',this)"><span class="nav-item-ico">🕐</span>Pointage</button>
+    <button class="nav-item" data-view="v-taches" onclick="goToView('v-taches',this)"><span class="nav-item-ico">✅</span>Mes tâches</button>
+    <button class="nav-item" data-view="v-mes-conges" onclick="goToView('v-mes-conges',this)"><span class="nav-item-ico">🏖️</span>Mes congés</button>
+    <button class="nav-item" data-view="v-mes-droits" onclick="goToView('v-mes-droits',this)"><span class="nav-item-ico">🔐</span>Mes droits</button>
+    <button class="nav-item" data-view="v-formation-qcm" onclick="goToView('v-formation-qcm',this)"><span class="nav-item-ico">🎓</span>Formation</button>
+  </div>
+</div>
+
+<!-- Contenu principal -->
+<div class="main-content" id="app-content">
+
+<!-- VUE ÉQUIPE RESPONSABLE -->
+<div class="view" id="v-equipe">
+  <div class="view-head">
+    <h1>👥 Mon équipe — Achats</h1>
+    <p>Supervision métier du service achats — dossiers, charge, retards.</p>
+  </div>
+  <!-- Résumé alertes -->
+  <div class="stats-row" id="equipe-resume-stats" style="display:none">
+    <div class="stat-card"><div class="stat-val warn" id="eq-da-attente">—</div><div class="stat-lbl">DA à valider</div></div>
+    <div class="stat-card"><div class="stat-val warn" id="eq-bc-attente">—</div><div class="stat-lbl">BC à approuver</div></div>
+    <div class="stat-card"><div class="stat-val" id="eq-consuls">—</div><div class="stat-lbl">AO en cours</div></div>
+    <div class="stat-card"><div class="stat-val err" id="eq-retards">—</div><div class="stat-lbl">Tâches en retard</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head">
+      <h2>Membres de l'équipe</h2>
+      <button class="btn-act btn-ghost btn-sm" onclick="chargerEquipe()">↺ Actualiser</button>
+    </div>
+    <div id="equipe-liste"><div class="empty-state"><div class="es-ic">🔄</div>Chargement...</div></div>
+  </div>
+  <div class="card" id="equipe-dossiers-card" style="display:none">
+    <div class="section-head"><h2 id="equipe-dossiers-titre">Dossiers</h2><button class="btn-act btn-ghost btn-sm" onclick="fermerDossiersEquipe()">✕</button></div>
+    <div id="equipe-dossiers-content"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="view active" id="v-dash">
+  <div class="view-head"><h1>Achats</h1><p id="dash-desc">Chargement...</p></div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val warn" id="stat-da-attente">—</div><div class="stat-lbl">Demandes en attente</div></div>
+    <div class="stat-card"><div class="stat-val warn" id="stat-bc-attente">—</div><div class="stat-lbl">BC en attente appro.</div></div>
+    <div class="stat-card"><div class="stat-val ok" id="stat-bc-mois">—</div><div class="stat-lbl">BC approuvés / mois</div></div>
+    <div class="stat-card"><div class="stat-val" id="stat-fournisseurs">—</div><div class="stat-lbl">Fournisseurs actifs</div></div>
+    <div class="stat-card"><div class="stat-val ok" id="stat-economies">—</div><div class="stat-lbl">Économies YTD (€)</div></div>
+    <div class="stat-card"><div class="stat-val" id="stat-cmd-mois">—</div><div class="stat-lbl">Commandé ce mois (€)</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>⚠️ Alertes achats</h2></div>
+    <div id="dash-alertes"><div class="empty-state"><div class="es-ic">✅</div>Aucune alerte.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Derniers bons de commande</h2><button class="btn-act btn-amber btn-sm" onclick="goToView('v-commandes')">Voir tout</button></div>
+    <div id="dash-bcs"><div class="empty-state"><div class="es-ic">📦</div>Aucun BC récent.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Demandes d'achat à traiter</h2><button class="btn-act btn-amber btn-sm" onclick="goToView('v-demandes')">Voir tout</button></div>
+    <div id="dash-das"><div class="empty-state"><div class="es-ic">📝</div>Aucune demande en attente.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>🔗 Interconnexion Industrial</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerInterco()">↺</button></div>
+    <div id="dash-interco"><div class="empty-state"><div class="es-ic">🔄</div>Chargement des données cross-postes...</div></div>
+  </div>
+</div>
+
+<!-- DEMANDES D'ACHAT -->
+<div class="view" id="v-demandes">
+  <div class="view-head"><h1>Demandes d'achat</h1><p>Workflow : Demande → Validation → BC → Réception → Rapprochement</p></div>
+  <div class="card">
+    <div class="section-head">
+      <h2>Demandes</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select id="filter-da-statut" class="input-field" style="width:160px" onchange="afficherDA()">
+          <option value="">Tous statuts</option>
+          <option value="en_attente">En attente</option>
+          <option value="approuvee">Approuvée</option>
+          <option value="refusee">Refusée</option>
+          <option value="en_bc">BC créé</option>
+          <option value="annulee">Annulée</option>
+        </select>
+        <button class="btn-act btn-amber" onclick="ouvrirModalDA()">+ Nouvelle demande</button>
+      </div>
+    </div>
+    <div id="liste-da"><div class="empty-state"><div class="es-ic">📝</div>Aucune demande.</div></div>
+  </div>
+  <div class="card" id="da-timeline-card" style="display:none">
+    <div class="section-head"><h2>📋 Suivi complet de la demande</h2><button class="btn-act btn-ghost btn-sm" onclick="fermerTimelineDA()">✕ Fermer</button></div>
+    <div id="da-timeline-content"></div>
+  </div>
+</div>
+
+<!-- BONS DE COMMANDE -->
+<div class="view" id="v-commandes">
+  <div class="view-head"><h1>Bons de commande</h1><p>Créez et suivez vos commandes fournisseurs.</p></div>
+  <div class="card">
+    <div class="section-head">
+      <h2>Commandes</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select id="filter-bc-statut" class="input-field" style="width:160px" onchange="afficherBC()">
+          <option value="">Tous statuts</option>
+          <option value="brouillon">Brouillon</option>
+          <option value="en_attente">En attente appro.</option>
+          <option value="approuve">Approuvé</option>
+          <option value="commande">Commandé</option>
+          <option value="recu">Reçu</option>
+          <option value="annule">Annulé</option>
+        </select>
+        <button class="btn-act btn-amber" onclick="ouvrirModalBC()">+ Nouveau BC</button>
+      </div>
+    </div>
+    <input type="text" id="search-bc" placeholder="Rechercher..." class="input-field" style="margin-bottom:12px" oninput="afficherBC()">
+    <div id="liste-bc"><div class="empty-state"><div class="es-ic">📦</div>Aucun bon de commande.</div></div>
+  </div>
+</div>
+
+<!-- RÉCEPTION -->
+<div class="view" id="v-reception">
+  <div class="view-head"><h1>Réception marchandises</h1><p>Confirmez la réception et signalez les écarts.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Commandes attendues</h2><button class="btn-act btn-amber" onclick="chargerReception()">↺ Actualiser</button></div>
+    <div id="liste-reception"><div class="empty-state"><div class="es-ic">📥</div>Aucune réception en attente.</div></div>
+  </div>
+</div>
+
+<!-- RAPPROCHEMENT 3 POINTS -->
+<div class="view" id="v-rapprochement">
+  <div class="view-head"><h1>Rapprochement 3 points</h1><p>BC ↔ Réception ↔ Facture — détection automatique des écarts.</p></div>
+  <div class="access-guard-resp" id="guard-v-rapprochement" style="display:none"><div class="empty-state"><div class="es-ic">🔒</div><div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px">Vue réservée au responsable achats</div><div style="font-size:13px;color:var(--ink-dim)">Contactez votre responsable pour accéder à cette analyse.</div></div></div>
+  <div class="card">
+    <div class="section-head"><h2>Anomalies détectées</h2><button class="btn-act btn-amber" onclick="chargerRapprochement()">↺ Analyser</button></div>
+    <div id="liste-rapproch-anomalies"><div class="empty-state"><div class="es-ic">🔗</div>Lancez l'analyse pour détecter les écarts BC / réception / facture.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Tous les dossiers</h2></div>
+    <div id="liste-rapproch-tous"><div class="empty-state"><div class="es-ic">📋</div>Aucun dossier de rapprochement.</div></div>
+  </div>
+</div>
+
+<!-- FOURNISSEURS -->
+<div class="view" id="v-fournisseurs">
+  <div class="view-head"><h1>Carnet fournisseurs</h1><p>Gérez vos fournisseurs, leurs conditions et leur historique.</p></div>
+  <div class="card">
+    <div class="section-head">
+      <h2>Fournisseurs</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select id="filter-fourn-cat" class="input-field" style="width:160px" onchange="afficherFournisseurs()">
+          <option value="">Toutes catégories</option>
+          <option value="matières premières">Matières premières</option>
+          <option value="services">Services</option>
+          <option value="équipements">Équipements</option>
+          <option value="transport">Transport</option>
+          <option value="informatique">Informatique</option>
+          <option value="autre">Autre</option>
+        </select>
+        <button class="btn-act btn-amber" onclick="ouvrirModalFournisseur()">+ Nouveau</button>
+      </div>
+    </div>
+    <input type="text" id="search-fourn" placeholder="Rechercher fournisseur..." class="input-field" style="margin-bottom:12px" oninput="afficherFournisseurs()">
+    <div id="liste-fournisseurs"><div class="empty-state"><div class="es-ic">🏭</div>Aucun fournisseur.</div></div>
+  </div>
+</div>
+
+<!-- SOURCING -->
+<div class="view" id="v-sourcing">
+  <div class="view-head"><h1>Sourcing & Comparaison</h1><p>Besoin → Recherche → Fournisseurs potentiels → Comparaison → Sélection</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Lancer une recherche</h2></div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Produit / Service *</label><input id="src-produit" class="input-field" placeholder="Ex : acier inoxydable 304, prestation logistique..."></div>
+      <div class="form-group"><label>Quantité estimée</label><input id="src-qte" class="input-field" placeholder="Ex : 500 kg"></div>
+      <div class="form-group"><label>Budget cible (€)</label><input id="src-budget" type="number" class="input-field" placeholder="0"></div>
+      <div class="form-group"><label>Délai souhaité</label><input id="src-delai" class="input-field" placeholder="Ex : 2 semaines"></div>
+      <div class="form-group"><label>Catégorie</label>
+        <select id="src-cat" class="input-field">
+          <option value="">Toutes</option>
+          <option value="matières premières">Matières premières</option>
+          <option value="services">Services</option>
+          <option value="équipements">Équipements</option>
+          <option value="transport">Transport</option>
+          <option value="informatique">Informatique</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div class="form-group"><label>Critères prioritaires</label></div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px">
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--ink-dim)"><input type="checkbox" id="src-c-prix" checked> Prix</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--ink-dim)"><input type="checkbox" id="src-c-delai" checked> Délai</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--ink-dim)"><input type="checkbox" id="src-c-qualite" checked> Qualité</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--ink-dim)"><input type="checkbox" id="src-c-paiement"> Conditions paiement</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--ink-dim)"><input type="checkbox" id="src-c-local"> Localisation</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--ink-dim)"><input type="checkbox" id="src-c-histo"> Historique entreprise</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--ink-dim)"><input type="checkbox" id="src-c-risque"> Risque dépendance</label>
+      </div>
+    </div>
+    <button class="btn-act btn-amber" onclick="lancerSourcing()">🔍 Comparer les fournisseurs</button>
+  </div>
+  <div id="sourcing-resultats"></div>
+</div>
+
+<!-- SCORE FOURNISSEUR -->
+<div class="view" id="v-evaluation">
+  <div class="view-head"><h1>Score fournisseur</h1><p>Performance calculée depuis les données réelles — commandes, réceptions, litiges.</p></div>
+  <div class="access-guard-resp" id="guard-v-evaluation" style="display:none"><div class="empty-state"><div class="es-ic">🔒</div><div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px">Vue réservée au responsable achats</div><div style="font-size:13px;color:var(--ink-dim)">Contactez votre responsable pour accéder à cette analyse.</div></div></div>
+  <div class="card">
+    <div class="section-head">
+      <h2>Fiche de performance</h2>
+      <select id="select-fourn-eval" class="input-field" style="width:240px" onchange="chargerScoreFourn(this.value)">
+        <option value="">Sélectionner un fournisseur</option>
+      </select>
+    </div>
+    <div id="score-fourn-detail"><div class="empty-state"><div class="es-ic">⭐</div>Sélectionnez un fournisseur pour voir sa fiche de performance.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Classement général</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerClassementFourn()">↺ Recalculer</button></div>
+    <div id="classement-fourn"><div class="empty-state"><div class="es-ic">🏆</div>Aucune donnée.</div></div>
+  </div>
+</div>
+
+<!-- CONTRATS -->
+<div class="view" id="v-contrats">
+  <div class="view-head"><h1>Contrats fournisseurs</h1><p>Suivi des contrats, échéances et renouvellements.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Contrats actifs</h2><button class="btn-act btn-amber" onclick="ouvrirModalContrat()">+ Nouveau contrat</button></div>
+    <div id="liste-contrats"><div class="empty-state"><div class="es-ic">📄</div>Aucun contrat enregistré.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>⏰ Échéances à venir (90 jours)</h2></div>
+    <div id="contrats-echeances"><div class="empty-state"><div class="es-ic">✅</div>Aucune échéance proche.</div></div>
+  </div>
+</div>
+
+<!-- RISQUES FOURNISSEURS -->
+<div class="view" id="v-risques-fourn">
+  <div class="view-head"><h1>Risques fournisseurs</h1><p>Surveillance automatique : dépendance, retards récurrents, hausses tarifaires, contrats expirants.</p></div>
+  <div class="access-guard-resp" id="guard-v-risques-fourn" style="display:none"><div class="empty-state"><div class="es-ic">🔒</div><div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px">Vue réservée au responsable achats</div><div style="font-size:13px;color:var(--ink-dim)">Contactez votre responsable pour accéder à cette analyse.</div></div></div>
+  <div class="card">
+    <div class="section-head"><h2>Alertes de risque</h2><button class="btn-act btn-amber" onclick="chargerRisquesFourn()">↺ Analyser</button></div>
+    <div id="liste-risques-fourn"><div class="empty-state"><div class="es-ic">🛡️</div>Lancez l'analyse pour détecter les risques fournisseurs.</div></div>
+  </div>
+</div>
+
+<!-- CONSULTATIONS / APPELS D'OFFRES -->
+<div class="view" id="v-consultations">
+  <div class="view-head"><h1>Appels d'offres / Consultations</h1><p>Créez une consultation, recueillez les offres, comparez automatiquement.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Consultations en cours</h2><button class="btn-act btn-amber" onclick="ouvrirModalConsultation()">+ Nouvelle consultation</button></div>
+    <div id="liste-consultations"><div class="empty-state"><div class="es-ic">📋</div>Aucune consultation en cours.</div></div>
+  </div>
+  <!-- Détail consultation sélectionnée -->
+  <div id="consul-detail-card" style="display:none">
+    <div class="card">
+      <div class="section-head">
+        <h2 id="consul-detail-titre">Détail consultation</h2>
+        <div style="display:flex;gap:8px">
+          <button class="btn-act btn-amber btn-sm" onclick="ouvrirSaisieOffre()">+ Saisir une offre</button>
+          <button class="btn-act btn-ok btn-sm" onclick="comparerOffresAria()">🧠 Comparer avec Aria</button>
+          <button class="btn-act btn-ghost btn-sm" onclick="fermerDetailConsul()">✕</button>
+        </div>
+      </div>
+      <div id="consul-detail-info" style="font-size:13px;color:var(--ink-dim);margin-bottom:14px"></div>
+      <div class="section-head" style="margin-bottom:8px"><h2 style="font-size:13px">Offres reçues</h2></div>
+      <div id="consul-offres-liste"><div class="empty-state"><div class="es-ic">📨</div>Aucune offre saisie.</div></div>
+    </div>
+    <div class="card" id="consul-comparatif-card" style="display:none">
+      <div class="section-head"><h2>🤖 Comparatif Aria</h2></div>
+      <div class="consult-ia" id="consul-comparatif-result">Analyse en cours...</div>
+      <div id="consul-winner" style="margin-top:12px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- NÉGOCIATION -->
+<div class="view" id="v-negociation">
+  <div class="view-head"><h1>Suivi des négociations</h1><p>Tarifs, remises obtenues, conditions avant/après, économies réalisées.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Négociations</h2><button class="btn-act btn-amber" onclick="ouvrirModalNegociation()">+ Nouvelle négociation</button></div>
+    <div id="liste-negociations"><div class="empty-state"><div class="es-ic">🤝</div>Aucune négociation enregistrée.</div></div>
+  </div>
+  <div class="card" id="nego-prep-card" style="display:none">
+    <div class="section-head"><h2>🧠 Préparation Aria</h2></div>
+    <div class="consult-ia" id="nego-prep-result">Sélectionnez une négociation et cliquez sur Préparer.</div>
+  </div>
+</div>
+
+<!-- ÉCONOMIES -->
+<div class="view" id="v-economies">
+  <div class="view-head"><h1>Économies achats</h1><p>Valeur créée par le service achats — avant/après négociation.</p></div>
+  <div class="access-guard-resp" id="guard-v-economies" style="display:none"><div class="empty-state"><div class="es-ic">🔒</div><div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px">Vue réservée au responsable achats</div><div style="font-size:13px;color:var(--ink-dim)">Contactez votre responsable pour accéder à cette analyse.</div></div></div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val ok" id="eco-mois">—</div><div class="stat-lbl">Économies ce mois (€)</div></div>
+    <div class="stat-card"><div class="stat-val ok" id="eco-annee">—</div><div class="stat-lbl">Économies YTD (€)</div></div>
+    <div class="stat-card"><div class="stat-val" id="eco-nb-nego">—</div><div class="stat-lbl">Négociations gagnantes</div></div>
+    <div class="stat-card"><div class="stat-val" id="eco-taux">—</div><div class="stat-lbl">Réduction moyenne</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Économies par fournisseur</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerEconomies()">↺ Actualiser</button></div>
+    <div id="eco-par-fourn"><div class="empty-state"><div class="es-ic">💰</div>Aucune économie enregistrée.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Économies par catégorie</h2></div>
+    <div id="eco-par-cat"><div class="empty-state"><div class="es-ic">📊</div>Aucune donnée.</div></div>
+  </div>
+</div>
+
+<!-- ANTICIPATION RUPTURES -->
+<div class="view" id="v-anticipation">
+  <div class="view-head"><h1>Anticipation des ruptures</h1><p>Croise stock Logistique × délais fournisseurs × commandes ouvertes.</p></div>
+  <div class="access-guard-resp" id="guard-v-anticipation" style="display:none"><div class="empty-state"><div class="es-ic">🔒</div><div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px">Vue réservée au responsable achats</div><div style="font-size:13px;color:var(--ink-dim)">Contactez votre responsable pour accéder à cette analyse.</div></div></div>
+  <div class="card">
+    <div class="section-head"><h2>Articles à risque de rupture</h2><button class="btn-act btn-amber" onclick="chargerAnticipation()">↺ Analyser</button></div>
+    <div id="liste-anticipation"><div class="empty-state"><div class="es-ic">🔮</div>Lancez l'analyse pour croiser stock et délais fournisseurs.</div></div>
+  </div>
+</div>
+
+<!-- CONSULTING ARIA -->
+<div class="view" id="v-consulting">
+  <div class="view-head"><h1>Consulting Aria</h1><p>IA métier — analyse vos données réelles : fournisseurs, contrats, négociations, stocks.</p></div>
+  <!-- Raccourcis contextuels -->
+  <div class="card">
+    <div class="section-head"><h2>Analyse rapide</h2></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+      <button class="btn-act btn-ghost btn-sm" onclick="ariaRapide('dependance')">⚠️ Risques dépendance</button>
+      <button class="btn-act btn-ghost btn-sm" onclick="ariaRapide('contrats')">📄 Contrats expirants</button>
+      <button class="btn-act btn-ghost btn-sm" onclick="ariaRapide('economies')">💰 Économies possibles</button>
+      <button class="btn-act btn-ghost btn-sm" onclick="ariaRapide('negociation')">🤝 Prioriser négociations</button>
+      <button class="btn-act btn-ghost btn-sm" onclick="ariaRapide('hausse')">📈 Hausses de prix</button>
+      <button class="btn-act btn-ghost btn-sm" onclick="ariaRapide('meilleur')">🏆 Meilleur fournisseur</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="form-group" style="margin-bottom:10px"><label>Question libre</label>
+      <textarea id="consult-question" class="input-field" rows="3" placeholder="Ex : Prépare-moi une négociation avec le fournisseur X. Quels fournisseurs alternatifs pour acier 304 ?"></textarea>
+    </div>
+    <button class="btn-act btn-amber" onclick="demanderAriaAchats()">🧠 Demander à Aria</button>
+    <div class="consult-ia" id="consult-reponse" style="margin-top:14px;display:none"></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>💡 Alertes & Opportunités du jour</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerSuggestions()">↺</button></div>
+    <div id="aria-suggestions"><div class="empty-state"><div class="es-ic">💡</div>Chargement...</div></div>
+  </div>
+</div>
+
+<!-- BUDGET & ANALYSE -->
+<div class="view" id="v-budget">
+  <div class="view-head"><h1>Budget & Analyse</h1><p>Suivi budgétaire et indicateurs de performance achats.</p></div>
+  <div class="access-guard-resp" id="guard-v-budget" style="display:none"><div class="empty-state"><div class="es-ic">🔒</div><div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px">Vue réservée au responsable achats</div><div style="font-size:13px;color:var(--ink-dim)">Contactez votre responsable pour accéder à cette analyse.</div></div></div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val" id="budget-engage">—</div><div class="stat-lbl">Engagé ce mois (€)</div></div>
+    <div class="stat-card"><div class="stat-val warn" id="budget-attente">—</div><div class="stat-lbl">En attente appro. (€)</div></div>
+    <div class="stat-card"><div class="stat-val" id="budget-nb-fourn">—</div><div class="stat-lbl">Fournisseurs actifs</div></div>
+    <div class="stat-card"><div class="stat-val" id="budget-nb-cmd">—</div><div class="stat-lbl">Commandes ce mois</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Répartition par catégorie</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerBudget()">↺ Actualiser</button></div>
+    <div id="budget-categories"><div class="empty-state"><div class="es-ic">📊</div>Aucune donnée.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Top fournisseurs (volume)</h2></div>
+    <div id="budget-top-fourn"><div class="empty-state"><div class="es-ic">🏭</div>Aucune donnée.</div></div>
+  </div>
+</div>
+
+<!-- JOURNAL -->
+<div class="view" id="v-journal">
+  <div class="view-head"><h1>Journal d'activité</h1></div>
+  <div class="card">
+    <div id="journal-empty" class="empty-state"><div class="es-ic">📜</div>Journal vide.</div>
+    <div id="journal-list"></div>
+  </div>
+</div>
+
+<!-- POINTAGE -->
+<div class="view" id="v-pointage">
+  <div class="view-head"><h1>Pointage</h1></div>
+  <div class="card">
+    <div class="section-head"><h2 id="point-heure">--:--</h2></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+      <button class="btn-act btn-ok" onclick="pointerWeb('arrivee')">✅ Arrivée</button>
+      <button class="btn-act btn-ghost" onclick="pointerWeb('pause_debut')">⏸ Début pause</button>
+      <button class="btn-act btn-ghost" onclick="pointerWeb('pause_fin')">▶️ Fin pause</button>
+      <button class="btn-act btn-err" onclick="pointerWeb('depart')">🚪 Départ</button>
+    </div>
+    <div id="point-status" style="font-size:13px;color:var(--ink-dim)">—</div>
+  </div>
+</div>
+
+<!-- TÂCHES -->
+<div class="view" id="v-taches">
+  <div class="view-head"><h1>Mes tâches</h1></div>
+  <div class="card">
+    <div class="section-head"><h2>Tâches assignées</h2><button class="btn-act btn-amber" onclick="ouvrirModal('modal-tache-p')">+ Tâche</button></div>
+    <div id="liste-taches-poste"><div class="empty-state"><div class="es-ic">✅</div>Aucune tâche.</div></div>
+  </div>
+</div>
+
+<!-- CONGÉS -->
+<div class="view" id="v-mes-conges">
+  <div class="view-head"><h1>Mes congés</h1></div>
+  <div class="card">
+    <div class="section-head"><h2>Demande de congé</h2></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Date début</label><input type="date" id="conge-debut" class="input-field"></div>
+      <div class="form-group"><label>Date fin</label><input type="date" id="conge-fin" class="input-field"></div>
+      <div class="form-group"><label>Type</label>
+        <select id="conge-type" class="input-field">
+          <option value="conges_payes">Congés payés</option>
+          <option value="maladie">Maladie</option>
+          <option value="sans_solde">Sans solde</option>
+          <option value="formation">Formation</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
+    </div>
+    <textarea id="conge-motif" class="input-field" rows="2" placeholder="Motif (optionnel)" style="margin-bottom:12px"></textarea>
+    <button class="btn-act btn-amber" onclick="soumettreCongePoste()">Envoyer la demande</button>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Mes absences</h2></div>
+    <div id="mes-absences-poste"><div class="empty-state"><div class="es-ic">🏖️</div>Aucune absence.</div></div>
+  </div>
+</div>
+
+<!-- DROITS -->
+<div class="view" id="v-mes-droits">
+  <div class="view-head"><h1>Mes droits & permissions</h1></div>
+  <div class="card">
+    <div class="section-head"><h2>Permissions du poste</h2><button class="btn-act btn-ghost btn-sm" onclick="demanderDroitsPoste()">↺ Actualiser</button></div>
+    <div id="mes-droits-list"><div class="empty-state"><div class="es-ic">🔐</div>Chargement...</div></div>
+  </div>
+</div>
+
+<!-- FORMATION -->
+
+<!-- CLIENTS -->
+<div class="view" id="v-clients">
+  <div class="view-head"><h1>Base clients</h1><p>Referencez vos clients et creez des taches depuis leur fiche.</p></div>
+  <div class="card" id="clients-liste-panel">
+    <div class="section-head"><h2>Clients</h2>
+      <button class="btn-act btn-amber btn-sm" onclick="afficherFormulaireClient()">+ Nouveau client</button>
+    </div>
+    <input type="text" class="input-field" placeholder="Rechercher..." oninput="rechercherClients(this.value)" style="margin-bottom:10px">
+    <div id="clients-liste"></div>
+  </div>
+  <div class="card" id="client-fiche-panel" style="display:none">
+    <button class="btn-act btn-ghost btn-sm" onclick="fermerFicheClient()" style="margin-bottom:10px">&larr; Retour</button>
+    <div id="client-fiche-contenu"></div>
+  </div>
+  <div class="card" id="client-form-panel" style="display:none">
+    <div class="section-head"><h2>Nouveau client</h2></div>
+    <div id="client-form-contenu"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn-act btn-amber" onclick="sauvegarderClient()">Enregistrer</button>
+      <button class="btn-act btn-ghost" onclick="annulerFormClient()">Annuler</button>
+    </div>
+  </div>
+</div>
+<div class="view" id="v-formation-qcm">
+  <div class="view-head"><h1>Formation & QCM</h1></div>
+  <div class="card">
+    <div class="section-head"><h2>QCM Achats</h2><button class="btn-act btn-amber" onclick="lancerQCMPoste()">▶ Démarrer</button></div>
+    <div id="qcm-zone"><div class="empty-state"><div class="es-ic">🎓</div>Cliquez sur Démarrer pour commencer.</div></div>
+  </div>
+</div>
+
+</div><!-- fin main-content -->
+</div><!-- fin app-shell -->
+
+<!-- === MODALES === -->
+
+<!-- Modale Demande d'achat -->
+<div class="modal-overlay" id="modal-da" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>📝 Nouvelle demande d'achat</h3><button class="modal-close" onclick="fermerModal('modal-da')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Désignation / besoin *</label><input id="da-designation" class="input-field" placeholder="Ex : 500 kg acier inox 304"></div>
+      <div class="form-group"><label>Quantité</label><input id="da-qte" class="input-field" placeholder="Ex : 500 kg"></div>
+      <div class="form-group"><label>Montant estimé (€)</label><input id="da-montant" type="number" class="input-field" placeholder="0"></div>
+      <div class="form-group"><label>Catégorie</label>
+        <select id="da-categorie" class="input-field">
+          <option value="">Sélectionner</option>
+          <option value="matières premières">Matières premières</option>
+          <option value="services">Services</option>
+          <option value="équipements">Équipements</option>
+          <option value="informatique">Informatique</option>
+          <option value="transport">Transport</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Urgence</label>
+        <select id="da-urgence" class="input-field">
+          <option value="normale">Normale</option>
+          <option value="haute">Haute</option>
+          <option value="urgente">Urgente</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Centre de coût</label><input id="da-centre" class="input-field" placeholder="Ex : Production, RH..."></div>
+      <div class="form-group"><label>Date souhaitée</label><input id="da-date-souhaitee" type="date" class="input-field"></div>
+    </div>
+    <div class="form-group" style="margin-bottom:16px"><label>Justification</label><textarea id="da-justif" class="input-field" rows="2" placeholder="Pourquoi ce besoin ?"></textarea></div>
+    <button class="btn-act btn-amber" onclick="creerDA()" style="width:100%">Soumettre la demande</button>
+  </div>
+</div>
+
+<!-- Modale Bon de commande -->
+<div class="modal-overlay" id="modal-bc" style="display:none">
+  <div class="modal-box" style="max-width:720px">
+    <div class="modal-head"><h3>📦 Nouveau bon de commande</h3><button class="modal-close" onclick="fermerModal('modal-bc')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Fournisseur *</label>
+        <select id="bc-fourn" class="input-field"><option value="">Sélectionner</option></select>
+      </div>
+      <div class="form-group"><label>Lié à une DA</label>
+        <select id="bc-da-ref" class="input-field"><option value="">Aucune</option></select>
+      </div>
+      <div class="form-group"><label>Date commande</label><input id="bc-date" type="date" class="input-field"></div>
+      <div class="form-group"><label>Date livraison souhaitée</label><input id="bc-date-liv" type="date" class="input-field"></div>
+    </div>
+    <div class="section-head" style="margin-bottom:8px"><h2>Lignes de commande</h2><button class="btn-act btn-ghost btn-sm" onclick="ajouterLigneBC()">+ Ligne</button></div>
+    <div id="bc-lignes-container"></div>
+    <div style="text-align:right;margin:8px 0;font-size:15px;font-weight:700;color:var(--amber)">Total : <span id="bc-total">0,00</span> €</div>
+    <div class="form-group" style="margin-bottom:16px"><label>Notes</label><textarea id="bc-notes" class="input-field" rows="2" placeholder="Conditions particulières, références..."></textarea></div>
+    <button class="btn-act btn-amber" onclick="creerBC()" style="width:100%">Créer le bon de commande</button>
+  </div>
+</div>
+
+<!-- Modale Fournisseur -->
+<div class="modal-overlay" id="modal-fourn" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="fourn-modal-title">🏭 Nouveau fournisseur</h3><button class="modal-close" onclick="fermerModal('modal-fourn')">✕</button></div>
+    <input type="hidden" id="fourn-id-edit">
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Raison sociale *</label><input id="fn-nom" class="input-field" placeholder="Nom de l'entreprise"></div>
+      <div class="form-group"><label>Contact</label><input id="fn-contact" class="input-field" placeholder="Nom du contact"></div>
+      <div class="form-group"><label>Email</label><input id="fn-email" type="email" class="input-field" placeholder="contact@fournisseur.fr"></div>
+      <div class="form-group"><label>Téléphone</label><input id="fn-tel" class="input-field" placeholder="01 23 45 67 89"></div>
+      <div class="form-group"><label>SIRET</label><input id="fn-siret" class="input-field" placeholder="000 000 000 00000"></div>
+      <div class="form-group"><label>Catégorie</label>
+        <select id="fn-cat" class="input-field">
+          <option value="">Sélectionner</option>
+          <option value="matières premières">Matières premières</option>
+          <option value="services">Services</option>
+          <option value="équipements">Équipements</option>
+          <option value="transport">Transport</option>
+          <option value="informatique">Informatique</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Conditions de paiement</label>
+        <select id="fn-paiement" class="input-field">
+          <option value="comptant">Comptant</option>
+          <option value="30 jours">30 jours</option>
+          <option value="45 jours">45 jours</option>
+          <option value="60 jours">60 jours</option>
+          <option value="90 jours">90 jours</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Délai habituel</label><input id="fn-delai" class="input-field" placeholder="Ex : 5 jours ouvrés"></div>
+      <div class="form-group"><label>Pays</label><input id="fn-pays" class="input-field" value="France"></div>
+      <div class="form-group"><label>Site web</label><input id="fn-web" class="input-field" placeholder="https://..."></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Adresse</label><input id="fn-adresse" class="input-field" placeholder="Adresse complète"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Notes internes</label><textarea id="fn-notes" class="input-field" rows="2" placeholder="Observations, points d'attention..."></textarea></div>
+    </div>
+    <button class="btn-act btn-amber" onclick="sauvegarderFournisseur()" style="width:100%">Enregistrer</button>
+  </div>
+</div>
+
+<!-- Modale Contrat -->
+<div class="modal-overlay" id="modal-contrat" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>📄 Nouveau contrat fournisseur</h3><button class="modal-close" onclick="fermerModal('modal-contrat')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Fournisseur *</label>
+        <select id="ct-fourn" class="input-field"><option value="">Sélectionner</option></select>
+      </div>
+      <div class="form-group"><label>Type de contrat</label>
+        <select id="ct-type" class="input-field">
+          <option value="cadre">Contrat cadre</option>
+          <option value="annuel">Accord annuel</option>
+          <option value="service">Contrat de service</option>
+          <option value="exclusivite">Exclusivité</option>
+          <option value="ponctuel">Commande ponctuelle</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Date début</label><input id="ct-debut" type="date" class="input-field"></div>
+      <div class="form-group"><label>Date fin</label><input id="ct-fin" type="date" class="input-field"></div>
+      <div class="form-group"><label>Préavis (jours)</label><input id="ct-preavis" type="number" class="input-field" value="30"></div>
+      <div class="form-group"><label>Renouvellement auto</label>
+        <select id="ct-renouvellement" class="input-field"><option value="oui">Oui</option><option value="non">Non</option></select>
+      </div>
+      <div class="form-group"><label>Montant annuel (€)</label><input id="ct-montant" type="number" class="input-field" placeholder="0"></div>
+      <div class="form-group"><label>Responsable</label><input id="ct-responsable" class="input-field" placeholder="Nom du responsable"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Prochaine action</label><input id="ct-action" class="input-field" placeholder="Ex : Renégociation tarifaire en septembre"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Notes</label><textarea id="ct-notes" class="input-field" rows="2" placeholder="Conditions particulières..."></textarea></div>
+    </div>
+    <button class="btn-act btn-amber" onclick="creerContrat()" style="width:100%">Enregistrer le contrat</button>
+  </div>
+</div>
+
+<!-- Modale Consultation -->
+<div class="modal-overlay" id="modal-consultation" style="display:none">
+  <div class="modal-box" style="max-width:720px">
+    <div class="modal-head"><h3>📋 Nouvelle consultation / Appel d'offres</h3><button class="modal-close" onclick="fermerModal('modal-consultation')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Objet de la consultation *</label><input id="cons-objet" class="input-field" placeholder="Ex : Fourniture acier inox 304 — 2 tonnes"></div>
+      <div class="form-group"><label>Quantité</label><input id="cons-qte" class="input-field" placeholder="Ex : 2 t"></div>
+      <div class="form-group"><label>Budget cible (€)</label><input id="cons-budget" type="number" class="input-field" placeholder="0"></div>
+      <div class="form-group"><label>Date limite réponse</label><input id="cons-deadline" type="date" class="input-field"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Cahier des charges</label><textarea id="cons-cdc" class="input-field" rows="3" placeholder="Spécifications techniques, normes, conditions..."></textarea></div>
+    </div>
+    <div class="form-group" style="margin-bottom:16px"><label>Fournisseurs à solliciter</label>
+      <div id="cons-fourns-check" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;margin-top:6px;max-height:160px;overflow-y:auto"></div>
+    </div>
+    <button class="btn-act btn-amber" onclick="creerConsultation()" style="width:100%">Lancer la consultation</button>
+  </div>
+</div>
+
+<!-- Modale Négociation -->
+<div class="modal-overlay" id="modal-negociation" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>🤝 Nouvelle négociation</h3><button class="modal-close" onclick="fermerModal('modal-negociation')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Fournisseur *</label>
+        <select id="nego-fourn" class="input-field"><option value="">Sélectionner</option></select>
+      </div>
+      <div class="form-group"><label>Référence / produit</label><input id="nego-ref" class="input-field" placeholder="REF-001 ou nom produit"></div>
+      <div class="form-group"><label>Tarif initial (€)</label><input id="nego-prix-avant" type="number" step="0.01" class="input-field" placeholder="0.00"></div>
+      <div class="form-group"><label>Tarif négocié (€)</label><input id="nego-prix-apres" type="number" step="0.01" class="input-field" placeholder="0.00"></div>
+      <div class="form-group"><label>Paiement avant</label><input id="nego-cp-avant" class="input-field" placeholder="Ex : 30 jours"></div>
+      <div class="form-group"><label>Paiement après</label><input id="nego-cp-apres" class="input-field" placeholder="Ex : 45 jours"></div>
+      <div class="form-group"><label>MOQ avant</label><input id="nego-moq-avant" class="input-field" placeholder="Ex : 100 unités"></div>
+      <div class="form-group"><label>MOQ après</label><input id="nego-moq-apres" class="input-field" placeholder="Ex : 50 unités"></div>
+      <div class="form-group"><label>Délai avant</label><input id="nego-delai-avant" class="input-field" placeholder="Ex : 10 jours"></div>
+      <div class="form-group"><label>Délai après</label><input id="nego-delai-apres" class="input-field" placeholder="Ex : 7 jours"></div>
+      <div class="form-group"><label>Volume annuel engagé</label><input id="nego-volume" class="input-field" placeholder="Ex : 10 000 €/an"></div>
+      <div class="form-group"><label>Date</label><input id="nego-date" type="date" class="input-field"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Notes & concessions</label><textarea id="nego-notes" class="input-field" rows="2" placeholder="Ce qui a été concédé, conditions particulières..."></textarea></div>
+    </div>
+    <button class="btn-act btn-amber" onclick="creerNegociation()" style="width:100%">Enregistrer la négociation</button>
+  </div>
+</div>
+
+<!-- Modale Réception -->
+<div class="modal-overlay" id="modal-reception" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>📥 Réceptionner une commande</h3><button class="modal-close" onclick="fermerModal('modal-reception')">✕</button></div>
+    <input type="hidden" id="rec-bc-id">
+    <div id="rec-lignes-check" style="margin-bottom:16px"></div>
+    <div class="form-group" style="margin-bottom:12px"><label>Observations</label><textarea id="rec-obs" class="input-field" rows="2" placeholder="Écarts, dommages, manquants..."></textarea></div>
+    <div class="form-group" style="margin-bottom:16px"><label>Statut réception</label>
+      <select id="rec-statut" class="input-field">
+        <option value="conforme">Conforme</option>
+        <option value="partielle">Partielle</option>
+        <option value="litige">Litige / Anomalie</option>
+      </select>
+    </div>
+    <button class="btn-act btn-amber" onclick="confirmerReception()" style="width:100%">Confirmer la réception</button>
+  </div>
+</div>
+
+<!-- Modale Saisie offre fournisseur -->
+<div class="modal-overlay" id="modal-offre" style="display:none">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-head"><h3>📨 Saisir une offre fournisseur</h3><button class="modal-close" onclick="fermerModal('modal-offre')">✕</button></div>
+    <input type="hidden" id="offre-consul-id">
+    <div class="form-grid">
+      <div class="form-group"><label>Fournisseur *</label>
+        <select id="offre-fourn" class="input-field"><option value="">Sélectionner</option></select>
+      </div>
+      <div class="form-group"><label>Prix unitaire (€) *</label><input id="offre-prix" type="number" step="0.01" class="input-field" placeholder="0.00"></div>
+      <div class="form-group"><label>Délai de livraison</label><input id="offre-delai" class="input-field" placeholder="Ex : 5 jours ouvrés"></div>
+      <div class="form-group"><label>Conditions paiement</label><input id="offre-paiement" class="input-field" placeholder="Ex : 30 jours"></div>
+      <div class="form-group"><label>MOQ</label><input id="offre-moq" class="input-field" placeholder="Ex : 100 unités"></div>
+      <div class="form-group"><label>Validité offre</label><input id="offre-validite" type="date" class="input-field"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Notes / conditions particulières</label><textarea id="offre-notes" class="input-field" rows="2" placeholder="Remises volume, certifications, garanties..."></textarea></div>
+    </div>
+    <button class="btn-act btn-amber" onclick="saisirOffre()" style="width:100%">Enregistrer l'offre</button>
+  </div>
+</div>
+
+<!-- Modale Tâche -->
+<div class="modal-overlay" id="modal-tache-p" style="display:none">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-head"><h3>✅ Nouvelle tâche</h3><button class="modal-close" onclick="fermerModal('modal-tache-p')">✕</button></div>
+    <div class="form-group" style="margin-bottom:12px"><label>Titre *</label><input id="tp-titre" class="input-field" placeholder="Description de la tâche"></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Priorité</label>
+        <select id="tp-prior" class="input-field">
+          <option value="normale">Normale</option>
+          <option value="haute">Haute</option>
+          <option value="urgente">Urgente</option>
+          <option value="basse">Basse</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Échéance</label><input type="date" id="tp-date" class="input-field"></div>
+    </div>
+    <div class="form-group" style="margin-bottom:16px"><label>Description</label><textarea id="tp-desc" class="input-field" rows="2" placeholder="Détails..."></textarea></div>
+    <button class="btn-act btn-amber" onclick="creerTachePoste()" style="width:100%">Créer</button>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// ARIA INDUSTRIAL — POSTE ACHATS
+// ════════════════════════════════════════════════════════════
+
+var POSTE_COURANT = 'achats';
+var RELAY = 'https://aria-forgelis.onrender.com';
+var SESSION = {};
+var estResponsable = false;
+var FOURNS_CACHE = [];
+var bcLignes = [];
+var tousDA = [];
+var tousBCs = [];
+var tousNegos = [];
+
+// ── Modale Aria (remplace confirm/prompt natifs) ──
+var _ariaModalCb = null, _ariaModalMode = 'confirm';
+function ariaConfirm(opts, cb) {
+  _ariaModalMode = 'confirm'; _ariaModalCb = cb;
+  document.getElementById('aria-modal-ico').textContent = opts.ico || '⚠️';
+  document.getElementById('aria-modal-title').textContent = opts.title || 'Confirmation';
+  document.getElementById('aria-modal-msg').textContent = opts.msg || '';
+  document.getElementById('aria-modal-input').style.display = 'none';
+  var btn = document.getElementById('aria-modal-confirm');
+  btn.textContent = opts.btnLabel || 'Confirmer';
+  btn.className = 'aria-modal-confirm ' + (opts.danger ? 'danger' : 'primary');
+  document.getElementById('aria-modal-overlay').classList.add('open');
+}
+function ariaPrompt(opts, cb) {
+  _ariaModalMode = 'prompt'; _ariaModalCb = cb;
+  document.getElementById('aria-modal-ico').textContent = opts.ico || '✏️';
+  document.getElementById('aria-modal-title').textContent = opts.title || 'Saisie';
+  document.getElementById('aria-modal-msg').textContent = opts.msg || '';
+  var inp = document.getElementById('aria-modal-input');
+  inp.type = opts.inputType || 'text';
+  inp.placeholder = opts.placeholder || '';
+  inp.value = '';
+  inp.style.display = 'block';
+  var btn = document.getElementById('aria-modal-confirm');
+  btn.textContent = opts.btnLabel || 'Valider';
+  btn.className = 'aria-modal-confirm primary';
+  document.getElementById('aria-modal-overlay').classList.add('open');
+  setTimeout(function() { inp.focus(); }, 180);
+}
+function _ariaModalConfirm() {
+  document.getElementById('aria-modal-overlay').classList.remove('open');
+  if (!_ariaModalCb) return;
+  if (_ariaModalMode === 'prompt') {
+    var v = document.getElementById('aria-modal-input').value.trim();
+    if (!v) return;
+    _ariaModalCb(v);
+  } else { _ariaModalCb(true); }
+  _ariaModalCb = null;
+}
+function _ariaModalCancel() {
+  document.getElementById('aria-modal-overlay').classList.remove('open');
+  _ariaModalCb = null;
+}
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') _ariaModalCancel(); });
+
+// ── Session ──
+function getSession() { try { SESSION = JSON.parse(localStorage.getItem('aria_industrial_session') || '{}'); return SESSION; } catch(e) { return {}; } }
+function getToken() { return SESSION.salarie_id || ''; }
+function getEntrepriseId() { return SESSION.entreprise_id || ''; }
+function lireStockageSecurise(k) { try { return localStorage.getItem(k); } catch(e) { return null; } }
+
+// ── Navigation ──
+function goToView(viewId, tabEl) {
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+  document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+  var n = tabEl || document.querySelector('.nav-item[data-view="' + viewId + '"]');
+  if (n) n.classList.add('active');
+  var v = document.getElementById(viewId);
+  if (v) v.classList.add('active');
+  chargerVue(viewId);
+  window.scrollTo(0, 0);
+}
+function toggleSidebar() { var sb = document.getElementById('app-sidebar'); if (sb) sb.classList.toggle('open'); }
+function deconnexion() { localStorage.removeItem('aria_industrial_session'); window.location.href = 'connexion-industrial.html'; }
+function ouvrirModal(id) { document.getElementById(id).style.display = 'flex'; }
+function fermerModal(id) { document.getElementById(id).style.display = 'none'; }
+
+// ── Notifications ──
+function notifOk(msg) { _notif(msg, '#2ECC71', '✅'); }
+function notifErr(msg) { _notif(msg, '#E24B4A', '❌'); }
+function _notif(msg, bg, ico) {
+  var el = document.createElement('div');
+  el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:' + bg + ';color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.3);max-width:320px';
+  el.textContent = ico + ' ' + msg;
+  document.body.appendChild(el);
+  setTimeout(function() { el.remove(); }, 3000);
+}
+
+// ── Journal ──
+var journal = [];
+function logAction(t) {
+  var h = new Date();
+  journal.unshift({ heure: String(h.getHours()).padStart(2,'0') + ':' + String(h.getMinutes()).padStart(2,'0'), texte: t });
+  var l = document.getElementById('journal-list');
+  if (!l) return;
+  var e = document.getElementById('journal-empty');
+  if (e) e.style.display = 'none';
+  l.innerHTML = journal.map(function(j) {
+    return '<div class="journal-item"><div class="journal-time">' + j.heure + '</div><div class="journal-txt">' + esc(j.texte) + '</div></div>';
+  }).join('');
+}
+
+// ── API ──
+async function api(endpoint, body, method) {
+  method = method || (body ? 'POST' : 'GET');
+  var url = RELAY + endpoint;
+  if (method === 'GET' && body) { url += '?' + new URLSearchParams(body).toString(); body = null; }
+  try {
+    var r = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+    return r.json();
+  } catch(e) { return { ok: false, erreur: 'Erreur réseau' }; }
+}
+async function apiAsk(question, contexte) {
+  try {
+    var r = await fetch(RELAY + '/ask-industrial', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: getToken(), entreprise_id: getEntrepriseId(), message: question, contexte: contexte || '' }) });
+    var d = await r.json(); return d.reponse || d.message || '';
+  } catch(e) { return 'Erreur lors de la consultation Aria.'; }
+}
+
+// ── Vérification session ──
+function verifierSession() {
+  var s = getSession();
+  if (!s.salarie_id || lireStockageSecurise('aria_session_active') !== 'achats') {
+    window.location.href = 'connexion-industrial.html'; return;
+  }
+  estResponsable = (s.role === 'responsable' || s.role === 'dirigeant');
+  initPoste();
+  adaptSidebarRole();
+}
+verifierSession();
+
+// ── Init ──
+function initPoste() {
+  chargerDash();
+  chargerFournisseurs();
+  chargerBC();
+  chargerDA();
+  setInterval(function() {
+    var h = new Date();
+    var el = document.getElementById('point-heure');
+    if (el) el.textContent = String(h.getHours()).padStart(2,'0') + ':' + String(h.getMinutes()).padStart(2,'0');
+  }, 1000);
+}
+
+function chargerVue(viewId) {
+  var map = {
+    'v-clients': chargerClients,
+    'v-dash': chargerDash,
+    'v-commandes': chargerBC,
+    'v-demandes': chargerDA,
+    'v-fournisseurs': chargerFournisseurs,
+    'v-reception': chargerReception,
+    'v-rapprochement': chargerRapprochement,
+    'v-contrats': chargerContrats,
+    'v-consultations': chargerConsultations,
+    'v-negociation': function() { remplirSelectFourns(); chargerNegociations(); },
+    'v-economies': chargerEconomies,
+    'v-risques-fourn': chargerRisquesFourn,
+    'v-anticipation': chargerAnticipation,
+    'v-budget': chargerBudget,
+    'v-evaluation': function() { remplirSelectFournEval(); chargerClassementFourn(); },
+    'v-equipe': chargerEquipe,
+    'v-taches': chargerTachesPoste,
+    'v-mes-conges': chargerMesCongesPoste,
+    'v-mes-droits': demanderDroitsPoste,
+    'v-consulting': chargerSuggestions,
+  };
+  if (map[viewId]) map[viewId]();
+}
+
+// ════════════════════════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════════════════════════
+
+
+// ════════════════════════════════════════════════════════════
+// DEMANDES D'ACHAT
+// ════════════════════════════════════════════════════════════
+async function chargerDA() {
+  var data = await api('/industrial/demandes-achat', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  tousDA = data.demandes || [];
+  afficherDA();
+}
+
+function ouvrirModalDA() {
+  ['da-designation','da-qte','da-centre','da-justif'].forEach(function(id) { document.getElementById(id).value = ''; });
+  document.getElementById('da-montant').value = '';
+  document.getElementById('da-categorie').value = '';
+  document.getElementById('da-urgence').value = 'normale';
+  document.getElementById('da-date-souhaitee').value = '';
+  ouvrirModal('modal-da');
+}
+async function creerDA() {
+  var designation = document.getElementById('da-designation').value.trim();
+  if (!designation) { notifErr('Désignation obligatoire'); return; }
+  var data = await api('/industrial/demande-achat/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    designation: designation,
+    qte: document.getElementById('da-qte').value,
+    montant_estime: parseFloat(document.getElementById('da-montant').value) || null,
+    categorie: document.getElementById('da-categorie').value,
+    urgence: document.getElementById('da-urgence').value,
+    centre_cout: document.getElementById('da-centre').value,
+    date_souhaitee: document.getElementById('da-date-souhaitee').value,
+    justification: document.getElementById('da-justif').value,
+  });
+  if (data.ok) { notifOk('Demande soumise'); fermerModal('modal-da'); logAction('DA créée : ' + designation); chargerDA(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+async function approuverDA(id, statut) {
+  var data = await api('/industrial/demande-achat/statut', { token: getToken(), entreprise_id: getEntrepriseId(), id: id, statut: statut });
+  if (data.ok) { notifOk(statut === 'approuvee' ? 'Demande approuvée' : 'Demande refusée'); logAction('DA ' + statut); chargerDA(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+function prefillBCdepuisDA(daId) {
+  var da = tousDA.find(function(d) { return d.id == daId; });
+  if (!da) return;
+  remplirSelectFourns();
+  remplirSelectDArefs();
+  bcLignes = [{ designation: da.designation, qte: 1, prix_u: parseFloat(da.montant_estime) || 0, unite: '' }];
+  renderLignesBC();
+  document.getElementById('bc-date').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('bc-notes').value = 'Référence DA : ' + da.designation;
+  ouvrirModal('modal-bc');
+}
+
+// ════════════════════════════════════════════════════════════
+// BONS DE COMMANDE
+// ════════════════════════════════════════════════════════════
+async function chargerBC() {
+  var data = await api('/industrial/bons-commande', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  tousBCs = data.bons_commande || [];
+  afficherBC();
+}
+function afficherBC() {
+  var statut = document.getElementById('filter-bc-statut') && document.getElementById('filter-bc-statut').value;
+  var q = (document.getElementById('search-bc') && document.getElementById('search-bc').value || '').toLowerCase();
+  var liste = tousBCs.filter(function(b) {
+    var ms = !statut || b.statut === statut;
+    var mq = !q || (b.numero || '').toLowerCase().includes(q) || (b.fournisseur_nom || '').toLowerCase().includes(q);
+    return ms && mq;
+  });
+  var el = document.getElementById('liste-bc'); if (!el) return;
+  if (!liste.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">📦</div>Aucun bon de commande.</div>'; return; }
+  el.innerHTML = liste.map(function(b) {
+    var btns = '';
+    if (estResponsable && b.statut === 'en_attente') {
+      btns = '<button class="btn-act btn-ok btn-sm" data-id="' + b.id + '" onclick="approuverBC(this.dataset.id)">✅</button>' +
+             '<button class="btn-act btn-err btn-sm" data-id="' + b.id + '" onclick="refuserBC(this.dataset.id)">✕</button>';
+    } else if (b.statut === 'approuve') {
+      btns = '<button class="btn-act btn-amber btn-sm" data-id="' + b.id + '" onclick="ouvrirModalReception(this.dataset.id)">📥 Réceptionner</button>';
+    }
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(b.numero) + ' — ' + esc(b.fournisseur_nom || '?') + '</div>' +
+      '<div class="ri-sub">' + fmtDate(b.date_commande) + (b.date_livraison_souhaitee ? ' · Livraison : ' + fmtDate(b.date_livraison_souhaitee) : '') + ' · <strong>' + fmtMontant(b.montant_total) + '</strong></div></div>' +
+      '<div class="ri-actions">' + badgeBC(b.statut) + btns + '</div></div>';
+  }).join('');
+}
+function ouvrirModalBC() {
+  remplirSelectFourns();
+  remplirSelectDArefs();
+  bcLignes = [{ designation: '', qte: 1, prix_u: 0, unite: '' }];
+  renderLignesBC();
+  document.getElementById('bc-date').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('bc-date-liv').value = '';
+  document.getElementById('bc-notes').value = '';
+  ouvrirModal('modal-bc');
+}
+function ajouterLigneBC() { bcLignes.push({ designation: '', qte: 1, prix_u: 0, unite: '' }); renderLignesBC(); }
+function renderLignesBC() {
+  var el = document.getElementById('bc-lignes-container');
+  el.innerHTML = bcLignes.map(function(l, i) {
+    return '<div style="display:grid;grid-template-columns:3fr 80px 100px 80px auto;gap:8px;margin-bottom:8px;align-items:center">' +
+      '<input class="input-field" placeholder="Désignation" value="' + esc(l.designation) + '" oninput="bcLignes[' + i + '].designation=this.value">' +
+      '<input class="input-field" type="number" placeholder="Qté" value="' + l.qte + '" oninput="bcLignes[' + i + '].qte=parseFloat(this.value)||0;calcTotalBC()">' +
+      '<input class="input-field" type="number" placeholder="Prix u." value="' + l.prix_u + '" step="0.01" oninput="bcLignes[' + i + '].prix_u=parseFloat(this.value)||0;calcTotalBC()">' +
+      '<input class="input-field" placeholder="Unité" value="' + esc(l.unite) + '" oninput="bcLignes[' + i + '].unite=this.value">' +
+      '<button class="btn-act btn-err btn-sm" onclick="bcLignes.splice(' + i + ',1);renderLignesBC()">✕</button></div>';
+  }).join('');
+  calcTotalBC();
+}
+function calcTotalBC() {
+  var total = bcLignes.reduce(function(s, l) { return s + (parseFloat(l.qte) || 0) * (parseFloat(l.prix_u) || 0); }, 0);
+  document.getElementById('bc-total').textContent = total.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+async function creerBC() {
+  var lignes = bcLignes.filter(function(l) { return l.designation.trim(); });
+  if (!lignes.length) { notifErr('Ajoutez au moins une ligne'); return; }
+  var fournId = document.getElementById('bc-fourn').value;
+  if (!fournId) { notifErr('Sélectionnez un fournisseur'); return; }
+  var fournNom = document.getElementById('bc-fourn').selectedOptions[0].text;
+  var data = await api('/industrial/bon-commande/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    fournisseur_id: fournId, fournisseur_nom: fournNom,
+    date_commande: document.getElementById('bc-date').value,
+    date_livraison_souhaitee: document.getElementById('bc-date-liv').value,
+    notes: document.getElementById('bc-notes').value, lignes: lignes,
+  });
+  if (data.ok) { notifOk('BC créé — ' + data.numero); fermerModal('modal-bc'); logAction('BC créé : ' + data.numero); chargerBC(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+async function approuverBC(id) {
+  var data = await api('/industrial/bon-commande/approuver', { token: getToken(), entreprise_id: getEntrepriseId(), bon_commande_id: id, statut: 'approuve' });
+  if (data.ok) { notifOk('BC approuvé'); logAction('BC approuvé'); chargerBC(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+async function refuserBC(id) {
+  ariaConfirm({ ico: '✕', title: 'Refuser ce BC ?', msg: 'Le BC sera marqué annulé.', btnLabel: 'Refuser', danger: true }, async function() {
+    var data = await api('/industrial/bon-commande/approuver', { token: getToken(), entreprise_id: getEntrepriseId(), bon_commande_id: id, statut: 'annule' });
+    if (data.ok) { notifOk('BC refusé'); logAction('BC refusé'); chargerBC(); }
+    else notifErr(data.erreur || 'Erreur');
+  });
+}
+function badgeBC(s) {
+  var m = { brouillon: 'badge-amber Brouillon', en_attente: 'badge-warn En attente', approuve: 'badge-ok Approuvé', commande: 'badge-blue Commandé', recu: 'badge-ok Reçu', annule: 'badge-err Annulé' };
+  var p = (m[s] || 'badge-amber ' + s).split(' ');
+  return '<span class="badge ' + p[0] + '">' + p.slice(1).join(' ') + '</span>';
+}
+
+// ════════════════════════════════════════════════════════════
+// RÉCEPTION
+// ════════════════════════════════════════════════════════════
+async function chargerReception() {
+  var bcs = tousBCs.length ? tousBCs : ((await api('/industrial/bons-commande', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET')).bons_commande || []);
+  var attendus = bcs.filter(function(b) { return b.statut === 'approuve' || b.statut === 'commande'; });
+  var el = document.getElementById('liste-reception');
+  if (!attendus.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">📥</div>Aucune réception en attente.</div>'; return; }
+  el.innerHTML = attendus.map(function(b) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(b.numero) + ' — ' + esc(b.fournisseur_nom || '?') + '</div>' +
+      '<div class="ri-sub">' + fmtMontant(b.montant_total) + (b.date_livraison_souhaitee ? ' · Attendu : ' + fmtDate(b.date_livraison_souhaitee) : '') + '</div></div>' +
+      '<button class="btn-act btn-amber btn-sm" data-id="' + b.id + '" onclick="ouvrirModalReception(this.dataset.id)">📥 Réceptionner</button></div>';
+  }).join('');
+}
+function ouvrirModalReception(bcId) {
+  var bc = tousBCs.find(function(b) { return b.id == bcId; });
+  document.getElementById('rec-bc-id').value = bcId;
+  var lignes = (bc && bc.lignes) || [];
+  document.getElementById('rec-lignes-check').innerHTML = lignes.length ?
+    '<p style="font-size:13px;color:var(--ink-dim);margin-bottom:8px">Lignes à réceptionner :</p>' +
+    lignes.map(function(l, i) {
+      return '<label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px;color:var(--ink)"><input type="checkbox" id="rec-l-' + i + '" checked> ' + esc(l.designation) + ' × ' + (l.qte || 1) + '</label>';
+    }).join('') : '<p style="font-size:13px;color:var(--ink-dim)">BC sans lignes détaillées — réception globale.</p>';
+  document.getElementById('rec-obs').value = '';
+  document.getElementById('rec-statut').value = 'conforme';
+  ouvrirModal('modal-reception');
+}
+async function confirmerReception() {
+  var bcId = document.getElementById('rec-bc-id').value;
+  var data = await api('/industrial/reception/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    bon_commande_id: bcId,
+    observations: document.getElementById('rec-obs').value,
+    statut: document.getElementById('rec-statut').value,
+    date_reception: new Date().toISOString().slice(0, 10),
+  });
+  if (data.ok) { notifOk('Réception confirmée'); fermerModal('modal-reception'); logAction('Réception BC #' + bcId); chargerReception(); chargerBC(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+// ════════════════════════════════════════════════════════════
+// RAPPROCHEMENT 3 POINTS
+// ════════════════════════════════════════════════════════════
+async function chargerRapprochement() {
+  var elA = document.getElementById('liste-rapproch-anomalies');
+  var elT = document.getElementById('liste-rapproch-tous');
+  elA.innerHTML = '<div class="empty-state"><div class="es-ic">🔄</div>Analyse en cours...</div>';
+  var data = await api('/industrial/rapprochement/analyser', { token: getToken(), entreprise_id: getEntrepriseId() });
+  var anomalies = data.anomalies || [];
+  var tous = data.dossiers || [];
+  elA.innerHTML = anomalies.length ? anomalies.map(function(a) {
+    var cls = a.gravite === 'critique' ? 'rp-alert' : 'rp-warn';
+    return '<div class="rp-row ' + cls + '"><div class="ri-title">' + esc(a.type_anomalie || 'Anomalie') + '</div>' +
+      '<div class="ri-sub">' + esc(a.description || '') + ' — BC : ' + esc(a.numero_bc || '—') + ' · Facture : ' + esc(a.numero_facture || '—') + '</div></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">✅</div>Aucune anomalie détectée.</div>';
+  elT.innerHTML = tous.length ? tous.map(function(d) {
+    var cls = d.statut_rapprochement === 'ok' ? 'rp-ok' : d.statut_rapprochement === 'alerte' ? 'rp-alert' : 'rp-warn';
+    return '<div class="rp-row ' + cls + '"><div class="ri-title">BC ' + esc(d.numero_bc) + ' — ' + esc(d.fournisseur_nom || '?') + '</div>' +
+      '<div class="rp-steps">' +
+      '<span class="rp-step ' + (d.bc_ok ? 'st-ok' : 'st-miss') + '">BC</span>' +
+      '<span style="color:var(--ink-faint)">→</span>' +
+      '<span class="rp-step ' + (d.reception_ok ? 'st-ok' : d.reception_partielle ? 'st-warn' : 'st-miss') + '">Réception</span>' +
+      '<span style="color:var(--ink-faint)">→</span>' +
+      '<span class="rp-step ' + (d.facture_ok ? 'st-ok' : 'st-miss') + '">Facture</span>' +
+      '</div><div class="ri-sub">' + esc(d.observations || '') + '</div></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">📋</div>Aucun dossier de rapprochement.</div>';
+  logAction('Analyse rapprochement 3 points');
+}
+
+// ════════════════════════════════════════════════════════════
+// FOURNISSEURS
+// ════════════════════════════════════════════════════════════
+async function chargerFournisseurs() {
+  var data = await api('/industrial/fournisseurs', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  FOURNS_CACHE = data.fournisseurs || [];
+  afficherFournisseurs();
+}
+function afficherFournisseurs() {
+  var cat = document.getElementById('filter-fourn-cat') && document.getElementById('filter-fourn-cat').value;
+  var q = (document.getElementById('search-fourn') && document.getElementById('search-fourn').value || '').toLowerCase();
+  var liste = FOURNS_CACHE.filter(function(f) {
+    var mc = !cat || f.categorie === cat;
+    var mq = !q || (f.nom || '').toLowerCase().includes(q) || (f.categorie || '').toLowerCase().includes(q) || (f.contact_nom || '').toLowerCase().includes(q);
+    return mc && mq;
+  });
+  var el = document.getElementById('liste-fournisseurs'); if (!el) return;
+  if (!liste.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">🏭</div>Aucun fournisseur.</div>'; return; }
+  el.innerHTML = liste.map(function(f) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(f.nom) + '</div>' +
+      '<div class="ri-sub">' + esc(f.categorie || '') + (f.contact_nom ? ' · ' + esc(f.contact_nom) : '') + (f.conditions_paiement ? ' · ' + esc(f.conditions_paiement) : '') + '</div>' +
+      '<div class="ri-sub">' + esc(f.email || '') + (f.telephone ? ' · ' + esc(f.telephone) : '') + '</div></div>' +
+      '<div class="ri-actions">' +
+      '<button class="btn-act btn-ghost btn-sm" data-id="' + f.id + '" onclick="ouvrirEditionFourn(this.dataset.id)">✏️</button>' +
+      '<button class="btn-act btn-amber btn-sm" data-id="' + f.id + '" onclick="chargerScoreFourn(this.dataset.id)">⭐</button>' +
+      '</div></div>';
+  }).join('');
+}
+function remplirSelectFourns() {
+  var ids = ['bc-fourn', 'ct-fourn', 'nego-fourn'];
+  ids.forEach(function(sid) {
+    var el = document.getElementById(sid); if (!el) return;
+    el.innerHTML = '<option value="">Sélectionner</option>' + FOURNS_CACHE.map(function(f) {
+      return '<option value="' + f.id + '">' + esc(f.nom) + '</option>';
+    }).join('');
+  });
+  var cc = document.getElementById('cons-fourns-check');
+  if (cc) cc.innerHTML = FOURNS_CACHE.map(function(f) {
+    return '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-dim)">' +
+      '<input type="checkbox" value="' + f.id + '" data-nom="' + esc(f.nom) + '"> ' + esc(f.nom) + '</label>';
+  }).join('');
+}
+function remplirSelectDArefs() {
+  var el = document.getElementById('bc-da-ref'); if (!el) return;
+  el.innerHTML = '<option value="">Aucune</option>' + tousDA.filter(function(d) { return d.statut === 'approuvee'; }).map(function(d) {
+    return '<option value="' + d.id + '">' + esc(d.designation) + '</option>';
+  }).join('');
+}
+function remplirSelectFournEval() {
+  var el = document.getElementById('select-fourn-eval'); if (!el) return;
+  el.innerHTML = '<option value="">Sélectionner un fournisseur</option>' + FOURNS_CACHE.map(function(f) {
+    return '<option value="' + f.id + '">' + esc(f.nom) + '</option>';
+  }).join('');
+}
+function ouvrirModalFournisseur() {
+  document.getElementById('fourn-id-edit').value = '';
+  document.getElementById('fourn-modal-title').textContent = '🏭 Nouveau fournisseur';
+  ['fn-nom','fn-contact','fn-email','fn-tel','fn-siret','fn-adresse','fn-web','fn-notes','fn-delai'].forEach(function(id) { document.getElementById(id).value = ''; });
+  document.getElementById('fn-cat').value = '';
+  document.getElementById('fn-paiement').value = '30 jours';
+  document.getElementById('fn-pays').value = 'France';
+  ouvrirModal('modal-fourn');
+}
+function ouvrirEditionFourn(id) {
+  var f = FOURNS_CACHE.find(function(x) { return x.id == id; }); if (!f) return;
+  document.getElementById('fourn-id-edit').value = f.id;
+  document.getElementById('fourn-modal-title').textContent = '✏️ Modifier fournisseur';
+  document.getElementById('fn-nom').value = f.nom || '';
+  document.getElementById('fn-contact').value = f.contact_nom || '';
+  document.getElementById('fn-email').value = f.email || '';
+  document.getElementById('fn-tel').value = f.telephone || '';
+  document.getElementById('fn-siret').value = f.siret || '';
+  document.getElementById('fn-adresse').value = f.adresse || '';
+  document.getElementById('fn-web').value = f.site_web || '';
+  document.getElementById('fn-notes').value = f.notes || '';
+  document.getElementById('fn-delai').value = f.delai_habituel || '';
+  document.getElementById('fn-pays').value = f.pays || 'France';
+  document.getElementById('fn-cat').value = f.categorie || '';
+  document.getElementById('fn-paiement').value = f.conditions_paiement || '30 jours';
+  ouvrirModal('modal-fourn');
+}
+async function sauvegarderFournisseur() {
+  var nom = document.getElementById('fn-nom').value.trim(); if (!nom) { notifErr('Nom obligatoire'); return; }
+  var id = document.getElementById('fourn-id-edit').value;
+  var body = { token: getToken(), entreprise_id: getEntrepriseId(), nom: nom,
+    contact_nom: document.getElementById('fn-contact').value, email: document.getElementById('fn-email').value,
+    telephone: document.getElementById('fn-tel').value, siret: document.getElementById('fn-siret').value,
+    adresse: document.getElementById('fn-adresse').value, site_web: document.getElementById('fn-web').value,
+    notes: document.getElementById('fn-notes').value, delai_habituel: document.getElementById('fn-delai').value,
+    pays: document.getElementById('fn-pays').value, categorie: document.getElementById('fn-cat').value,
+    conditions_paiement: document.getElementById('fn-paiement').value,
+  };
+  var endpoint = id ? '/industrial/fournisseur/modifier' : '/industrial/fournisseur/creer';
+  if (id) body.fournisseur_id = id;
+  var data = await api(endpoint, body);
+  if (data.ok) { notifOk(id ? 'Fournisseur modifié' : 'Fournisseur créé'); fermerModal('modal-fourn'); logAction((id ? 'Fournisseur modifié' : 'Fournisseur créé') + ' : ' + nom); chargerFournisseurs(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+// ════════════════════════════════════════════════════════════
+// SOURCING & COMPARAISON
+// ════════════════════════════════════════════════════════════
+async function lancerSourcing() {
+  var produit = document.getElementById('src-produit').value.trim();
+  if (!produit) { notifErr('Précisez le produit ou service'); return; }
+  var criteres = [];
+  if (document.getElementById('src-c-prix').checked) criteres.push('prix');
+  if (document.getElementById('src-c-delai').checked) criteres.push('délai livraison');
+  if (document.getElementById('src-c-qualite').checked) criteres.push('qualité');
+  if (document.getElementById('src-c-paiement').checked) criteres.push('conditions paiement');
+  if (document.getElementById('src-c-local').checked) criteres.push('localisation géographique');
+  if (document.getElementById('src-c-histo').checked) criteres.push('historique relation');
+  if (document.getElementById('src-c-risque').checked) criteres.push('risque dépendance');
+  var el = document.getElementById('sourcing-resultats');
+  el.innerHTML = '<div class="card"><div class="empty-state"><div class="es-ic">🔄</div>Analyse Aria en cours...</div></div>';
+  var cat = document.getElementById('src-cat').value;
+  var fourns = FOURNS_CACHE.filter(function(f) { return !cat || f.categorie === cat; });
+  if (!fourns.length) {
+    el.innerHTML = '<div class="card"><div class="empty-state"><div class="es-ic">🏭</div>Aucun fournisseur dans la catégorie sélectionnée. Ajoutez des fournisseurs dans le carnet.</div></div>';
+    return;
+  }
+  var contexte = 'Fournisseurs disponibles :\n' + fourns.map(function(f) {
+    return f.nom + ' | catégorie: ' + (f.categorie || '?') + ' | paiement: ' + (f.conditions_paiement || '?') + ' | délai: ' + (f.delai_habituel || '?') + ' | pays: ' + (f.pays || '?') + ' | note qualité: ' + (f.note_qualite || 'N/A');
+  }).join('\n');
+  var question = 'Besoin : ' + produit + '\nQuantité : ' + (document.getElementById('src-qte').value || 'non précisée') +
+    '\nBudget cible : ' + (document.getElementById('src-budget').value || 'non précisé') + ' €' +
+    '\nDélai souhaité : ' + (document.getElementById('src-delai').value || 'non précisé') +
+    '\nCritères prioritaires : ' + criteres.join(', ') +
+    '\n\nAnalyse les fournisseurs disponibles et propose une comparaison objective. Recommande le plus adapté avec justification. Si aucun ne convient, précise-le et suggère des critères de recherche externe.';
+  var reponse = await apiAsk(question, contexte);
+  el.innerHTML = '<div class="card"><div class="section-head"><h2>🤖 Recommandation Aria</h2></div><div class="consult-ia">' + esc(reponse) + '</div></div>' +
+    '<div class="card"><div class="section-head"><h2>Fournisseurs analysés (' + fourns.length + ')</h2></div>' +
+    fourns.slice(0, 8).map(function(f) {
+      return '<div class="sourcing-card"><div class="ri-title">' + esc(f.nom) + '</div>' +
+        '<div class="src-criteria">' +
+        '<div class="src-crit">Catégorie<span>' + esc(f.categorie || '—') + '</span></div>' +
+        '<div class="src-crit">Paiement<span>' + esc(f.conditions_paiement || '—') + '</span></div>' +
+        '<div class="src-crit">Délai<span>' + esc(f.delai_habituel || '—') + '</span></div>' +
+        '<div class="src-crit">Pays<span>' + esc(f.pays || '—') + '</span></div>' +
+        '</div></div>';
+    }).join('') + '</div>';
+  logAction('Sourcing : ' + produit);
+}
+
+// ════════════════════════════════════════════════════════════
+// SCORE FOURNISSEUR
+// ════════════════════════════════════════════════════════════
+async function chargerScoreFourn(fournId) {
+  if (!fournId) { document.getElementById('score-fourn-detail').innerHTML = '<div class="empty-state"><div class="es-ic">⭐</div>Sélectionnez un fournisseur.</div>'; return; }
+  var el = document.getElementById('score-fourn-detail');
+  el.innerHTML = '<div class="empty-state"><div class="es-ic">🔄</div>Calcul du score...</div>';
+  var fourn = FOURNS_CACHE.find(function(f) { return f.id == fournId; });
+  var data = await api('/industrial/score-fournisseur', { token: getToken(), entreprise_id: getEntrepriseId(), fournisseur_id: fournId });
+  var s = data.score || {};
+  var criteres = [
+    { label: 'Qualité livraisons', val: s.qualite || 0, max: 20 },
+    { label: 'Respect des délais', val: s.delai || 0, max: 20 },
+    { label: 'Stabilité des prix', val: s.stabilite_prix || 0, max: 15 },
+    { label: 'Conformité produits', val: s.conformite || 0, max: 15 },
+    { label: 'Taux litiges (inversé)', val: s.litiges_inverse || 0, max: 10 },
+    { label: 'Réactivité SAV', val: s.reactivite || 0, max: 10 },
+    { label: 'Diversification (anti-dépendance)', val: s.dependance_inverse || 0, max: 5 },
+    { label: 'Stabilité relation', val: s.stabilite_relation || 0, max: 5 },
+  ];
+  var total = criteres.reduce(function(t, c) { return t + (parseFloat(c.val) || 0); }, 0);
+  var mention = total >= 80 ? '✅ Fournisseur recommandé' : total >= 60 ? '🟡 Fournisseur à surveiller' : '🔴 Fournisseur à risque';
+  var cls = total >= 80 ? 'sf-ok' : total >= 60 ? 'sf-warn' : 'sf-err';
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">' +
+    '<div style="font-size:28px;font-weight:800;color:var(--amber)">' + Math.round(total) + '/100</div>' +
+    '<div><div style="font-size:15px;font-weight:700;color:var(--ink)">' + esc(fourn ? fourn.nom : '?') + '</div><div style="font-size:13px;color:var(--ink-dim)">' + mention + '</div></div></div>' +
+    criteres.map(function(c) {
+      var pct = c.max > 0 ? Math.round((parseFloat(c.val) || 0) / c.max * 100) : 0;
+      return '<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink-dim);margin-bottom:3px"><span>' + c.label + '</span><span>' + (parseFloat(c.val) || 0).toFixed(1) + '/' + c.max + '</span></div>' +
+        '<div class="score-bar"><div class="score-fill ' + cls + '" style="width:' + pct + '%"></div></div></div>';
+    }).join('') +
+    (data.observations ? '<div class="alert-item" style="margin-top:12px"><div class="alert-title">Observations</div><div class="alert-desc">' + esc(data.observations) + '</div></div>' : '');
+}
+async function chargerClassementFourn() {
+  var el = document.getElementById('classement-fourn');
+  if (!FOURNS_CACHE.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">🏭</div>Aucun fournisseur.</div>'; return; }
+  el.innerHTML = '<div class="empty-state"><div class="es-ic">🔄</div>Calcul des scores...</div>';
+  var data = await api('/industrial/scores-fournisseurs', { token: getToken(), entreprise_id: getEntrepriseId() });
+  var scores = data.scores || [];
+  if (!scores.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">📊</div>Pas assez de données pour classer les fournisseurs.</div>'; return; }
+  el.innerHTML = scores.map(function(s, i) {
+    var cls = s.score >= 80 ? 'badge-ok' : s.score >= 60 ? 'badge-warn' : 'badge-err';
+    return '<div class="row-item"><div style="font-size:18px;font-weight:800;color:var(--ink-dim);min-width:28px">' + (i+1) + '</div>' +
+      '<div class="ri-main"><div class="ri-title">' + esc(s.nom) + '</div><div class="ri-sub">' + esc(s.categorie || '') + '</div></div>' +
+      '<span class="badge ' + cls + '">' + Math.round(s.score) + '/100</span></div>';
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+// CONTRATS
+// ════════════════════════════════════════════════════════════
+async function chargerContrats() {
+  remplirSelectFourns();
+  var data = await api('/industrial/contrats', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var contrats = data.contrats || [];
+  var now = new Date();
+  var el = document.getElementById('liste-contrats');
+  if (!contrats.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">📄</div>Aucun contrat enregistré.</div>'; }
+  else { el.innerHTML = contrats.map(function(c) {
+    var fin = c.date_fin ? new Date(c.date_fin) : null;
+    var j = fin ? Math.ceil((fin - now) / 86400000) : null;
+    var bc = j === null ? 'badge-amber' : j < 0 ? 'badge-err' : j < 30 ? 'badge-warn' : 'badge-ok';
+    var bl = j === null ? 'Indéterminé' : j < 0 ? 'Expiré' : j + 'j restants';
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(c.fournisseur_nom || '?') + ' — ' + esc(c.type_contrat || '') + '</div>' +
+      '<div class="ri-sub">' + (c.date_debut || '?') + ' → ' + (c.date_fin || '∞') + (c.montant ? ' · ' + fmtMontant(c.montant) + '/an' : '') + '</div>' +
+      '<div class="ri-sub">' + esc(c.prochaine_action || '') + '</div></div><span class="badge ' + bc + '">' + bl + '</span></div>';
+  }).join(''); }
+  // Échéances 90j
+  var ech = contrats.filter(function(c) { if (!c.date_fin) return false; var j = Math.ceil((new Date(c.date_fin) - now) / 86400000); return j > 0 && j <= 90; });
+  var elE = document.getElementById('contrats-echeances');
+  elE.innerHTML = ech.length ? ech.map(function(c) {
+    var j = Math.ceil((new Date(c.date_fin) - now) / 86400000);
+    return '<div class="alert-item' + (j < 30 ? ' alert-crit' : '') + '"><div class="alert-title">' + esc(c.fournisseur_nom || '?') + ' — ' + j + ' jours</div>' +
+      '<div class="alert-desc">Préavis : ' + (c.preavis_jours || '?') + ' jours · ' + (c.renouvellement_auto === 'oui' ? 'Renouvellement automatique' : 'À renégocier') + '</div></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">✅</div>Aucune échéance dans les 90 prochains jours.</div>';
+}
+function ouvrirModalContrat() { remplirSelectFourns(); document.getElementById('ct-debut').value = new Date().toISOString().slice(0, 10); ouvrirModal('modal-contrat'); }
+async function creerContrat() {
+  var fournId = document.getElementById('ct-fourn').value; if (!fournId) { notifErr('Sélectionnez un fournisseur'); return; }
+  var fournNom = document.getElementById('ct-fourn').selectedOptions[0].text;
+  var data = await api('/industrial/contrat/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    fournisseur_id: fournId, fournisseur_nom: fournNom,
+    type_contrat: document.getElementById('ct-type').value,
+    date_debut: document.getElementById('ct-debut').value, date_fin: document.getElementById('ct-fin').value,
+    preavis_jours: parseInt(document.getElementById('ct-preavis').value) || 30,
+    renouvellement_auto: document.getElementById('ct-renouvellement').value,
+    montant: parseFloat(document.getElementById('ct-montant').value) || null,
+    responsable: document.getElementById('ct-responsable').value,
+    prochaine_action: document.getElementById('ct-action').value, notes: document.getElementById('ct-notes').value,
+  });
+  if (data.ok) { notifOk('Contrat enregistré'); fermerModal('modal-contrat'); logAction('Contrat créé : ' + fournNom); chargerContrats(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+// ════════════════════════════════════════════════════════════
+// RISQUES FOURNISSEURS
+// ════════════════════════════════════════════════════════════
+async function chargerRisquesFourn() {
+  var el = document.getElementById('liste-risques-fourn');
+  el.innerHTML = '<div class="empty-state"><div class="es-ic">🔄</div>Analyse en cours...</div>';
+  var data = await api('/industrial/risques-fournisseurs', { token: getToken(), entreprise_id: getEntrepriseId() });
+  var risques = data.risques || [];
+  if (!risques.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">✅</div>Aucun risque fournisseur détecté.</div>'; return; }
+  el.innerHTML = risques.map(function(r) {
+    return '<div class="risk-card risk-' + (r.criticite || 'modere') + '"><div class="ri-title">' +
+      (r.criticite === 'critique' ? '🔴' : r.criticite === 'eleve' ? '🟠' : '🟡') + ' ' + esc(r.fournisseur_nom || '?') + ' — ' + esc(r.type_risque || 'Risque') + '</div>' +
+      '<div class="ri-sub" style="margin-top:4px">' + esc(r.description || '') + '</div>' +
+      (r.action_recommandee ? '<div style="margin-top:6px;font-size:12px;color:var(--amber)">→ ' + esc(r.action_recommandee) + '</div>' : '') + '</div>';
+  }).join('');
+  logAction('Analyse risques fournisseurs');
+}
+
+// ════════════════════════════════════════════════════════════
+// CONSULTATIONS / APPELS D'OFFRES
+// ════════════════════════════════════════════════════════════
+var tousConsultations = [];
+
+function ouvrirModalConsultation() { remplirSelectFourns(); ouvrirModal('modal-consultation'); }
+async function creerConsultation() {
+  var objet = document.getElementById('cons-objet').value.trim(); if (!objet) { notifErr('Objet obligatoire'); return; }
+  var checks = document.querySelectorAll('#cons-fourns-check input[type=checkbox]:checked');
+  var fourns = Array.from(checks).map(function(c) { return { id: c.value, nom: c.dataset.nom }; });
+  var data = await api('/industrial/consultation/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(), objet: objet,
+    qte: document.getElementById('cons-qte').value,
+    budget: parseFloat(document.getElementById('cons-budget').value) || null,
+    date_limite: document.getElementById('cons-deadline').value,
+    cahier_des_charges: document.getElementById('cons-cdc').value, fournisseurs: fourns,
+  });
+  if (data.ok) { notifOk('Consultation lancée'); fermerModal('modal-consultation'); logAction('Consultation : ' + objet); chargerConsultations(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+async function analyserConsultation(id) {
+  var c = tousConsultations.find(function(x) { return x.id == id; }); if (!c) return;
+  var question = 'Analyse cette consultation et génère un comparatif objectif des réponses fournisseurs :\nObjet : ' + c.objet + '\nRéponses : ' + JSON.stringify(c.reponses || []);
+  var rep = await apiAsk(question, '');
+  document.getElementById('consult-reponse').textContent = rep;
+  document.getElementById('consult-reponse').style.display = 'block';
+  goToView('v-consulting');
+}
+
+// ════════════════════════════════════════════════════════════
+// NÉGOCIATION
+// ════════════════════════════════════════════════════════════
+async function chargerNegociations() {
+  var data = await api('/industrial/negociations', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  tousNegos = data.negociations || [];
+  var el = document.getElementById('liste-negociations');
+  if (!tousNegos.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">🤝</div>Aucune négociation.</div>'; return; }
+  el.innerHTML = tousNegos.map(function(n) {
+    var avant = parseFloat(n.prix_avant || 0), apres = parseFloat(n.prix_apres || 0);
+    var eco = avant > 0 && apres > 0 && avant > apres ? ((avant - apres) / avant * 100).toFixed(1) : null;
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(n.fournisseur_nom || '?') + (n.reference ? ' — ' + esc(n.reference) : '') + '</div>' +
+      '<div class="ri-sub">' + fmtDate(n.date_negociation || n.created_at) + (eco ? ' · Remise : ' + eco + ' %' : '') + (n.notes ? ' · ' + esc(n.notes.slice(0, 50)) : '') + '</div>' +
+      (avant > 0 && apres > 0 ? '<div class="nego-ba"><div class="nego-val"><div class="nego-val-lbl">Avant</div><div class="nego-val-num strike">' + avant.toFixed(2) + ' €</div></div><div style="color:var(--ink-faint)">→</div><div class="nego-val"><div class="nego-val-lbl">Après</div><div class="nego-val-num saved">' + apres.toFixed(2) + ' €</div></div></div>' : '') +
+      '</div><div class="ri-actions">' + (eco ? '<span class="badge badge-ok">-' + eco + '%</span>' : '') +
+      '<button class="btn-act btn-ghost btn-sm" data-id="' + n.id + '" onclick="preparerNego(this.dataset.id)">🧠 Préparer</button></div></div>';
+  }).join('');
+}
+function ouvrirModalNegociation() {
+  remplirSelectFourns();
+  document.getElementById('nego-date').value = new Date().toISOString().slice(0, 10);
+  ouvrirModal('modal-negociation');
+}
+async function creerNegociation() {
+  var fournId = document.getElementById('nego-fourn').value; if (!fournId) { notifErr('Sélectionnez un fournisseur'); return; }
+  var fournNom = document.getElementById('nego-fourn').selectedOptions[0].text;
+  var data = await api('/industrial/negociation/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    fournisseur_id: fournId, fournisseur_nom: fournNom,
+    reference: document.getElementById('nego-ref').value,
+    prix_avant: parseFloat(document.getElementById('nego-prix-avant').value) || null,
+    prix_apres: parseFloat(document.getElementById('nego-prix-apres').value) || null,
+    cp_avant: document.getElementById('nego-cp-avant').value, cp_apres: document.getElementById('nego-cp-apres').value,
+    moq_avant: document.getElementById('nego-moq-avant').value, moq_apres: document.getElementById('nego-moq-apres').value,
+    delai_avant: document.getElementById('nego-delai-avant').value, delai_apres: document.getElementById('nego-delai-apres').value,
+    volume_annuel: document.getElementById('nego-volume').value,
+    date_negociation: document.getElementById('nego-date').value, notes: document.getElementById('nego-notes').value,
+  });
+  if (data.ok) { notifOk('Négociation enregistrée'); fermerModal('modal-negociation'); logAction('Négociation : ' + fournNom); chargerNegociations(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+async function preparerNego(id) {
+  var n = tousNegos.find(function(x) { return x.id == id; }); if (!n) return;
+  document.getElementById('nego-prep-card').style.display = 'block';
+  document.getElementById('nego-prep-result').textContent = 'Analyse en cours...';
+  var question = 'Prépare une stratégie de négociation :\nFournisseur : ' + (n.fournisseur_nom || '?') + '\nRéférence : ' + (n.reference || 'non précisée') +
+    '\nTarif actuel : ' + (n.prix_avant || '?') + ' €\nObjectif : obtenir un meilleur prix\nConditions actuelles : ' + (n.cp_avant || '?') + '\nVolume annuel : ' + (n.volume_annuel || 'non précisé') +
+    '\nHistorique : ' + (n.notes || 'aucun') + '\n\nFournis : arguments de négociation, points de levier, fournisseurs alternatifs suggérés, objectif tarifaire réaliste, concessions possibles.';
+  var rep = await apiAsk(question, 'Fournisseurs disponibles : ' + FOURNS_CACHE.map(function(f) { return f.nom; }).join(', '));
+  document.getElementById('nego-prep-result').textContent = rep;
+  logAction('Préparation négociation Aria : ' + (n.fournisseur_nom || '?'));
+}
+
+// ════════════════════════════════════════════════════════════
+// ÉCONOMIES
+// ════════════════════════════════════════════════════════════
+async function chargerEconomies() {
+  var data = await api('/industrial/negociations', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  tousNegos = data.negociations || [];
+  var now = new Date(); var mois = now.toISOString().slice(0, 7); var annee = now.getFullYear().toString();
+  var ecoMois = 0, ecoAn = 0, nbGagnes = 0, totalAvant = 0;
+  var parFourn = {}, parCat = {};
+  tousNegos.forEach(function(n) {
+    var avant = parseFloat(n.prix_avant || 0), apres = parseFloat(n.prix_apres || 0);
+    if (avant <= 0 || apres <= 0 || apres >= avant) return;
+    var eco = avant - apres; nbGagnes++; totalAvant += avant;
+    if ((n.date_negociation || '').startsWith(mois)) ecoMois += eco;
+    if ((n.date_negociation || '').startsWith(annee)) ecoAn += eco;
+    parFourn[n.fournisseur_nom || '?'] = (parFourn[n.fournisseur_nom || '?'] || 0) + eco;
+    parCat[n.categorie || 'Autre'] = (parCat[n.categorie || 'Autre'] || 0) + eco;
+  });
+  var taux = nbGagnes > 0 && totalAvant > 0 ? (ecoAn / totalAvant * 100).toFixed(1) + ' %' : '—';
+  document.getElementById('eco-mois').textContent = ecoMois > 0 ? Math.round(ecoMois) + ' €' : '—';
+  document.getElementById('eco-annee').textContent = ecoAn > 0 ? Math.round(ecoAn) + ' €' : '—';
+  document.getElementById('eco-nb-nego').textContent = nbGagnes;
+  document.getElementById('eco-taux').textContent = taux;
+  var triF = Object.entries(parFourn).sort(function(a, b) { return b[1] - a[1]; });
+  document.getElementById('eco-par-fourn').innerHTML = triF.length ? triF.map(function(e) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(e[0]) + '</div></div><span class="badge badge-ok">' + Math.round(e[1]) + ' €</span></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">💰</div>Aucune économie enregistrée.</div>';
+  var triC = Object.entries(parCat).sort(function(a, b) { return b[1] - a[1]; });
+  document.getElementById('eco-par-cat').innerHTML = triC.length ? triC.map(function(e) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(e[0]) + '</div></div><span class="badge badge-ok">' + Math.round(e[1]) + ' €</span></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">📊</div>Aucune donnée.</div>';
+}
+
+// ════════════════════════════════════════════════════════════
+// ANTICIPATION RUPTURES
+// ════════════════════════════════════════════════════════════
+async function chargerAnticipation() {
+  var el = document.getElementById('liste-anticipation');
+  el.innerHTML = '<div class="empty-state"><div class="es-ic">🔄</div>Analyse en cours...</div>';
+  var data = await api('/industrial/anticipation-ruptures', { token: getToken(), entreprise_id: getEntrepriseId() });
+  var articles = data.articles || [];
+  if (!articles.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">✅</div>Aucune rupture anticipée. Les stocks couvrent les délais fournisseurs.</div>'; return; }
+  el.innerHTML = articles.map(function(a) {
+    return '<div class="alert-item' + (a.urgence === 'critique' ? ' alert-crit' : '') + '"><div class="alert-title">' +
+      (a.urgence === 'critique' ? '🔴' : '🟡') + ' ' + esc(a.reference) + ' — ' + esc(a.designation || '') + '</div>' +
+      '<div class="alert-desc">Stock estimé : ' + (a.stock_jours != null ? a.stock_jours + ' jours' : '?') + ' · Délai fournisseur : ' + (a.delai_fourn != null ? a.delai_fourn + ' jours' : '?') + (a.fourn_nom ? ' (' + esc(a.fourn_nom) + ')' : '') + '</div>' +
+      (a.action ? '<div style="margin-top:4px;color:var(--amber);font-size:12px">→ ' + esc(a.action) + '</div>' : '') + '</div>';
+  }).join('');
+  logAction('Analyse anticipation ruptures');
+}
+
+// ════════════════════════════════════════════════════════════
+// BUDGET & ANALYSE
+// ════════════════════════════════════════════════════════════
+async function chargerBudget() {
+  var [bcData, fData] = await Promise.all([
+    api('/industrial/bons-commande', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET'),
+    api('/industrial/fournisseurs', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET'),
+  ]);
+  var bcs = bcData.bons_commande || [];
+  var fourns = fData.fournisseurs || [];
+  var mois = new Date().toISOString().slice(0, 7);
+  var engage = bcs.filter(function(b) { return b.statut !== 'annule' && (b.created_at || '').startsWith(mois); }).reduce(function(s, b) { return s + parseFloat(b.montant_total || 0); }, 0);
+  var attente = bcs.filter(function(b) { return b.statut === 'en_attente'; }).reduce(function(s, b) { return s + parseFloat(b.montant_total || 0); }, 0);
+  var nbCmd = bcs.filter(function(b) { return b.statut !== 'annule' && (b.created_at || '').startsWith(mois); }).length;
+  document.getElementById('budget-engage').textContent = engage > 0 ? Math.round(engage) + ' €' : '—';
+  document.getElementById('budget-attente').textContent = attente > 0 ? Math.round(attente) + ' €' : '—';
+  document.getElementById('budget-nb-fourn').textContent = fourns.length;
+  document.getElementById('budget-nb-cmd').textContent = nbCmd;
+  // Par catégorie
+  var parCat = {};
+  bcs.filter(function(b) { return b.statut !== 'annule'; }).forEach(function(b) { var c = b.categorie || 'Non classé'; parCat[c] = (parCat[c] || 0) + parseFloat(b.montant_total || 0); });
+  var tri = Object.entries(parCat).sort(function(a, b) { return b[1] - a[1]; });
+  var total = tri.reduce(function(t, e) { return t + e[1]; }, 0);
+  document.getElementById('budget-categories').innerHTML = tri.length ? tri.map(function(e) {
+    var pct = total > 0 ? Math.round(e[1] / total * 100) : 0;
+    return '<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink-dim);margin-bottom:3px"><span>' + esc(e[0]) + '</span><span>' + fmtMontant(e[1]) + ' (' + pct + '%)</span></div>' +
+      '<div class="score-bar"><div class="score-fill sf-ok" style="width:' + pct + '%"></div></div></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">📊</div>Aucune donnée.</div>';
+  // Top fournisseurs
+  var parFourn = {};
+  bcs.filter(function(b) { return b.statut !== 'annule' && b.fournisseur_nom; }).forEach(function(b) { parFourn[b.fournisseur_nom] = (parFourn[b.fournisseur_nom] || 0) + parseFloat(b.montant_total || 0); });
+  var triF = Object.entries(parFourn).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 10);
+  document.getElementById('budget-top-fourn').innerHTML = triF.length ? triF.map(function(e, i) {
+    return '<div class="row-item"><div style="font-size:16px;font-weight:800;color:var(--ink-dim);min-width:24px">' + (i+1) + '</div><div class="ri-main"><div class="ri-title">' + esc(e[0]) + '</div></div><span class="badge badge-amber">' + fmtMontant(e[1]) + '</span></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">🏭</div>Aucune donnée.</div>';
+}
+
+// ════════════════════════════════════════════════════════════
+// CONSULTING ARIA
+// ════════════════════════════════════════════════════════════
+
+
+
+// ════════════════════════════════════════════════════════════
+// POSTE — POINTAGE / TÂCHES / CONGÉS / DROITS / FORMATION
+// ════════════════════════════════════════════════════════════
+async function pointerWeb(type) {
+  var data = await api('/industrial/pointer', { token: getToken(), entreprise_id: getEntrepriseId(), type_pointage: type, source: 'web' });
+  if (data.ok) {
+    var labels = { arrivee: 'Arrivée pointée', depart: 'Départ pointé', pause_debut: 'Pause démarrée', pause_fin: 'Pause terminée' };
+    notifOk(labels[type] || 'Pointé');
+    var h = new Date();
+    document.getElementById('point-status').textContent = 'Dernier : ' + type + ' à ' + String(h.getHours()).padStart(2,'0') + ':' + String(h.getMinutes()).padStart(2,'0');
+  } else notifErr(data.erreur || 'Erreur pointage');
+}
+async function chargerTachesPoste() {
+  var data = await api('/industrial/taches', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var taches = (data.taches || []).filter(function(t) { return t.assignee_id === getToken() && t.statut !== 'termine' && t.statut !== 'annule'; });
+  var prior = { urgente: '🔴', haute: '🟠', normale: '🟡', basse: '🟢' };
+  var el = document.getElementById('liste-taches-poste');
+  el.innerHTML = taches.length ? taches.map(function(t) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + (prior[t.priorite] || '🟡') + ' ' + esc(t.titre) + '</div><div class="ri-sub">' + (t.deadline || '') + '</div></div>' +
+      '<button class="btn-act btn-ok btn-sm" data-id="' + t.id + '" onclick="terminerTachePoste(this.dataset.id)">✅</button></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">✅</div>Aucune tâche active.</div>';
+}
+async function creerTachePoste() {
+  var titre = document.getElementById('tp-titre').value.trim(); if (!titre) { notifErr('Titre obligatoire'); return; }
+  var data = await api('/industrial/tache/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(), titre: titre,
+    priorite: document.getElementById('tp-prior').value, deadline: document.getElementById('tp-date').value,
+    description: document.getElementById('tp-desc').value, poste_cible: 'achats',
+  });
+  if (data.ok) { notifOk('Tâche créée'); fermerModal('modal-tache-p'); chargerTachesPoste(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+async function terminerTachePoste(id) {
+  var data = await api('/industrial/tache/modifier', { token: getToken(), entreprise_id: getEntrepriseId(), tache_id: id, statut: 'termine' });
+  if (data.ok) { notifOk('Tâche terminée'); chargerTachesPoste(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+async function chargerMesCongesPoste() {
+  var data = await api('/industrial/absences', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var abs = (data.absences || []).filter(function(a) { return a.salarie_id === getToken(); });
+  var statuts = { en_attente: 'badge-warn', approuve: 'badge-ok', refuse: 'badge-err', annule: 'badge-amber' };
+  var el = document.getElementById('mes-absences-poste');
+  el.innerHTML = abs.length ? abs.map(function(a) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(a.type_absence) + '</div><div class="ri-sub">' + a.date_debut + ' → ' + a.date_fin + '</div></div>' +
+      '<span class="badge ' + (statuts[a.statut] || 'badge-amber') + '">' + esc(a.statut || '?') + '</span></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">🏖️</div>Aucune absence enregistrée.</div>';
+}
+async function soumettreCongePoste() {
+  var debut = document.getElementById('conge-debut').value, fin = document.getElementById('conge-fin').value;
+  if (!debut || !fin) { notifErr('Dates obligatoires'); return; }
+  var data = await api('/industrial/absence/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    type_absence: document.getElementById('conge-type').value, date_debut: debut, date_fin: fin,
+    justificatif: document.getElementById('conge-motif').value,
+  });
+  if (data.ok) { notifOk('Demande envoyée'); logAction('Congé demandé'); chargerMesCongesPoste(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+async function demanderDroitsPoste() {
+  var el = document.getElementById('mes-droits-list');
+  var data = await api('/industrial/fiche-rh', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  if (data.permissions && data.permissions.length) {
+    el.innerHTML = data.permissions.map(function(p) {
+      return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(p.label || p.tache_id) + '</div></div>' +
+        '<span class="badge ' + (p.autorise_salarie ? 'badge-ok' : 'badge-err') + '">' + (p.autorise_salarie ? 'Autorisé' : 'Non autorisé') + '</span></div>';
+    }).join('');
+  } else { el.innerHTML = '<div class="empty-state"><div class="es-ic">🔐</div>Aucune permission configurée pour ce poste.</div>'; }
+}
+
+// ── QCM Formation ──
+var qcmData = null, qcmIdx = 0, qcmScore = 0;
+function lancerQCMPoste() {
+  qcmData = [
+    { q: "Qu'est-ce qu'un appel d'offres ?", opts: ["Une commande directe fournisseur", "Une consultation de plusieurs fournisseurs", "Un bon de commande signé", "Une facture proforma"], rep: 1 },
+    { q: "Le rapprochement 3 points vérifie la cohérence entre :", opts: ["BC + Réception + Facture", "DA + BC + Réception", "Devis + BC + Paiement", "Commande + Stock + Facture"], rep: 0 },
+    { q: "Un fournisseur unique pour un composant critique représente :", opts: ["Un risque de qualité", "Un risque de dépendance", "Un avantage tarifaire", "Un risque de délai seulement"], rep: 1 },
+    { q: "MOQ signifie :", opts: ["Montant Optimal de Qualité", "Minimum Order Quantity", "Mode Opératoire Qualifié", "Méthode d'Optimisation"], rep: 1 },
+    { q: "Les conditions de paiement '60 jours fin de mois' signifient :", opts: ["Paiement à 60% immédiatement", "Paiement 60 jours après la fin du mois de facturation", "Paiement en 6 fois sans frais", "Règlement immédiat avec 60 jours de garantie"], rep: 1 },
+    { q: "La règle Incoterm FOB signifie :", opts: ["Le fournisseur livre en entrepôt client", "Le risque passe à l'acheteur quand la marchandise est à bord du navire", "Le transport est inclus dans le prix", "Le douanier valide la facture"], rep: 1 },
+  ];
+  qcmIdx = 0; qcmScore = 0; afficherQCM();
+}
+function afficherQCM() {
+  if (qcmIdx >= qcmData.length) {
+    document.getElementById('qcm-zone').innerHTML = '<div style="text-align:center;padding:24px"><div style="font-size:32px;margin-bottom:8px">🎓</div><div style="font-size:20px;font-weight:700;color:var(--ink)">Score : ' + qcmScore + '/' + qcmData.length + '</div><div style="color:var(--ink-dim);margin-top:6px">' + (qcmScore >= 5 ? 'Excellent !' : qcmScore >= 4 ? 'Bien !' : qcmScore >= 3 ? 'Correct' : 'À réviser') + '</div></div>'; return;
+  }
+  var q = qcmData[qcmIdx];
+  document.getElementById('qcm-zone').innerHTML = '<div style="font-size:12px;color:var(--ink-dim);margin-bottom:8px">Question ' + (qcmIdx+1) + '/' + qcmData.length + '</div>' +
+    '<div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:14px">' + esc(q.q) + '</div>' +
+    q.opts.map(function(o, i) {
+      return '<button onclick="repQCM(' + i + ')" style="display:block;width:100%;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:8px;cursor:pointer;color:var(--ink);font-size:13px;font-family:inherit">' + esc(o) + '</button>';
+    }).join('');
+}
+function repQCM(idx) { if (idx === qcmData[qcmIdx].rep) qcmScore++; qcmIdx++; afficherQCM(); }
+
+// ════════════════════════════════════════════════════════════
+// WORKFLOW DA — Timeline complète
+// ════════════════════════════════════════════════════════════
+var _selectedDA = null;
+
+function afficherTimelineDA(da) {
+  _selectedDA = da;
+  var card = document.getElementById('da-timeline-card');
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  var bc = tousBCs.find(function(b) { return b.notes && b.notes.includes(da.id || da.designation); });
+  var etapes = [
+    { ico: '📝', label: 'Demande créée', date: da.created_at, ok: true, desc: 'Par ' + esc(da.demandeur_nom || '?') + (da.centre_cout ? ' · ' + esc(da.centre_cout) : '') },
+    { ico: '✅', label: 'Validation hiérarchique', date: da.approuvee_at, ok: da.statut !== 'en_attente', desc: da.statut === 'approuvee' || da.statut === 'en_bc' ? 'Approuvée' : da.statut === 'refusee' ? '❌ Refusée' : 'En attente' },
+    { ico: '📦', label: 'Bon de commande', date: bc ? bc.created_at : null, ok: da.statut === 'en_bc' || !!bc, desc: bc ? 'BC ' + esc(bc.numero) + ' — ' + esc(bc.fournisseur_nom || '?') : 'Non créé' },
+    { ico: '📥', label: 'Réception', date: null, ok: bc && bc.statut === 'recu', desc: bc && bc.statut === 'recu' ? 'Réceptionnée' : 'En attente livraison' },
+    { ico: '🧾', label: 'Facture & Rapprochement', date: null, ok: false, desc: 'Clôture après validation comptable' },
+  ];
+  document.getElementById('da-timeline-content').innerHTML =
+    '<div style="margin-bottom:14px"><div class="ri-title">' + esc(da.designation) + '</div>' +
+    '<div class="ri-sub">' + (da.montant_estime ? fmtMontant(da.montant_estime) + ' · ' : '') + esc(da.categorie || '') + (da.urgence && da.urgence !== 'normale' ? ' · <strong style="color:var(--wait)">' + da.urgence.toUpperCase() + '</strong>' : '') + '</div></div>' +
+    '<div style="position:relative;padding-left:28px">' +
+    etapes.map(function(e, i) {
+      return '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;position:relative">' +
+        '<div style="position:absolute;left:-24px;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;background:' + (e.ok ? 'var(--ok)' : 'var(--line2)') + ';color:#fff;flex-shrink:0">' + (e.ok ? '✓' : (i+1)) + '</div>' +
+        (i < etapes.length-1 ? '<div style="position:absolute;left:-16px;top:18px;width:2px;height:calc(100% + 4px);background:var(--line2)"></div>' : '') +
+        '<div style="flex:1"><div style="font-size:13px;font-weight:600;color:' + (e.ok ? 'var(--ink)' : 'var(--ink-dim)') + '">' + e.ico + ' ' + e.label + (e.date ? ' <span style="font-size:11px;color:var(--ink-faint);font-weight:400">— ' + fmtDate(e.date) + '</span>' : '') + '</div>' +
+        '<div style="font-size:12px;color:var(--ink-dim);margin-top:2px">' + e.desc + '</div></div></div>';
+    }).join('') + '</div>';
+}
+function fermerTimelineDA() {
+  document.getElementById('da-timeline-card').style.display = 'none';
+  _selectedDA = null;
+}
+
+// ════════════════════════════════════════════════════════════
+// CONSULTATIONS — Comparateur réel avec saisie offres
+// ════════════════════════════════════════════════════════════
+var _selectedConsul = null;
+
+function ouvrirDetailConsul(id) {
+  _selectedConsul = tousConsultations.find(function(c) { return c.id == id; });
+  if (!_selectedConsul) return;
+  document.getElementById('consul-detail-card').style.display = 'block';
+  document.getElementById('consul-detail-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  document.getElementById('consul-detail-titre').textContent = '📋 ' + _selectedConsul.objet;
+  document.getElementById('consul-detail-info').innerHTML =
+    'Date limite : <strong>' + (fmtDate(_selectedConsul.date_limite) || '—') + '</strong>' +
+    ((_selectedConsul.budget) ? ' · Budget : <strong>' + fmtMontant(_selectedConsul.budget) + '</strong>' : '') +
+    ' · Fournisseurs sollicités : <strong>' + (_selectedConsul.nb_fournisseurs || 0) + '</strong>' +
+    ' · Statut : ' + esc(_selectedConsul.statut || '?');
+  afficherOffres(_selectedConsul.reponses || []);
+  document.getElementById('consul-comparatif-card').style.display = 'none';
+}
+function fermerDetailConsul() {
+  document.getElementById('consul-detail-card').style.display = 'none';
+  _selectedConsul = null;
+}
+function afficherOffres(offres) {
+  var el = document.getElementById('consul-offres-liste');
+  if (!offres || !offres.length) {
+    el.innerHTML = '<div class="empty-state"><div class="es-ic">📨</div>Aucune offre saisie. Cliquez sur "+ Saisir une offre".</div>';
+    return;
+  }
+  // Trouver le meilleur prix
+  var minPrix = Math.min.apply(null, offres.map(function(o) { return parseFloat(o.prix) || Infinity; }));
+  el.innerHTML = '<div class="table-wrap"><table class="dt"><thead><tr>' +
+    '<th>Fournisseur</th><th>Prix u.</th><th>Délai</th><th>Paiement</th><th>MOQ</th><th>Notes</th></tr></thead><tbody>' +
+    offres.map(function(o) {
+      var isBest = parseFloat(o.prix) === minPrix;
+      return '<tr' + (isBest ? ' style="background:rgba(79,191,139,.07)"' : '') + '>' +
+        '<td><strong>' + esc(o.fourn_nom || '?') + '</strong>' + (isBest ? ' <span class="badge badge-ok">Meilleur prix</span>' : '') + '</td>' +
+        '<td><strong style="color:' + (isBest ? 'var(--ok)' : 'var(--ink)') + '">' + fmtMontant(o.prix) + '</strong></td>' +
+        '<td>' + esc(o.delai || '—') + '</td>' +
+        '<td>' + esc(o.paiement || '—') + '</td>' +
+        '<td>' + esc(o.moq || '—') + '</td>' +
+        '<td style="max-width:180px;font-size:12px">' + esc((o.notes || '').slice(0, 80)) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+}
+function ouvrirSaisieOffre() {
+  if (!_selectedConsul) return;
+  remplirSelectFourns();
+  var sel = document.getElementById('offre-fourn');
+  // Pré-cocher uniquement les fournisseurs de la consultation
+  var fournsConsul = _selectedConsul.fournisseurs || [];
+  if (sel && fournsConsul.length) {
+    Array.from(sel.options).forEach(function(opt) {
+      if (fournsConsul.some(function(f) { return String(f.id) === opt.value; })) opt.selected = true;
+    });
+  }
+  document.getElementById('offre-consul-id').value = _selectedConsul.id;
+  ['offre-prix','offre-delai','offre-paiement','offre-moq','offre-notes'].forEach(function(id) { document.getElementById(id).value = ''; });
+  ouvrirModal('modal-offre');
+}
+async function saisirOffre() {
+  var consulId = document.getElementById('offre-consul-id').value;
+  var fournEl = document.getElementById('offre-fourn');
+  var fournNom = fournEl.selectedOptions[0] ? fournEl.selectedOptions[0].text : '';
+  var prix = parseFloat(document.getElementById('offre-prix').value);
+  if (!fournNom || !fournEl.value) { notifErr('Sélectionnez un fournisseur'); return; }
+  if (!prix || prix <= 0) { notifErr('Prix obligatoire'); return; }
+  // Ajouter l'offre dans reponses JSONB via endpoint existant (patch sur consultations)
+  var consul = tousConsultations.find(function(c) { return c.id == consulId; });
+  if (!consul) { notifErr('Consultation introuvable'); return; }
+  var offres = consul.reponses || [];
+  // Retirer offre précédente du même fournisseur
+  offres = offres.filter(function(o) { return o.fourn_id !== fournEl.value; });
+  offres.push({
+    fourn_id: fournEl.value, fourn_nom: fournNom,
+    prix: prix, delai: document.getElementById('offre-delai').value,
+    paiement: document.getElementById('offre-paiement').value, moq: document.getElementById('offre-moq').value,
+    validite: document.getElementById('offre-validite').value, notes: document.getElementById('offre-notes').value,
+    saisie_at: new Date().toISOString(),
+  });
+  var data = await api('/industrial/consultation/offre', { token: getToken(), entreprise_id: getEntrepriseId(), consultation_id: consulId, reponses: offres });
+  if (data.ok) {
+    notifOk('Offre enregistrée');
+    fermerModal('modal-offre');
+    consul.reponses = offres;
+    afficherOffres(offres);
+    logAction('Offre saisie — ' + fournNom + ' : ' + prix + ' €');
+  } else notifErr(data.erreur || 'Erreur');
+}
+async function comparerOffresAria() {
+  if (!_selectedConsul) return;
+  var offres = _selectedConsul.reponses || [];
+  if (offres.length < 2) { notifErr('Au moins 2 offres nécessaires pour comparer'); return; }
+  document.getElementById('consul-comparatif-card').style.display = 'block';
+  document.getElementById('consul-comparatif-result').textContent = 'Analyse Aria en cours...';
+  document.getElementById('consul-winner').innerHTML = '';
+  var question = 'Compare ces offres fournisseurs pour la consultation : ' + _selectedConsul.objet +
+    '\nBudget cible : ' + (_selectedConsul.budget ? _selectedConsul.budget + ' €' : 'non précisé') +
+    '\nCahier des charges : ' + (_selectedConsul.cahier_des_charges || 'non précisé') +
+    '\n\nOffres reçues :\n' + offres.map(function(o, i) {
+      return (i+1) + '. ' + o.fourn_nom + ' — Prix : ' + o.prix + ' €' +
+        (o.delai ? ' | Délai : ' + o.delai : '') + (o.paiement ? ' | Paiement : ' + o.paiement : '') +
+        (o.moq ? ' | MOQ : ' + o.moq : '') + (o.notes ? ' | Notes : ' + o.notes : '');
+    }).join('\n') +
+    '\n\nFournis : analyse critère par critère, recommandation motivée, fournisseur à retenir et pourquoi, points de vigilance. Sois un acheteur professionnel.';
+  var rep = await apiAsk(question, 'Poste : Acheteur professionnel');
+  document.getElementById('consul-comparatif-result').textContent = rep;
+  // Afficher le gagnant prix en badge
+  var minPrix = Math.min.apply(null, offres.map(function(o) { return parseFloat(o.prix)||Infinity; }));
+  var winner = offres.find(function(o) { return parseFloat(o.prix) === minPrix; });
+  if (winner) document.getElementById('consul-winner').innerHTML = '<div class="alert-item alert-ok"><div class="alert-title">🏆 Meilleur prix : ' + esc(winner.fourn_nom) + ' — ' + fmtMontant(winner.prix) + '</div></div>';
+  logAction('Comparaison Aria — ' + _selectedConsul.objet);
+}
+
+// ════════════════════════════════════════════════════════════
+// IA CONTEXTUELLE — Analyse avec données réelles
+// ════════════════════════════════════════════════════════════
+async function ariaRapide(type) {
+  var el = document.getElementById('consult-reponse');
+  el.style.display = 'block'; el.textContent = 'Aria analyse vos données...';
+  var now = new Date();
+  var contexteRiche = await construireContexteRiche();
+  var questions = {
+    dependance: 'Analyse les risques de dépendance fournisseur depuis les données réelles. Identifie les fournisseurs qui représentent plus de 30% des commandes et propose des alternatives.',
+    contrats: 'Liste tous les contrats fournisseurs expirant dans les 90 prochains jours et donne des recommandations de renégociation prioritaires avec des arguments concrets.',
+    economies: "Identifie les 3 meilleures opportunités d'économies achats à saisir maintenant, basées sur les historiques de commandes et les négociations passées.",
+    negociation: 'Classe les fournisseurs par priorité de renégociation. Utilise : volume annuel commandé, évolution des prix, scores de performance, et conditions actuelles.',
+    hausse: 'Détecte les hausses de prix inhabituelles en comparant les derniers bons de commande aux négociations enregistrées. Alerte sur les dérives significatives.',
+    meilleur: 'Classe les fournisseurs du meilleur au moins bon en croisant : score qualité, respect délais, litiges, stabilité prix, et ancienneté relation.'
+  };
+  el.textContent = await apiAsk(questions[type] || questions.meilleur, contexteRiche);
+  logAction('Aria rapide : ' + type);
+}
+async function construireContexteRiche() {
+  // Récupérer toutes les données nécessaires si pas en cache
+  if (!FOURNS_CACHE.length) await chargerFournisseurs();
+  var now = new Date();
+  var moisCourant = now.toISOString().slice(0, 7);
+  // Stats BC
+  var totalBC = tousBCs.length;
+  var cmdMois = tousBCs.filter(function(b) { return (b.created_at||'').startsWith(moisCourant); }).length;
+  // Volume par fournisseur
+  var volParFourn = {};
+  tousBCs.filter(function(b) { return b.statut !== 'annule' && b.fournisseur_nom; }).forEach(function(b) {
+    volParFourn[b.fournisseur_nom] = (volParFourn[b.fournisseur_nom]||0) + parseFloat(b.montant_total||0);
+  });
+  var topFourns = Object.entries(volParFourn).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
+  // Économies négociations
+  var ecoTotal = tousNegos.reduce(function(s,n){
+    var a=parseFloat(n.prix_avant||0),p=parseFloat(n.prix_apres||0);
+    return s+(a>p?a-p:0);
+  },0);
+  // Contrats expirants
+  var contratsExp = [];
+  try {
+    var cd = await api('/industrial/contrats', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+    (cd.contrats||[]).forEach(function(c) {
+      if (c.date_fin) { var j=Math.ceil((new Date(c.date_fin)-now)/86400000); if(j>0&&j<90) contratsExp.push(c.fournisseur_nom+' ('+j+'j)'); }
+    });
+  } catch(e) {}
+  return ['DONNÉES RÉELLES ENTREPRISE (' + getEntrepriseId() + ')',
+    'Fournisseurs actifs : ' + FOURNS_CACHE.length,
+    'Total BC émis : ' + totalBC + ' | Ce mois : ' + cmdMois,
+    'Top fournisseurs par volume : ' + topFourns.map(function(e){return e[0]+' ('+Math.round(e[1])+'€)';}).join(', '),
+    'Négociations enregistrées : ' + tousNegos.length + ' | Économies totales : ' + Math.round(ecoTotal) + '€',
+    'Contrats expirant <90j : ' + (contratsExp.length ? contratsExp.join(', ') : 'aucun'),
+    'DA en attente : ' + tousDA.filter(function(d){return d.statut==='en_attente';}).length,
+    'Fournisseurs : ' + FOURNS_CACHE.slice(0,15).map(function(f){return f.nom+'('+f.categorie+','+f.conditions_paiement+','+f.delai_habituel+')';}).join(' | ')
+  ].join('\\n');
+}
+
+// ════════════════════════════════════════════════════════════
+// INTERCONNEXION — données cross-postes
+// ════════════════════════════════════════════════════════════
+async function chargerInterco() {
+  var el = document.getElementById('dash-interco');
+  el.innerHTML = '<div class="empty-state"><div class="es-ic">🔄</div>Chargement...</div>';
+  var [stockData, factsData] = await Promise.all([
+    api('/industrial/stock', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET'),
+    api('/industrial/factures', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET'),
+  ]);
+  var stock = stockData.articles || stockData.stock || [];
+  var factures = factsData.factures || [];
+  var alertes = [];
+  // Stock en alerte → besoin achat
+  var stockAlerte = stock.filter(function(a) { return parseFloat(a.quantite||0) <= parseFloat(a.seuil_alerte||0) && a.seuil_alerte > 0; });
+  stockAlerte.slice(0,3).forEach(function(a) {
+    alertes.push({ type: 'warn', src: 'Logistique', txt: 'Stock critique : ' + esc(a.designation||a.reference) + ' (' + a.quantite + ' unités) → Commander', action: function() { document.getElementById('da-designation').value = 'Réappro ' + (a.designation||a.reference); document.getElementById('da-categorie').value = 'matières premières'; ouvrirModal('modal-da'); } });
+  });
+  // Factures fournisseurs sans BC associé
+  var factsForni = factures.filter(function(f) { return f.type_facture === 'fournisseur' && !f.bon_commande_id; });
+  if (factsForni.length > 0) alertes.push({ type: 'warn', src: 'Comptabilité', txt: factsForni.length + ' facture(s) fournisseur sans BC associé → Rapprochement requis', action: function() { goToView('v-rapprochement'); } });
+  // BC approuvés non réceptionnés depuis >7j
+  var now = new Date();
+  var bcRetard = tousBCs.filter(function(b) { return b.statut==='commande' && b.date_livraison_souhaitee && (now-new Date(b.date_livraison_souhaitee))/86400000 > 0; });
+  bcRetard.slice(0,3).forEach(function(b) {
+    alertes.push({ type: 'crit', src: 'Achats', txt: 'Livraison en retard : BC ' + esc(b.numero) + ' — ' + esc(b.fournisseur_nom||'?'), action: function() { goToView('v-reception'); } });
+  });
+  if (!alertes.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">✅</div>Aucune alerte cross-poste. Tous les postes sont synchronisés.</div>'; return; }
+  el.innerHTML = alertes.map(function(a) {
+    return '<div class="alert-item' + (a.type==='crit'?' alert-crit':'') + '" style="cursor:pointer" onclick="(' + a.action.toString() + ')()"><div class="alert-title">' + (a.type==='crit'?'🔴':'🟡') + ' [' + a.src + '] ' + a.txt + '</div></div>';
+  }).join('');
+}
+
+// ── Surcharge afficherDA pour ajouter timeline ──
+function afficherDA() {
+  var filtre = document.getElementById('filter-da-statut') && document.getElementById('filter-da-statut').value;
+  var liste = filtre ? tousDA.filter(function(d) { return d.statut === filtre; }) : tousDA;
+  var el = document.getElementById('liste-da'); if (!el) return;
+  if (!liste.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">📝</div>Aucune demande.</div>'; return; }
+  var statuts = { en_attente: 'badge-warn', approuvee: 'badge-ok', refusee: 'badge-err', en_bc: 'badge-blue', annulee: 'badge-amber' };
+  var labels = { en_attente: 'En attente', approuvee: 'Approuvée', refusee: 'Refusée', en_bc: 'BC créé', annulee: 'Annulée' };
+  el.innerHTML = liste.map(function(d, i) {
+    var btns = '<button class="btn-act btn-ghost btn-sm" data-idx="' + tousDA.indexOf(d) + '" onclick="afficherTimelineDA(tousDA[this.dataset.idx])">📋</button>';
+    if (estResponsable && d.statut === 'en_attente') {
+      btns += '<button class="btn-act btn-ok btn-sm" data-id="' + d.id + '" data-st="approuvee" onclick="approuverDA(this.dataset.id,this.dataset.st)">✅</button>' +
+              '<button class="btn-act btn-err btn-sm" data-id="' + d.id + '" data-st="refusee" onclick="approuverDA(this.dataset.id,this.dataset.st)">✕</button>';
+    } else if (estResponsable && d.statut === 'approuvee') {
+      btns += '<button class="btn-act btn-amber btn-sm" data-id="' + d.id + '" onclick="prefillBCdepuisDA(this.dataset.id)">→ BC</button>';
+    }
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(d.designation) + '</div>' +
+      '<div class="ri-sub">' + esc(d.demandeur_nom||'?') + ' · ' + esc(d.categorie||'') + (d.montant_estime?' · '+fmtMontant(d.montant_estime):'') + (d.urgence&&d.urgence!=='normale'?' · <strong style="color:var(--wait)">'+d.urgence.toUpperCase()+'</strong>':'') + '</div>' +
+      '<div class="ri-sub">' + fmtDate(d.created_at) + (d.justification?' — '+esc(d.justification.slice(0,60)):'') + '</div></div>' +
+      '<div class="ri-actions"><span class="badge ' + (statuts[d.statut]||'badge-amber') + '">' + (labels[d.statut]||d.statut) + '</span>' + btns + '</div></div>';
+  }).join('');
+}
+
+// ── Surcharge chargerConsultations pour ajouter bouton détail ──
+async function chargerConsultations() {
+  remplirSelectFourns();
+  var data = await api('/industrial/consultations', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  tousConsultations = data.consultations || [];
+  var el = document.getElementById('liste-consultations');
+  if (!tousConsultations.length) { el.innerHTML = '<div class="empty-state"><div class="es-ic">📋</div>Aucune consultation.</div>'; return; }
+  el.innerHTML = tousConsultations.map(function(c) {
+    var bc = c.statut === 'ouverte' ? 'badge-warn' : c.statut === 'cloturee' ? 'badge-ok' : 'badge-amber';
+    var nbOffres = (c.reponses||[]).length;
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(c.objet) + '</div>' +
+      '<div class="ri-sub">Limite : ' + (fmtDate(c.date_limite)||'—') + ' · ' + (c.nb_fournisseurs||0) + ' fournisseurs · ' + nbOffres + ' offre(s)</div></div>' +
+      '<div class="ri-actions"><span class="badge ' + bc + '">' + esc(c.statut||'?') + '</span>' +
+      '<button class="btn-act btn-amber btn-sm" data-id="' + c.id + '" onclick="ouvrirDetailConsul(this.dataset.id)">📋 Ouvrir</button></div></div>';
+  }).join('');
+  document.getElementById('consul-detail-card').style.display = 'none';
+}
+
+// ── Surcharge chargerSuggestions pour IA contextuelle réelle ──
+async function chargerSuggestions() {
+  var el = document.getElementById('aria-suggestions');
+  el.innerHTML = '<div class="empty-state"><div class="es-ic">🔄</div>Analyse en cours...</div>';
+  var contexte = await construireContexteRiche();
+  var question = "Tu es un acheteur professionnel. G\u00e9n\u00e8re exactement 4 alertes ou opportunit\u00e9s prioritaires pour aujourd'hui, bas\u00e9es UNIQUEMENT sur les donn\u00e9es ci-dessous. Format strict : une ligne par alerte, emoji + texte court + chiffre cl\u00e9. Pas de g\u00e9n\u00e9ralit\u00e9s.";
+  var rep = await apiAsk(question, contexte);
+  el.innerHTML = '<div class="consult-ia">' + esc(rep) + '</div>';
+}
+
+// ── Surcharge demanderAriaAchats pour contexte riche ──
+async function demanderAriaAchats() {
+  var q = document.getElementById('consult-question').value.trim(); if (!q) { notifErr('Posez une question'); return; }
+  var el = document.getElementById('consult-reponse');
+  el.style.display = 'block'; el.textContent = 'Aria analyse vos données...';
+  var contexte = await construireContexteRiche();
+  el.textContent = await apiAsk(q, contexte);
+  logAction('Consulting Aria : ' + q.slice(0, 60));
+}
+
+// ── Init interconnexion au chargement dashboard ──
+async function chargerDash() {
+  await _origChargerDash();
+  chargerInterco();
+}
+
+// ════════════════════════════════════════════════════════════
+// GESTION DES RÔLES — Adaptation interface
+// ════════════════════════════════════════════════════════════
+
+function adaptSidebarRole() {
+  var isResp = estResponsable;
+  // Éléments nav réservés responsable
+  document.querySelectorAll('.data-role-resp').forEach(function(el) {
+    el.style.display = isResp ? '' : 'none';
+  });
+  // Groupe supervision équipe
+  document.querySelectorAll('.nav-group-resp').forEach(function(el) {
+    el.style.display = isResp ? '' : 'none';
+  });
+  // Gardes d'accès sur les vues réservées
+  var guardIds = ['guard-v-evaluation','guard-v-risques-fourn','guard-v-economies',
+                  'guard-v-anticipation','guard-v-rapprochement','guard-v-budget'];
+  guardIds.forEach(function(gid) {
+    var g = document.getElementById(gid);
+    if (g) g.style.display = isResp ? 'none' : 'block';
+  });
+  // Label sidebar — poste tag
+  var s = getSession();
+  var roleLabel = estResponsable ? '👔 Responsable Achats' : '📦 Achats';
+  var tag = document.getElementById('poste-tag');
+  if (tag) tag.textContent = (s.nom ? s.nom + ' — ' : '') + roleLabel;
+}
+
+// ════════════════════════════════════════════════════════════
+// VUE ÉQUIPE RESPONSABLE
+// ════════════════════════════════════════════════════════════
+var _equipeData = [];
+
+async function chargerEquipe() {
+  if (!estResponsable) {
+    document.getElementById('equipe-liste').innerHTML = '<div class="empty-state"><div class="es-ic">🔒</div>Vue réservée au responsable achats.</div>';
+    return;
+  }
+  document.getElementById('equipe-liste').innerHTML = '<div class="empty-state"><div class="es-ic">🔄</div>Chargement...</div>';
+  var data = await api('/industrial/equipe-achats', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  if (!data.ok || data.acces_refuse) {
+    document.getElementById('equipe-liste').innerHTML = '<div class="empty-state"><div class="es-ic">🔒</div>Accès refusé.</div>';
+    return;
+  }
+  _equipeData = data.equipe || [];
+  var resume = data.resume || {};
+  // Stats résumé
+  var statsEl = document.getElementById('equipe-resume-stats');
+  if (statsEl) {
+    statsEl.style.display = 'grid';
+    document.getElementById('eq-da-attente').textContent = resume.da_a_valider || 0;
+    document.getElementById('eq-bc-attente').textContent = resume.bc_a_approuver || 0;
+    document.getElementById('eq-consuls').textContent    = resume.consuls_ouvertes || 0;
+    document.getElementById('eq-retards').textContent    = resume.taches_retard_total || 0;
+  }
+  if (!_equipeData.length) {
+    document.getElementById('equipe-liste').innerHTML = '<div class="empty-state"><div class="es-ic">👥</div>Aucun membre d&#39;équipe trouvé.</div>';
+    return;
+  }
+  document.getElementById('equipe-liste').innerHTML = _equipeData.map(function(m, idx) {
+    var alertes = [];
+    if (m.da_attente > 0) alertes.push('<span class="badge badge-warn">' + m.da_attente + ' DA</span>');
+    if (m.bc_attente > 0) alertes.push('<span class="badge badge-warn">' + m.bc_attente + ' BC</span>');
+    if (m.taches_retard > 0) alertes.push('<span class="badge badge-err">' + m.taches_retard + ' retard(s)</span>');
+    if (m.consuls_en_cours > 0) alertes.push('<span class="badge badge-blue">' + m.consuls_en_cours + ' AO</span>');
+    var charge = m.taches_actives > 5 ? 'err' : m.taches_actives > 2 ? 'warn' : 'ok';
+    return '<div class="row-item">' +
+      '<div style="width:36px;height:36px;border-radius:50%;background:var(--amber-dim);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:var(--amber);flex-shrink:0">' + esc(m.nom.charAt(0)) + '</div>' +
+      '<div class="ri-main">' +
+        '<div class="ri-title">' + esc(m.nom) + ' <span style="font-size:11px;color:var(--ink-faint);font-weight:400">' + esc(m.poste || '') + '</span></div>' +
+        '<div class="ri-sub">' +
+          m.da_total + ' DA · ' + m.bc_total + ' BC · ' + m.negos_total + ' négo(s) · ' +
+          fmtMontant(m.montant_commande) + ' commandé(s)' +
+          (m.economies_generees > 0 ? ' · <span style="color:var(--ok)">+' + fmtMontant(m.economies_generees) + ' économies</span>' : '') +
+        '</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">' + (alertes.join('') || '<span style="font-size:11px;color:var(--ok)">✓ RAS</span>') + '</div>' +
+      '</div>' +
+      '<div class="ri-actions">' +
+        '<span class="badge badge-' + charge + '" title="Tâches actives">' + m.taches_actives + ' tâche(s)</span>' +
+        '<button class="btn-act btn-ghost btn-sm" data-idx="' + idx + '" onclick="voirDossiersEquipe(parseInt(this.dataset.idx))">Dossiers</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  logAction('Vue équipe chargée — ' + _equipeData.length + ' membres');
+}
+
+function voirDossiersEquipe(idx) {
+  var m = _equipeData[idx]; if (!m) return;
+  var card = document.getElementById('equipe-dossiers-card');
+  card.style.display = 'block';
+  document.getElementById('equipe-dossiers-titre').textContent = '📋 Dossiers de ' + m.nom;
+  var rows = [
+    { label: "Demandes d'achat", val: m.da_total + ' dont ' + m.da_attente + ' en attente', warn: m.da_attente > 0 },
+    { label: 'Bons de commande', val: m.bc_total + ' dont ' + m.bc_attente + ' en attente appro.', warn: m.bc_attente > 0 },
+    { label: "Appels d'offres", val: m.consuls_en_cours + ' en cours', warn: false },
+    { label: 'Négociations', val: m.negos_total + ' enregistrée(s)', warn: false },
+    { label: 'Tâches actives', val: m.taches_actives + ' dont ' + m.taches_retard + ' en retard', warn: m.taches_retard > 0 },
+    { label: 'Volume commandé', val: fmtMontant(m.montant_commande), warn: false },
+    { label: 'Économies générées', val: fmtMontant(m.economies_generees), warn: false },
+  ];
+  document.getElementById('equipe-dossiers-content').innerHTML = rows.map(function(r) {
+    return '<div class="row-item" style="padding:10px 14px"><div class="ri-main"><div class="ri-title" style="font-size:13px;color:var(--ink-dim)">' + r.label + '</div></div>' +
+      '<span class="badge ' + (r.warn ? 'badge-warn' : 'badge-amber') + '">' + r.val + '</span></div>';
+  }).join('');
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function fermerDossiersEquipe() {
+  document.getElementById('equipe-dossiers-card').style.display = 'none';
+}
+
+// ── Helpers ──
+function fmtDate(d) { if (!d) return '—'; try { return new Date(d).toLocaleDateString('fr-FR'); } catch(e) { return d; } }
+function fmtMontant(m) { var n = parseFloat(m || 0); return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
+function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+<script src="/clients_module.js"></script>
+</script>
+</body>
+</html>

@@ -1,0 +1,2270 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aria Industrial — RH</title>
+<style>
+:root{
+  --bg:#14161C;--panel:#1B1E27;--panel2:#22252F;--panel3:#282C38;
+  --line:#2E3240;--line2:#3A3F4E;
+  --ink:#EDEFF3;--ink-dim:#9096A8;--ink-faint:#5E6479;
+  --amber:#E8873A;--amber-dim:#3A2E20;
+  --ok:#4FBF8B;--ok-dim:#1C2E27;
+  --wait:#E0B23C;--wait-dim:#332C1A;
+  --err:#E15B5B;--err-dim:#331E1E;
+  --blue:#4A86E8;--radius:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;min-height:100vh;display:flex;flex-direction:column}
+.app-shell{display:flex;flex:1}
+.sidebar{width:232px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;position:sticky;top:0;height:100vh}
+.brand{padding:16px;border-bottom:1px solid var(--line)}
+.brand-logo{font-size:16px;font-weight:800;color:var(--amber)}
+.brand-sub{font-size:10.5px;color:var(--ink-dim);margin-top:2px}
+.nav-group-label{padding:8px 14px 4px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-faint)}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 14px;cursor:pointer;color:var(--ink-dim);font-size:12.5px;border:none;background:none;width:100%;text-align:left;transition:background .12s,color .12s}
+.nav-item:hover{background:var(--panel2);color:var(--ink)}
+.nav-item.active{background:var(--amber-dim);color:var(--amber);font-weight:600}
+.nav-item-ico{font-size:13px;width:17px;text-align:center}
+.nav-item.resp-nav{display:none}
+.nav-item.drh-nav{display:none}
+.nav-sep{height:1px;background:var(--line);margin:3px 0}
+.topbar{background:var(--panel);border-bottom:1px solid var(--line);height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0}
+.role-badge{border-radius:8px;padding:4px 11px;font-size:11.5px;font-weight:700}
+.role-sal{background:var(--panel2);color:var(--ink-dim);border:1px solid var(--line)}
+.role-resp{background:rgba(74,134,232,.15);color:var(--blue)}
+.role-drh{background:var(--amber-dim);color:var(--amber)}
+.role-dir{background:rgba(79,191,139,.15);color:var(--ok)}
+.btn-icon{background:none;border:1px solid var(--line);border-radius:8px;color:var(--ink-dim);padding:5px 10px;cursor:pointer;font-size:13px}
+.btn-icon:hover{border-color:var(--amber);color:var(--amber)}
+.main-content{flex:1;padding:22px;overflow-y:auto;max-width:1080px}
+.view{display:none}
+.view.active{display:block}
+.view-head{margin-bottom:18px}
+.view-head h1{font-size:20px;font-weight:700;margin-bottom:4px}
+.view-head p{color:var(--ink-dim);font-size:13px}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.stat-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:13px;text-align:center}
+.stat-val{font-size:22px;font-weight:800;color:var(--amber);margin-bottom:3px}
+.stat-val.ok{color:var(--ok)}.stat-val.warn{color:var(--wait)}.stat-val.err{color:var(--err)}
+.stat-lbl{font-size:10px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.04em}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap}
+.section-head h2{font-size:14px;font-weight:700}
+.row-item{background:var(--panel2);border-radius:10px;padding:11px 13px;margin-bottom:7px;display:flex;align-items:flex-start;gap:11px}
+.ri-main{flex:1;min-width:0}
+.ri-title{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:3px}
+.ri-sub{font-size:11.5px;color:var(--ink-dim)}
+.ri-actions{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;align-items:flex-start}
+.badge{display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;white-space:nowrap}
+.badge-ok{background:rgba(79,191,139,.15);color:var(--ok)}
+.badge-warn{background:rgba(224,178,60,.15);color:var(--wait)}
+.badge-err{background:rgba(225,91,91,.15);color:var(--err)}
+.badge-amber{background:var(--amber-dim);color:var(--amber)}
+.badge-blue{background:rgba(74,134,232,.15);color:var(--blue)}
+.badge-grey{background:var(--panel2);color:var(--ink-dim);border:1px solid var(--line)}
+.btn-act{border:none;border-radius:8px;padding:7px 13px;cursor:pointer;font-size:12.5px;font-weight:600;transition:opacity .15s;white-space:nowrap;font-family:inherit}
+.btn-act:hover{opacity:.85}
+.btn-amber{background:var(--amber);color:#fff}
+.btn-ok{background:var(--ok);color:#fff}
+.btn-err{background:var(--err);color:#fff}
+.btn-ghost{background:transparent;border:1px solid var(--line2);color:var(--ink-dim)}
+.btn-sm{padding:4px 10px;font-size:11.5px}
+.input-field{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-size:13px;padding:8px 12px;outline:none;transition:border-color .15s;font-family:inherit}
+.input-field:focus{border-color:var(--amber)}
+.input-field option{background:var(--panel)}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:11px;margin-bottom:13px}
+.form-group label{display:block;font-size:10.5px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-box{background:var(--panel);border-radius:16px;padding:24px;width:100%;max-width:580px;max-height:92vh;overflow-y:auto;border:1px solid var(--line)}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-head h3{font-size:17px;font-weight:700}
+.modal-close{background:none;border:none;font-size:20px;color:var(--ink-dim);cursor:pointer}
+.aria-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .18s}
+.aria-modal-overlay.open{opacity:1;pointer-events:all}
+.aria-modal{background:var(--panel2);border:1px solid var(--line2);border-radius:var(--radius);padding:26px;width:min(420px,90vw);box-shadow:0 20px 60px rgba(0,0,0,.5);transform:translateY(8px);transition:transform .18s}
+.aria-modal-overlay.open .aria-modal{transform:translateY(0)}
+.aria-modal-ico{font-size:24px;text-align:center;margin-bottom:10px}
+.aria-modal-title{font-size:15px;font-weight:700;text-align:center;margin-bottom:5px}
+.aria-modal-msg{font-size:12.5px;color:var(--ink-dim);text-align:center;margin-bottom:14px;line-height:1.5}
+.aria-modal-input{width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-size:14px;padding:9px 13px;outline:none;transition:border-color .15s;box-sizing:border-box;margin-bottom:14px;font-family:inherit}
+.aria-modal-input:focus{border-color:var(--amber)}
+.aria-modal-actions{display:flex;gap:10px;justify-content:flex-end}
+.aria-modal-cancel{background:transparent;border:1px solid var(--line2);color:var(--ink-dim);border-radius:8px;padding:7px 16px;cursor:pointer;font-size:13px;font-family:inherit}
+.aria-modal-confirm{border:none;border-radius:8px;padding:7px 16px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit}
+.aria-modal-confirm.danger{background:var(--err);color:#fff}
+.aria-modal-confirm.primary{background:var(--amber);color:#fff}
+.empty-state{text-align:center;padding:36px 20px;color:var(--ink-dim)}
+.es-ic{font-size:30px;margin-bottom:8px}
+.aria-zone{background:var(--panel3);border-radius:10px;padding:14px;font-size:13px;line-height:1.7;color:var(--ink-dim);white-space:pre-wrap;min-height:48px}
+.alert-item{border-left:3px solid var(--wait);background:var(--wait-dim);border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:8px}
+.alert-item.crit{border-color:var(--err)!important;background:var(--err-dim)!important}
+.alert-title{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px}
+.alert-desc{font-size:11.5px;color:var(--ink-dim)}
+.check-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.check-item:last-child{border-bottom:none}
+.check-box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--line2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;transition:background .15s}
+.check-box.done{background:var(--ok);border-color:var(--ok);color:#fff}
+.check-txt{font-size:13px;color:var(--ink)}
+.check-txt.done{text-decoration:line-through;color:var(--ink-faint)}
+.skill-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.skill-name{width:150px;font-size:12.5px;flex-shrink:0}
+.skill-bar{flex:1;height:5px;background:var(--panel2);border-radius:4px;overflow:hidden}
+.skill-bar span{display:block;height:100%;background:var(--amber)}
+.skill-lvl{width:30px;text-align:right;font-family:monospace;font-size:11px;color:var(--ink-dim)}
+.org-node{background:var(--panel2);border:1px solid var(--line2);border-radius:9px;padding:10px 16px;font-size:12px;text-align:center;margin:4px}
+.org-node.top{border-color:var(--amber)}
+.pipe-col{background:var(--panel2);border-radius:10px;padding:12px}
+.pipe-col h3{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-faint);margin-bottom:10px;font-weight:700}
+.pipe-card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px;font-size:12px;cursor:pointer}
+.pipe-card:hover{border-color:var(--amber)}
+.pipe-card .pn{font-weight:600;margin-bottom:3px}
+.pipe-card .pd{font-size:10.5px;color:var(--ink-faint)}
+.access-guard{background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius);padding:28px;text-align:center}
+.access-guard .ag-ico{font-size:28px;margin-bottom:10px}
+.access-guard p{font-size:13px;color:var(--ink-dim);margin-top:4px}
+table.dt{width:100%;border-collapse:collapse;font-size:12.5px}
+table.dt th{background:var(--panel2);color:var(--ink-dim);font-size:10px;font-weight:700;text-transform:uppercase;padding:8px 11px;text-align:left;border-bottom:1px solid var(--line)}
+table.dt td{padding:9px 11px;border-bottom:1px solid var(--line);color:var(--ink)}
+table.dt tr:last-child td{border-bottom:none}
+@media(max-width:768px){.sidebar{display:none}.main-content{padding:14px}}
+</style>
+</head>
+<body>
+<!-- Modale Aria -->
+<div class="aria-modal-overlay" id="aria-modal-overlay" onclick="if(event.target===this)_ariaModalCancel()">
+  <div class="aria-modal">
+    <div class="aria-modal-ico" id="aria-modal-ico">❓</div>
+    <div class="aria-modal-title" id="aria-modal-title"></div>
+    <div class="aria-modal-msg" id="aria-modal-msg"></div>
+    <input class="aria-modal-input" id="aria-modal-input" type="text" style="display:none">
+    <div class="aria-modal-actions">
+      <button class="aria-modal-cancel" onclick="_ariaModalCancel()">Annuler</button>
+      <button class="aria-modal-confirm primary" id="aria-modal-confirm" onclick="_ariaModalConfirm()">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Topbar -->
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:12px">
+    <button class="btn-icon" onclick="toggleSidebar()">☰</button>
+    <span style="font-size:14px;font-weight:700">Aria Industrial — RH</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span class="role-badge role-sal" id="role-badge-el">👥 RH</span>
+    <span id="poste-tag-nom" style="font-size:12px;color:var(--ink-dim)"></span>
+    <button class="btn-icon" onclick="deconnexion()">Déconnexion</button>
+  </div>
+</div>
+
+<div class="app-shell">
+<!-- Sidebar -->
+<div class="sidebar" id="app-sidebar">
+  <div class="brand"><div class="brand-logo">Aria</div><div class="brand-sub">Poste RH</div></div>
+
+  <div class="nav-group-label">Vue d'ensemble</div>
+  <button class="nav-item active" data-view="v-dash" onclick="goToView('v-dash',this)"><span class="nav-item-ico">📊</span>Tableau de bord</button>
+
+  <div class="nav-sep"></div>
+  <div class="nav-group-label">Opérations RH</div>
+  <button class="nav-item" data-view="v-conges" onclick="goToView('v-conges',this)"><span class="nav-item-ico">🏖️</span>Congés &amp; absences</button>
+  <button class="nav-item" data-view="v-temps" onclick="goToView('v-temps',this)"><span class="nav-item-ico">⏱️</span>Temps &amp; présences</button>
+  <button class="nav-item" data-view="v-hs" onclick="goToView('v-hs',this)"><span class="nav-item-ico">🕐</span>Heures supplémentaires</button>
+  <button class="nav-item" data-view="v-contrats" onclick="goToView('v-contrats',this)"><span class="nav-item-ico">📋</span>Contrats &amp; avenants</button>
+  <button class="nav-item" data-view="v-frais" onclick="goToView('v-frais',this)"><span class="nav-item-ico">🧳</span>Notes de frais</button>
+
+  <div class="nav-sep"></div>
+  <div class="nav-group-label">Recrutement &amp; Intégration</div>
+  <button class="nav-item resp-nav" data-view="v-recrutement" onclick="goToView('v-recrutement',this)"><span class="nav-item-ico">📋</span>Pipeline candidatures</button>
+  <button class="nav-item resp-nav" data-view="v-onboarding" onclick="goToView('v-onboarding',this)"><span class="nav-item-ico">🚪</span>Onboarding</button>
+  <button class="nav-item resp-nav" data-view="v-creer-poste" onclick="goToView('v-creer-poste',this)"><span class="nav-item-ico">✨</span>Créer un poste</button>
+
+  <div class="nav-sep"></div>
+  <div class="nav-group-label">Développement RH</div>
+  <button class="nav-item resp-nav" data-view="v-entretiens" onclick="goToView('v-entretiens',this)"><span class="nav-item-ico">💬</span>Entretiens &amp; évaluations</button>
+  <button class="nav-item resp-nav" data-view="v-formation" onclick="goToView('v-formation',this)"><span class="nav-item-ico">🎓</span>Plans de formation</button>
+  <button class="nav-item resp-nav" data-view="v-gpec" onclick="goToView('v-gpec',this)"><span class="nav-item-ico">📈</span>Compétences (GPEC)</button>
+
+  <div class="nav-sep"></div>
+  <div class="nav-group-label">Organisation</div>
+  <button class="nav-item resp-nav" data-view="v-dossiers" onclick="goToView('v-dossiers',this)"><span class="nav-item-ico">📁</span>Dossiers salariés</button>
+  <button class="nav-item drh-nav" data-view="v-organigramme" onclick="goToView('v-organigramme',this)"><span class="nav-item-ico">🗂️</span>Organigramme</button>
+  <button class="nav-item drh-nav" data-view="v-depart" onclick="goToView('v-depart',this)"><span class="nav-item-ico">🚪</span>Départ salarié</button>
+  <button class="nav-item drh-nav" data-view="v-sanctions" onclick="goToView('v-sanctions',this)"><span class="nav-item-ico">⚠️</span>Sanctions &amp; procédures</button>
+
+  <div class="nav-sep"></div>
+  <div class="nav-group-label">Pilotage DRH</div>
+  <button class="nav-item drh-nav" data-view="v-paie" onclick="goToView('v-paie',this)"><span class="nav-item-ico">💰</span>Masse salariale</button>
+  <button class="nav-item drh-nav" data-view="v-reporting" onclick="goToView('v-reporting',this)"><span class="nav-item-ico">📊</span>Reporting RH</button>
+  <button class="nav-item drh-nav" data-view="v-politique-rh" onclick="goToView('v-politique-rh',this)"><span class="nav-item-ico">📜</span>Politique RH</button>
+  <button class="nav-item drh-nav" data-view="v-absences-proactives" onclick="goToView('v-absences-proactives',this)"><span class="nav-item-ico">🚨</span>Absences proactives</button>
+
+  <div class="nav-sep"></div>
+  <div class="nav-group-label">Mon espace</div>
+  <button class="nav-item" data-view="v-mes-conges" onclick="goToView('v-mes-conges',this)"><span class="nav-item-ico">🏖️</span>Mes congés</button>
+  <button class="nav-item" data-view="v-mes-droits" onclick="goToView('v-mes-droits',this)"><span class="nav-item-ico">⚖️</span>Mes droits</button>
+  <button class="nav-item" data-view="v-taches" onclick="goToView('v-taches',this)"><span class="nav-item-ico">✅</span>Mes tâches</button>
+  <button class="nav-item" data-view="v-formation-qcm" onclick="goToView('v-formation-qcm',this)"><span class="nav-item-ico">🎓</span>Formation QCM</button>
+  <button class="nav-item" data-view="v-journal" onclick="goToView('v-journal',this)"><span class="nav-item-ico">📜</span>Journal</button>
+</div>
+
+<div class="main-content" id="app-content">
+
+<!-- ═══ DASHBOARD ═══ -->
+<div class="view active" id="v-dash">
+  <div class="view-head"><h1>Tableau de bord RH</h1><p id="dash-role-desc">Chargement...</p></div>
+  <div class="stats-row" id="dash-stats">
+    <div class="stat-card"><div class="stat-val" id="stat-salaries">—</div><div class="stat-lbl">Salariés actifs</div></div>
+    <div class="stat-card"><div class="stat-val warn" id="stat-absences">—</div><div class="stat-lbl">Absences en attente</div></div>
+    <div class="stat-card"><div class="stat-val" id="stat-taches">—</div><div class="stat-lbl">Tâches ouvertes</div></div>
+    <div class="stat-card"><div class="stat-val ok" id="stat-pointages">—</div><div class="stat-lbl">Présents aujourd'hui</div></div>
+    <div class="stat-card drh-el" style="display:none"><div class="stat-val warn" id="stat-masse-sal">—</div><div class="stat-lbl">Masse salariale (€)</div></div>
+    <div class="stat-card drh-el" style="display:none"><div class="stat-val err" id="stat-fin-contrat">—</div><div class="stat-lbl">Contrats fin proche</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>⚠️ Alertes &amp; priorités</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerDash()">↺</button></div>
+    <div id="dash-alertes"><div class="empty-state"><div class="es-ic">✅</div>Aucune alerte.</div></div>
+  </div>
+  <div class="card resp-el" style="display:none">
+    <div class="section-head"><h2>Absences en attente d'approbation</h2></div>
+    <div id="dash-absences-attente"><div class="empty-state"><div class="es-ic">📭</div>Aucune demande.</div></div>
+  </div>
+</div>
+
+<!-- ═══ CONGÉS & ABSENCES ═══ -->
+<div class="view" id="v-conges">
+  <div class="view-head"><h1>Congés &amp; Absences</h1><p>Gestion des demandes de l'équipe.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Demandes en attente</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerAbsences()">↺</button></div>
+    <div id="absences-attente"><div class="empty-state"><div class="es-ic">📭</div>Aucune demande en attente.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Historique</h2></div>
+    <div id="absences-historique"><div class="empty-state"><div class="es-ic">📂</div>Aucun historique.</div></div>
+  </div>
+</div>
+
+<!-- ═══ MES CONGÉS ═══ -->
+<div class="view" id="v-mes-conges">
+  <div class="view-head"><h1>Mes congés &amp; absences</h1></div>
+  <div class="card">
+    <div class="section-head"><h2>Nouvelle demande</h2><button class="btn-act btn-amber" onclick="ouvrirModal('modal-absence')">+ Demande</button></div>
+    <div id="mes-absences"><div class="empty-state"><div class="es-ic">🏖️</div>Aucune demande.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Solde estimé</h2></div>
+    <div id="solde-conges" style="font-size:13px;color:var(--ink-dim)">Calculé selon votre date d'embauche (2,08 jours/mois).</div>
+  </div>
+</div>
+
+<!-- ═══ TEMPS & PRÉSENCES ═══ -->
+<div class="view" id="v-temps">
+  <div class="view-head"><h1>Temps &amp; Présences</h1></div>
+  <div class="card">
+    <div class="section-head"><h2>Mon pointage du jour</h2></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="btn-act btn-ok" onclick="pointerWeb('arrivee')">✅ Arrivée</button>
+      <button class="btn-act btn-ghost" onclick="pointerWeb('pause_debut')">⏸ Pause</button>
+      <button class="btn-act btn-ghost" onclick="pointerWeb('pause_fin')">▶️ Reprise</button>
+      <button class="btn-act btn-err" onclick="pointerWeb('depart')">🚪 Départ</button>
+    </div>
+    <div id="mon-pointage-msg" style="font-size:13px;color:var(--ok)"></div>
+  </div>
+  <div class="card resp-el" style="display:none">
+    <div class="section-head"><h2>Présences équipe — aujourd'hui</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerPointages()">↺</button></div>
+    <div id="liste-pointages"><div class="empty-state"><div class="es-ic">⏱️</div>Aucun pointage.</div></div>
+  </div>
+</div>
+
+<!-- ═══ HEURES SUPP ═══ -->
+<div class="view" id="v-hs">
+  <div class="view-head"><h1>Heures supplémentaires</h1></div>
+  <div class="card">
+    <div class="section-head"><h2>Déclarer des HS</h2></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Salarié</label>
+        <select id="hs-salarie" class="input-field"><option value="">— Moi-même —</option></select>
+      </div>
+      <div class="form-group"><label>Semaine du</label><input type="date" id="hs-date" class="input-field"></div>
+      <div class="form-group"><label>Heures 36–43 (maj. 25%)</label><input type="number" id="hs-25" class="input-field" min="0" max="8" step="0.5" placeholder="0"></div>
+      <div class="form-group"><label>Heures 44+ (maj. 50%)</label><input type="number" id="hs-50" class="input-field" min="0" step="0.5" placeholder="0"></div>
+      <div class="form-group"><label>Motif</label><input type="text" id="hs-note" class="input-field" placeholder="Raison..."></div>
+    </div>
+    <div id="hs-calcul" style="display:none;margin:12px 0;padding:12px;background:var(--panel2);border-radius:8px;font-size:13px"></div>
+    <button class="btn-act btn-amber" onclick="calculerEtSauverHS()">💾 Enregistrer</button>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Historique</h2></div>
+    <div id="hs-historique"><div class="empty-state"><div class="es-ic">📭</div>Aucune heure supplémentaire.</div></div>
+  </div>
+</div>
+
+<!-- ═══ CONTRATS & AVENANTS ═══ -->
+<div class="view" id="v-contrats">
+  <div class="view-head"><h1>Contrats &amp; Avenants</h1><p>Générez des contrats légaux avec Aria ou demandez un document.</p></div>
+  <!-- Bloc salarié : demande de document -->
+  <div class="card" id="bloc-contrats-sal" style="display:none">
+    <div class="section-head"><h2>Demander un document contractuel</h2></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Type</label>
+        <select id="dem-type-doc" class="input-field">
+          <option value="attestation_emploi">Attestation d'emploi</option>
+          <option value="attestation_salaire">Attestation de salaire</option>
+          <option value="avenant_contrat">Avenant au contrat</option>
+          <option value="solde_tout_compte">Solde de tout compte</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1/-1"><label>Précisions</label>
+        <textarea id="dem-motif" class="input-field" style="height:70px;resize:vertical" placeholder="Ex: attestation pour ma banque..."></textarea>
+      </div>
+    </div>
+    <button class="btn-act btn-amber" onclick="demanderDocumentRH()">📨 Envoyer au service RH</button>
+    <div id="dem-doc-msg" style="font-size:13px;margin-top:10px;display:none"></div>
+  </div>
+  <!-- Bloc RH : générer un contrat -->
+  <div class="card resp-el" style="display:none">
+    <div class="section-head"><h2>Générer un contrat avec Aria</h2></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Type de contrat</label>
+        <select id="c-type" class="input-field"><option value="CDI">CDI</option><option value="CDD">CDD</option><option value="apprentissage">Apprentissage</option><option value="stage">Stage</option></select>
+      </div>
+      <div class="form-group"><label>Nom complet *</label><input type="text" id="c-nom" class="input-field" placeholder="Prénom Nom"></div>
+      <div class="form-group"><label>Poste *</label><input type="text" id="c-poste-txt" class="input-field" placeholder="Comptable, Vendeur..."></div>
+      <div class="form-group"><label>Salaire brut (€) *</label><input type="number" id="c-salaire" class="input-field" placeholder="2500"></div>
+      <div class="form-group"><label>Début *</label><input type="date" id="c-debut" class="input-field"></div>
+      <div class="form-group"><label>Fin (CDD/stage)</label><input type="date" id="c-fin" class="input-field"></div>
+      <div class="form-group"><label>Temps de travail</label><input type="text" id="c-temps" class="input-field" placeholder="35h/semaine"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Convention collective</label><input type="text" id="c-convention" class="input-field" placeholder="Convention nationale du commerce..."></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Précisions (période d'essai, clauses...)</label>
+        <textarea id="c-precisions" class="input-field" style="height:70px;resize:vertical"></textarea>
+      </div>
+    </div>
+    <button class="btn-act btn-amber" onclick="genererContrat()">✨ Générer avec Aria</button>
+  </div>
+  <div class="card" id="bloc-contrat-genere" style="display:none">
+    <div class="section-head"><h2>Contrat généré</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn-act btn-ghost btn-sm" onclick="demanderModifContrat()">✏️ Modifier</button>
+        <button class="btn-act btn-amber btn-sm" onclick="telechargerContratPDF()">⬇️ PDF</button>
+      </div>
+    </div>
+    <div id="contrat-preview" style="background:var(--panel2);border-radius:8px;padding:20px;font-size:13px;line-height:1.8;white-space:pre-wrap;max-height:500px;overflow-y:auto;font-family:Georgia,serif"></div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <input type="text" id="modif-contrat-input" class="input-field" placeholder="Ex: Ajouter une clause de télétravail 2j/semaine..." style="flex:1">
+      <button class="btn-act btn-amber" onclick="appliquerModifContrat()">Appliquer</button>
+    </div>
+  </div>
+  <!-- Avenants -->
+  <div class="card resp-el" style="display:none">
+    <div class="section-head"><h2>Générer un avenant</h2></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Salarié concerné</label><input type="text" id="av-salarie" class="input-field" placeholder="Nom du salarié"></div>
+      <div class="form-group"><label>Type d'avenant</label>
+        <select id="av-type" class="input-field">
+          <option value="augmentation">Augmentation de salaire</option>
+          <option value="temps_travail">Changement temps de travail</option>
+          <option value="poste">Changement de poste</option>
+          <option value="teletravail">Accord télétravail</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1/-1"><label>Précisions</label>
+        <textarea id="av-precisions" class="input-field" style="height:60px;resize:vertical" placeholder="Ex: Nouveau salaire brut mensuel 3200€ à compter du 01/09/2026..."></textarea>
+      </div>
+    </div>
+    <button class="btn-act btn-amber" onclick="genererAvenant()">✨ Générer avenant</button>
+    <div class="aria-zone" id="avenant-preview" style="margin-top:12px;display:none"></div>
+  </div>
+</div>
+
+<!-- ═══ NOTES DE FRAIS ═══ -->
+<div class="view" id="v-frais">
+  <div class="view-head"><h1>Notes de frais</h1><p>Saisissez et validez les notes de frais.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>Ma note de frais</h2></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Date</label><input type="date" id="nf-date" class="input-field"></div>
+      <div class="form-group"><label>Catégorie</label>
+        <select id="nf-cat" class="input-field">
+          <option value="transport">Transport</option><option value="repas">Repas</option>
+          <option value="hebergement">Hébergement</option><option value="fournitures">Fournitures</option><option value="autre">Autre</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Montant TTC (€)</label><input type="number" id="nf-montant" step="0.01" class="input-field"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Description</label><input type="text" id="nf-desc" class="input-field" placeholder="Déjeuner client, taxi gare..."></div>
+    </div>
+    <button class="btn-act btn-amber" onclick="soumettreNoteFrais()">💾 Soumettre</button>
+  </div>
+  <div class="card resp-el" style="display:none">
+    <div class="section-head"><h2>Notes de frais équipe — à valider</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerFraisEquipe()">↺</button></div>
+    <div id="frais-a-valider"><div class="empty-state"><div class="es-ic">🧳</div>Aucune note à valider.</div></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><h2>Mes notes de frais</h2></div>
+    <div id="mes-frais"><div class="empty-state"><div class="es-ic">🧳</div>Aucune note de frais.</div></div>
+  </div>
+</div>
+
+<!-- ═══ RECRUTEMENT ═══ -->
+<div class="view" id="v-recrutement">
+  <div class="view-head"><h1>Pipeline candidatures</h1><p>Gérez les candidats en cours de recrutement.</p></div>
+  <div class="card" id="recrutement-guard" style="display:none">
+    <div class="access-guard"><div class="ag-ico">🔒</div><strong>Accès réservé au Responsable RH</strong><p>Contactez votre responsable.</p></div>
+  </div>
+  <div id="recrutement-data">
+    <div class="card">
+      <div class="section-head"><h2>Candidatures actives</h2><button class="btn-act btn-amber" onclick="ouvrirModal('modal-candidat')">+ Candidat</button></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px" id="pipeline-cols">
+        <div class="pipe-col"><h3>📬 Nouveau</h3><div id="pipe-nouveau"></div></div>
+        <div class="pipe-col"><h3>📞 Entretien 1</h3><div id="pipe-entretien1"></div></div>
+        <div class="pipe-col"><h3>👥 Entretien 2</h3><div id="pipe-entretien2"></div></div>
+        <div class="pipe-col"><h3>✅ Offre</h3><div id="pipe-offre"></div></div>
+        <div class="pipe-col"><h3>❌ Refusé</h3><div id="pipe-refuse"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>🧠 Rédiger une offre d'emploi avec Aria</h2></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Poste</label><input type="text" id="rec-poste" class="input-field" placeholder="Développeur Full Stack..."></div>
+        <div class="form-group"><label>Contrat</label>
+          <select id="rec-type" class="input-field"><option value="CDI">CDI</option><option value="CDD">CDD</option><option value="stage">Stage</option><option value="alternance">Alternance</option></select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1"><label>Compétences clés</label><input type="text" id="rec-competences" class="input-field" placeholder="Python, gestion de projet, anglais B2..."></div>
+      </div>
+      <button class="btn-act btn-amber" onclick="genererOffreEmploi()">🧠 Générer l'offre</button>
+      <div class="aria-zone" id="offre-emploi-result" style="margin-top:12px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ONBOARDING ═══ -->
+<div class="view" id="v-onboarding">
+  <div class="view-head"><h1>Onboarding</h1><p>Checklist d'intégration par salarié.</p></div>
+  <div class="card" id="onboarding-guard" style="display:none">
+    <div class="access-guard"><div class="ag-ico">🔒</div><strong>Accès réservé au Responsable RH</strong></div>
+  </div>
+  <div id="onboarding-data">
+    <div class="card">
+      <div class="section-head">
+        <h2>Salarié à intégrer</h2>
+        <select id="onboard-sal-select" class="input-field" style="width:200px" onchange="chargerChecklistOnboarding()">
+          <option value="">— Sélectionner —</option>
+        </select>
+      </div>
+      <div id="onboarding-checklist"><div class="empty-state"><div class="es-ic">🚪</div>Sélectionnez un salarié.</div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>🧠 Créer un plan d'intégration personnalisé</h2></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Poste</label><input type="text" id="onb-poste" class="input-field" placeholder="Comptable, RH..."></div>
+        <div class="form-group"><label>Secteur</label><input type="text" id="onb-secteur" class="input-field" placeholder="Commerce, Industrie..."></div>
+      </div>
+      <button class="btn-act btn-amber" onclick="genererPlanOnboarding()">🧠 Générer le plan</button>
+      <div class="aria-zone" id="plan-onboarding-result" style="margin-top:12px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CRÉER UN POSTE ═══ -->
+<div class="view" id="v-creer-poste">
+  <div class="view-head"><h1>Créer un poste</h1><p>Définissez la fiche de poste et les critères de recrutement.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>🧠 Fiche de poste avec Aria</h2></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Intitulé du poste *</label><input type="text" id="fp-intitule" class="input-field" placeholder="Responsable Achats"></div>
+      <div class="form-group"><label>Service / Département</label><input type="text" id="fp-service" class="input-field" placeholder="Finance, RH, Production..."></div>
+      <div class="form-group"><label>Type de contrat</label>
+        <select id="fp-contrat" class="input-field"><option>CDI</option><option>CDD</option><option>Alternance</option><option>Stage</option></select>
+      </div>
+      <div class="form-group"><label>Salaire brut (€)</label><input type="text" id="fp-salaire" class="input-field" placeholder="30000–35000"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Missions principales</label>
+        <textarea id="fp-missions" class="input-field" style="height:70px;resize:vertical" placeholder="Ex: gestion des fournisseurs, négociation contrats, suivi budgétaire..."></textarea>
+      </div>
+      <div class="form-group" style="grid-column:1/-1"><label>Compétences requises</label>
+        <textarea id="fp-competences" class="input-field" style="height:60px;resize:vertical" placeholder="Ex: 3 ans d'expérience, Excel avancé, anglais B2..."></textarea>
+      </div>
+    </div>
+    <button class="btn-act btn-amber" onclick="genererFichePoste()">🧠 Générer la fiche de poste</button>
+    <div class="aria-zone" id="fiche-poste-result" style="margin-top:12px;display:none"></div>
+  </div>
+</div>
+
+<!-- ═══ ENTRETIENS & ÉVALUATIONS ═══ -->
+<div class="view" id="v-entretiens">
+  <div class="view-head"><h1>Entretiens &amp; Évaluations</h1><p>Annuels, professionnels, suivi performance.</p></div>
+  <div class="card" id="entretiens-guard" style="display:none">
+    <div class="access-guard"><div class="ag-ico">🔒</div><strong>Accès réservé au Responsable RH</strong></div>
+  </div>
+  <div id="entretiens-data">
+    <div class="card">
+      <div class="section-head"><h2>Entretiens à planifier</h2><button class="btn-act btn-amber btn-sm" onclick="ouvrirModal('modal-entretien')">+ Planifier</button></div>
+      <div id="entretiens-liste"><div class="empty-state"><div class="es-ic">💬</div>Aucun entretien planifié.</div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>🧠 Préparer un entretien annuel</h2></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Salarié</label><input type="text" id="ent-sal" class="input-field" placeholder="Nom du salarié"></div>
+        <div class="form-group"><label>Poste</label><input type="text" id="ent-poste" class="input-field" placeholder="Poste occupé"></div>
+        <div class="form-group" style="grid-column:1/-1"><label>Points à aborder</label>
+          <textarea id="ent-points" class="input-field" style="height:60px;resize:vertical" placeholder="Performance, formation souhaitée, évolution..."></textarea>
+        </div>
+      </div>
+      <button class="btn-act btn-amber" onclick="preparerEntretien()">🧠 Préparer avec Aria</button>
+      <div class="aria-zone" id="entretien-prep-result" style="margin-top:12px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FORMATION ═══ -->
+<div class="view" id="v-formation">
+  <div class="view-head"><h1>Plans de formation</h1><p>Suivi du plan de développement des compétences.</p></div>
+  <div class="card" id="formation-guard" style="display:none">
+    <div class="access-guard"><div class="ag-ico">🔒</div><strong>Accès réservé au Responsable RH</strong></div>
+  </div>
+  <div id="formation-data">
+    <div class="card">
+      <div class="section-head"><h2>Formations en cours</h2><button class="btn-act btn-amber btn-sm" onclick="ouvrirModal('modal-formation')">+ Ajouter</button></div>
+      <div id="formations-liste"><div class="empty-state"><div class="es-ic">🎓</div>Aucune formation enregistrée.</div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>🧠 Recommandations de formation</h2></div>
+      <textarea id="form-contexte" class="input-field" rows="2" placeholder="Ex: Mettre à niveau l'équipe RH sur la RGPD et le droit du travail numérique..." style="margin-bottom:10px"></textarea>
+      <button class="btn-act btn-amber" onclick="recommanderFormations()">🧠 Demander à Aria</button>
+      <div class="aria-zone" id="formation-recomm-result" style="margin-top:12px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ GPEC ═══ -->
+<div class="view" id="v-gpec">
+  <div class="view-head"><h1>Compétences (GPEC)</h1><p>Cartographie des compétences et plans de développement.</p></div>
+  <div class="card" id="gpec-guard" style="display:none">
+    <div class="access-guard"><div class="ag-ico">🔒</div><strong>Accès réservé au Responsable RH</strong></div>
+  </div>
+  <div id="gpec-data">
+    <div class="card">
+      <div class="section-head">
+        <h2>Compétences par collaborateur</h2>
+        <select id="gpec-sal-select" class="input-field" style="width:200px" onchange="chargerCompetences()">
+          <option value="">— Sélectionner —</option>
+        </select>
+      </div>
+      <div id="gpec-competences"><div class="empty-state"><div class="es-ic">📈</div>Sélectionnez un collaborateur.</div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>🧠 Analyse des écarts de compétences</h2></div>
+      <textarea id="gpec-contexte" class="input-field" rows="2" placeholder="Ex: L'équipe doit maîtriser les outils RH numériques pour 2027..." style="margin-bottom:10px"></textarea>
+      <button class="btn-act btn-amber" onclick="analyseGPEC()">🧠 Analyser avec Aria</button>
+      <div class="aria-zone" id="gpec-analyse-result" style="margin-top:12px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DOSSIERS SALARIÉS ═══ -->
+<div class="view" id="v-dossiers">
+  <div class="view-head"><h1>Dossiers salariés</h1><p id="dossiers-desc">Gérez les dossiers de l'équipe.</p></div>
+  <div class="card" id="dossiers-guard" style="display:none">
+    <div class="access-guard"><div class="ag-ico">🔒</div><strong>Accès réservé au Responsable RH</strong></div>
+  </div>
+  <!-- Vue responsable -->
+  <div id="bloc-dossiers-resp">
+    <div class="card">
+      <div class="section-head">
+        <h2>Salariés</h2>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="search-salarie" placeholder="Rechercher..." class="input-field" style="width:180px" oninput="filtrerSalaries(this.value)">
+          <button class="btn-act btn-amber" onclick="ouvrirModal('modal-creer-salarie')">+ Nouveau</button>
+        </div>
+      </div>
+      <div id="liste-salaries"><div class="empty-state"><div class="es-ic">👥</div>Aucun salarié.</div></div>
+    </div>
+  </div>
+  <!-- Vue salarié -->
+  <div id="bloc-dossiers-sal" style="display:none">
+    <div class="card">
+      <div class="section-head"><h2>Ma fiche personnelle</h2></div>
+      <div id="ma-fiche-resume"></div>
+      <button class="btn-act btn-amber btn-sm" style="margin-top:12px" onclick="ouvrirModal('modal-modif-fiche')">✏️ Demander une modification à la RH</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FICHE SALARIÉ ═══ -->
+<div class="view" id="v-fiche-salarie">
+  <div class="view-head" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <button class="btn-act btn-ghost btn-sm" onclick="goToView('v-dossiers')">← Retour</button>
+    <div><h1 id="fiche-nom-titre">Fiche salarié</h1><p id="fiche-poste-titre"></p></div>
+    <div style="margin-left:auto"><button class="btn-act btn-amber" onclick="sauverFiche()">💾 Sauvegarder</button></div>
+  </div>
+  <input type="hidden" id="fiche-salarie-id">
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+    <div class="card"><div class="section-head"><h2>🪪 Identité</h2></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Prénom</label><input type="text" id="f-prenom" class="input-field"></div>
+        <div class="form-group"><label>Date de naissance</label><input type="date" id="f-date-naissance" class="input-field"></div>
+        <div class="form-group"><label>Sexe</label>
+          <select id="f-sexe" class="input-field"><option value="">—</option><option value="M">Masculin</option><option value="F">Féminin</option><option value="autre">Autre</option></select>
+        </div>
+        <div class="form-group"><label>Nationalité</label><input type="text" id="f-nationalite" class="input-field" placeholder="Française"></div>
+        <div class="form-group" style="grid-column:1/-1"><label>N° Sécurité sociale</label><input type="text" id="f-num-secu" class="input-field" placeholder="1 85 05 75 115 423 43"></div>
+      </div>
+    </div>
+    <div class="card"><div class="section-head"><h2>📍 Coordonnées</h2></div>
+      <div class="form-grid">
+        <div class="form-group" style="grid-column:1/-1"><label>Adresse</label><input type="text" id="f-adresse" class="input-field"></div>
+        <div class="form-group"><label>Ville</label><input type="text" id="f-ville" class="input-field"></div>
+        <div class="form-group"><label>Code postal</label><input type="text" id="f-code-postal" class="input-field"></div>
+        <div class="form-group"><label>Téléphone</label><input type="tel" id="f-telephone" class="input-field"></div>
+        <div class="form-group"><label>Email personnel</label><input type="email" id="f-email-perso" class="input-field"></div>
+      </div>
+    </div>
+    <div class="card"><div class="section-head"><h2>📄 Contrat</h2></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Type</label>
+          <select id="f-type-contrat" class="input-field"><option value="">—</option><option>CDI</option><option>CDD</option><option>Apprentissage</option><option>Stage</option><option>Intérim</option></select>
+        </div>
+        <div class="form-group"><label>Date d'embauche</label><input type="date" id="f-date-embauche" class="input-field"></div>
+        <div class="form-group"><label>Fin de contrat</label><input type="date" id="f-date-fin-contrat" class="input-field"></div>
+        <div class="form-group"><label>Salaire brut (€)</label><input type="number" id="f-salaire-brut" class="input-field"></div>
+        <div class="form-group"><label>Temps de travail</label><input type="text" id="f-temps-travail" class="input-field" placeholder="35h"></div>
+        <div class="form-group" style="grid-column:1/-1"><label>Convention collective</label><input type="text" id="f-convention" class="input-field"></div>
+      </div>
+    </div>
+    <div class="card"><div class="section-head"><h2>🆘 Contact urgence</h2></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Nom &amp; Prénom</label><input type="text" id="f-urg-nom" class="input-field"></div>
+        <div class="form-group"><label>Téléphone</label><input type="tel" id="f-urg-tel" class="input-field"></div>
+      </div>
+    </div>
+    <div class="card" style="grid-column:1/-1"><div class="section-head"><h2>📝 Notes internes RH</h2></div>
+      <textarea id="f-notes" class="input-field" style="height:90px;resize:vertical" placeholder="Visible uniquement par le service RH..."></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ORGANIGRAMME ═══ -->
+<div class="view" id="v-organigramme">
+  <div class="view-head"><h1>Organigramme</h1><p>Visualisation de la structure de l'entreprise.</p></div>
+  <div class="card" id="organigramme-guard" style="display:none">
+    <div class="access-guard"><div class="ag-ico">🔒</div><strong>Accès réservé au DRH</strong></div>
+  </div>
+  <div id="organigramme-data">
+    <div class="card">
+      <div class="section-head"><h2>Structure</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerOrganigramme()">↺</button></div>
+      <div id="organigramme-content"><div class="empty-state"><div class="es-ic">🗂️</div>Chargement...</div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>🧠 Recommandations structurelles</h2></div>
+      <button class="btn-act btn-amber" onclick="analyseOrganigramme()">🧠 Analyser avec Aria</button>
+      <div class="aria-zone" id="org-analyse-result" style="margin-top:12px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DÉPART SALARIÉ ═══ -->
+<div class="view" id="v-depart">
+  <div class="view-head"><h1>Départ salarié</h1><p>Gestion des sorties — démission, licenciement, retraite.</p></div>
+  <div class="card" id="depart-guard" style="display:none">
+    <div class="access-guard"><div class="ag-ico">🔒</div><strong>Accès réservé au DRH</strong></div>
+  </div>
+  <div id="depart-data">
+    <div class="card">
+      <div class="section-head"><h2>Initier un départ</h2></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Salarié concerné *</label>
+          <select id="dep-sal" class="input-field"><option value="">— Sélectionner —</option></select>
+        </div>
+        <div class="form-group"><label>Type de départ *</label>
+          <select id="dep-type" class="input-field">
+            <option value="demission">Démission</option>
+            <option value="rupture_conv">Rupture conventionnelle</option>
+            <option value="licenciement_eco">Licenciement économique</option>
+            <option value="licenciement_perso">Licenciement personnel</option>
+            <option value="retraite">Départ en retraite</option>
+            <option value="fin_cdd">Fin de CDD</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Date de départ *</label><input type="date" id="dep-date" class="input-field"></div>
+        <div class="form-group" style="grid-column:1/-1"><label>Commentaires</label>
+          <textarea id="dep-commentaire" class="input-field" style="height:60px;resize:vertical"></textarea>
+        </div>
+      </div>
+      <button class="btn-act btn-amber" onclick="initierDepart()">📝 Générer la checklist de départ</button>
+      <div class="aria-zone" id="depart-checklist-result" style="margin-top:12px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SANCTIONS ═══ -->
+<div class="view" id="v-sanctions">
+  <div class="view-head"><h1>Sanctions &amp; Procédures disciplinaires</h1><p>Gestion des procédures disciplinaires selon le droit du travail.</p></div>
+  <div class="card" id="sanctions-guard" style="display:none">
+    <div class="access-guard"><div class="ag-ico">🔒</div><strong>Accès réservé au DRH</strong></div>
+  </div>
+  <div id="sanctions-data">
+    <div class="card">
+      <div class="section-head"><h2>Procédures en cours</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerSanctions()">↺</button></div>
+      <div id="sanctions-liste"><div class="empty-state"><div class="es-ic">⚠️</div>Aucune procédure en cours.</div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>🧠 Aide Aria — procédure disciplinaire</h2></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Salarié</label><input type="text" id="sanc-sal" class="input-field" placeholder="Nom du salarié"></div>
+        <div class="form-group"><label>Faute / Motif</label>
+          <select id="sanc-type" class="input-field">
+            <option value="avertissement">Avertissement</option>
+            <option value="mise_en_demeure">Mise en demeure</option>
+            <option value="faute_grave">Faute grave</option>
+            <option value="inaptitude">Inaptitude médicale</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1"><label>Description des faits</label>
+          <textarea id="sanc-desc" class="input-field" style="height:70px;resize:vertical" placeholder="Décrivez les faits objectivement..."></textarea>
+        </div>
+      </div>
+      <button class="btn-act btn-amber" onclick="aideProceduire()">🧠 Procédure avec Aria</button>
+      <div class="aria-zone" id="sanction-procedure-result" style="margin-top:12px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MASSE SALARIALE ═══ -->
+<div class="view" id="v-paie">
+  <div class="view-head"><h1>Masse salariale</h1><p>Analyse et pilotage des coûts salariaux.</p></div>
+  <div class="card" id="paie-guard" style="display:none">
+    <div class="access-guard"><div class="ag-ico">🔒</div><strong>Accès réservé au DRH</strong></div>
+  </div>
+  <div id="paie-data">
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-val warn" id="masse-sal-brute">—</div><div class="stat-lbl">Masse salariale brute (€)</div></div>
+      <div class="stat-card"><div class="stat-val" id="masse-sal-moy">—</div><div class="stat-lbl">Salaire moyen (€)</div></div>
+      <div class="stat-card"><div class="stat-val err" id="masse-sal-charge">—</div><div class="stat-lbl">Charges patronales est. (€)</div></div>
+      <div class="stat-card"><div class="stat-val ok" id="masse-sal-nb">—</div><div class="stat-lbl">Salariés comptés</div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>Répartition par poste</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerMasseSalariale()">↺</button></div>
+      <div id="masse-sal-detail"><div class="empty-state"><div class="es-ic">💰</div>Chargement...</div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>🧠 Analyse Aria</h2></div>
+      <button class="btn-act btn-amber" onclick="analyseMasseSalariale()">🧠 Analyser</button>
+      <div class="aria-zone" id="masse-sal-analyse" style="margin-top:12px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ REPORTING RH ═══ -->
+<div class="view" id="v-reporting">
+  <div class="view-head"><h1>Reporting RH</h1><p>Indicateurs et tableaux de bord stratégiques.</p></div>
+  <div class="card" id="reporting-guard" style="display:none">
+    <div class="access-guard"><div class="ag-ico">🔒</div><strong>Accès réservé au DRH</strong></div>
+  </div>
+  <div id="reporting-data">
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-val" id="rep-effectif">—</div><div class="stat-lbl">Effectif total</div></div>
+      <div class="stat-card"><div class="stat-val warn" id="rep-turnover">—</div><div class="stat-lbl">Taux d'absentéisme</div></div>
+      <div class="stat-card"><div class="stat-val ok" id="rep-anciennete">—</div><div class="stat-lbl">Ancienneté moy. (mois)</div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>🧠 Rapport RH mensuel</h2></div>
+      <button class="btn-act btn-amber" onclick="genererRapportRH()">🧠 Générer avec Aria</button>
+      <div class="aria-zone" id="rapport-rh-result" style="margin-top:12px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ POLITIQUE RH ═══ -->
+<div class="view" id="v-politique-rh">
+  <div class="view-head"><h1>Politique RH</h1><p>Règles, procédures et documents de référence de l'entreprise.</p></div>
+  <div class="card" id="politique-guard" style="display:none">
+    <div class="access-guard"><div class="ag-ico">🔒</div><strong>Accès réservé au DRH</strong></div>
+  </div>
+  <div id="politique-data">
+    <div class="card">
+      <div class="section-head"><h2>🧠 Rédiger une politique RH</h2></div>
+      <div class="form-grid">
+        <div class="form-group" style="grid-column:1/-1"><label>Sujet</label>
+          <select id="pol-type" class="input-field">
+            <option value="teletravail">Charte télétravail</option>
+            <option value="equal_pay">Égalité salariale H/F</option>
+            <option value="diversite">Politique diversité &amp; inclusion</option>
+            <option value="harcelement">Procédure harcèlement</option>
+            <option value="formation">Politique de formation</option>
+            <option value="autre">Autre politique</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1"><label>Précisions</label>
+          <textarea id="pol-precisions" class="input-field" style="height:60px;resize:vertical" placeholder="Ex: 2 jours max par semaine, poste éligibles..."></textarea>
+        </div>
+      </div>
+      <button class="btn-act btn-amber" onclick="genererPolitiqueRH()">🧠 Générer avec Aria</button>
+      <div class="aria-zone" id="politique-result" style="margin-top:12px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ABSENCES PROACTIVES ═══ -->
+<div class="view" id="v-absences-proactives">
+  <div class="view-head"><h1>Absences proactives</h1><p>Détection des patterns d'absentéisme et alertes préventives.</p></div>
+  <div class="card" id="abs-proact-guard" style="display:none">
+    <div class="access-guard"><div class="ag-ico">🔒</div><strong>Accès réservé au DRH</strong></div>
+  </div>
+  <div id="abs-proact-data">
+    <div class="card">
+      <div class="section-head"><h2>Analyse de l'absentéisme</h2><button class="btn-act btn-ghost btn-sm" onclick="chargerAbsencesProactives()">↺ Analyser</button></div>
+      <div id="abs-proact-content"><div class="empty-state"><div class="es-ic">🚨</div>Cliquez sur Analyser pour détecter les patterns.</div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>🧠 Recommandations Aria</h2></div>
+      <button class="btn-act btn-amber" onclick="recommandationsAbsenteisme()">🧠 Recommandations</button>
+      <div class="aria-zone" id="abs-proact-recomm" style="margin-top:12px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MES DROITS ═══ -->
+<div class="view" id="v-mes-droits">
+  <div class="view-head"><h1>Mes droits</h1><p>Aria vous informe sur vos droits selon votre contrat et la législation.</p></div>
+  <div class="card">
+    <textarea id="droits-question" class="input-field" rows="2" placeholder="Ex: Combien de jours de préavis pour un CDI ? Ai-je droit à la mutuelle ?"></textarea>
+    <button class="btn-act btn-amber btn-sm" style="margin-top:8px" onclick="demanderDroits()">⚖️ Demander à Aria</button>
+    <div class="aria-zone" id="droits-reponse" style="margin-top:12px;display:none"></div>
+  </div>
+</div>
+
+<!-- ═══ MES TÂCHES ═══ -->
+<div class="view" id="v-taches">
+  <div class="view-head"><h1>Mes tâches</h1></div>
+  <div class="card">
+    <div class="section-head"><h2>Tâches en cours</h2><button class="btn-act btn-amber btn-sm" onclick="ouvrirModal('modal-tache')">+ Nouvelle</button></div>
+    <div id="liste-taches"><div class="empty-state"><div class="es-ic">📋</div>Aucune tâche.</div></div>
+  </div>
+</div>
+
+<!-- ═══ FORMATION QCM ═══ -->
+<div class="view" id="v-formation-qcm">
+  <div class="view-head"><h1>Formation quotidienne</h1><p>3 questions de droit du travail · 3 minutes.</p></div>
+  <div class="card">
+    <div class="section-head"><h2>QCM droit du travail</h2><button class="btn-act btn-amber" onclick="lancerQCM()">▶ Démarrer</button></div>
+    <div id="qcm-zone"><div class="empty-state"><div class="es-ic">🎓</div>Cliquez sur Démarrer.</div></div>
+  </div>
+</div>
+
+<!-- ═══ JOURNAL ═══ -->
+<div class="view" id="v-journal">
+  <div class="view-head"><h1>Journal d'activité</h1></div>
+  <div class="card">
+    <div id="journal-empty" class="empty-state"><div class="es-ic">📜</div>Journal vide.</div>
+    <div id="journal-list"></div>
+  </div>
+</div>
+
+</div><!-- fin main-content -->
+</div><!-- fin app-shell -->
+
+<!-- ═══ MODALES ═══ -->
+<div class="modal-overlay" id="modal-absence" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Demande d'absence</h3><button class="modal-close" onclick="fermerModal('modal-absence')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Type</label>
+        <select id="abs-type" class="input-field">
+          <option value="conges_payes">Congés payés</option><option value="maladie">Maladie</option>
+          <option value="accident_travail">Accident du travail</option><option value="maternite">Maternité</option>
+          <option value="paternite">Paternité</option><option value="sans_solde">Sans solde</option>
+          <option value="formation">Formation</option><option value="autre">Autre</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Du *</label><input type="date" id="abs-debut" class="input-field"></div>
+      <div class="form-group"><label>Au *</label><input type="date" id="abs-fin" class="input-field"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Commentaire</label>
+        <textarea id="abs-commentaire" class="input-field" style="height:60px;resize:vertical"></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-act btn-ghost" onclick="fermerModal('modal-absence')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="soumettreAbsence()">Envoyer la demande</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-creer-salarie" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Nouveau salarié</h3><button class="modal-close" onclick="fermerModal('modal-creer-salarie')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Nom complet *</label><input type="text" id="ns-nom" class="input-field" placeholder="Prénom Nom"></div>
+      <div class="form-group"><label>Email entreprise *</label><input type="email" id="ns-email" class="input-field"></div>
+      <div class="form-group"><label>Mot de passe *</label><input type="text" id="ns-mdp" class="input-field" placeholder="Mot de passe initial"></div>
+      <div class="form-group"><label>Poste *</label>
+        <select id="ns-poste" class="input-field">
+          <option value="rh">RH</option><option value="comptabilite">Comptabilité</option>
+          <option value="achats">Achats</option><option value="service-client">Service client</option>
+          <option value="logistique">Logistique</option><option value="technicien-sav">Technicien SAV</option>
+          <option value="dirigeant">Dirigeant</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Rôle</label>
+        <select id="ns-role" class="input-field">
+          <option value="salarie">Salarié</option><option value="responsable">Responsable</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Langue</label>
+        <select id="ns-langue" class="input-field">
+          <option value="fr">Français</option><option value="ar">Arabe</option>
+          <option value="en">Anglais</option><option value="es">Espagnol</option>
+          <option value="pt">Portugais</option><option value="de">Allemand</option>
+        </select>
+      </div>
+    </div>
+    <div id="ns-erreur" style="color:var(--err);font-size:12.5px;margin-top:8px;display:none"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-act btn-ghost" onclick="fermerModal('modal-creer-salarie')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="creerSalarie()" id="btn-creer-sal">Créer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-tache" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Nouvelle tâche</h3><button class="modal-close" onclick="fermerModal('modal-tache')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Titre *</label><input type="text" id="t-titre" class="input-field"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Description</label><textarea id="t-desc" class="input-field" style="height:60px;resize:vertical"></textarea></div>
+      <div class="form-group"><label>Priorité</label>
+        <select id="t-priorite" class="input-field"><option value="normale">Normale</option><option value="haute">Haute</option><option value="urgente">Urgente</option><option value="basse">Basse</option></select>
+      </div>
+      <div class="form-group"><label>Deadline</label><input type="date" id="t-deadline" class="input-field"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Assigner à</label>
+        <select id="t-assignee" class="input-field"><option value="">— Moi-même —</option></select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-act btn-ghost" onclick="fermerModal('modal-tache')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="creerTache()">Créer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-modif-fiche" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Demander une modification</h3><button class="modal-close" onclick="fermerModal('modal-modif-fiche')">✕</button></div>
+    <p style="font-size:13px;color:var(--ink-dim);margin-bottom:14px">Décrivez la modification — elle sera transmise comme tâche au service RH.</p>
+    <div class="form-group" style="margin-bottom:12px"><label>Champ à modifier</label>
+      <select id="modif-champ" class="input-field">
+        <option value="adresse">Adresse</option><option value="telephone">Téléphone</option>
+        <option value="email_perso">Email personnel</option><option value="contact_urgence">Contact d'urgence</option>
+        <option value="rib">RIB / Coordonnées bancaires</option><option value="autre">Autre</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Précisions *</label>
+      <textarea id="modif-detail" class="input-field" style="height:80px;resize:vertical" placeholder="Ex: Ma nouvelle adresse est 15 rue Victor Hugo, 69001 Lyon"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-act btn-ghost" onclick="fermerModal('modal-modif-fiche')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="envoyerDemandeModifFiche()">📨 Envoyer au service RH</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-candidat" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Ajouter un candidat</h3><button class="modal-close" onclick="fermerModal('modal-candidat')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Nom complet *</label><input type="text" id="cand-nom" class="input-field"></div>
+      <div class="form-group"><label>Poste visé</label><input type="text" id="cand-poste" class="input-field"></div>
+      <div class="form-group"><label>Source</label>
+        <select id="cand-source" class="input-field"><option value="linkedin">LinkedIn</option><option value="indeed">Indeed</option><option value="spontanee">Candidature spontanée</option><option value="referral">Recommandation</option></select>
+      </div>
+      <div class="form-group"><label>Email</label><input type="email" id="cand-email" class="input-field"></div>
+      <div class="form-group"><label>Téléphone</label><input type="tel" id="cand-tel" class="input-field"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-act btn-ghost" onclick="fermerModal('modal-candidat')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="ajouterCandidat()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-entretien" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Planifier un entretien</h3><button class="modal-close" onclick="fermerModal('modal-entretien')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Salarié</label>
+        <select id="ent-sal-select" class="input-field"><option value="">— Sélectionner —</option></select>
+      </div>
+      <div class="form-group"><label>Type</label>
+        <select id="ent-type" class="input-field">
+          <option value="annuel">Entretien annuel</option><option value="professionnel">Entretien professionnel</option>
+          <option value="periode_essai">Bilan période d'essai</option><option value="retour">Retour absence</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Date *</label><input type="date" id="ent-date" class="input-field"></div>
+      <div class="form-group"><label>Lieu / Lien</label><input type="text" id="ent-lieu" class="input-field" placeholder="Salle de réunion A, Teams..."></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-act btn-ghost" onclick="fermerModal('modal-entretien')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="planifierEntretien()">Planifier</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-formation" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Ajouter une formation</h3><button class="modal-close" onclick="fermerModal('modal-formation')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Intitulé *</label><input type="text" id="form-intitule" class="input-field" placeholder="Formation RGPD, Gestion du stress..."></div>
+      <div class="form-group"><label>Organisme</label><input type="text" id="form-organisme" class="input-field"></div>
+      <div class="form-group"><label>Durée (jours)</label><input type="number" id="form-duree" class="input-field" min="0.5" step="0.5"></div>
+      <div class="form-group"><label>Date début</label><input type="date" id="form-debut" class="input-field"></div>
+      <div class="form-group"><label>Coût (€)</label><input type="number" id="form-cout" class="input-field" min="0"></div>
+      <div class="form-group"><label>Salarié(s)</label>
+        <select id="form-sal-select" class="input-field"><option value="">— Tous —</option></select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-act btn-ghost" onclick="fermerModal('modal-formation')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="enregistrerFormation()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-mdp-sal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="mdp-modal-titre">Changer le mot de passe</h3><button class="modal-close" onclick="fermerModal('modal-mdp-sal')">✕</button></div>
+    <input type="hidden" id="mdp-sal-email"><input type="hidden" id="mdp-sal-nom">
+    <div class="form-group" style="margin-bottom:14px"><label>Nouveau mot de passe *</label>
+      <input type="text" id="mdp-sal-valeur" class="input-field" placeholder="Nouveau mot de passe">
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-act btn-ghost" onclick="fermerModal('modal-mdp-sal')">Annuler</button>
+      <button class="btn-act btn-amber" onclick="confirmerChangeMdp()">Changer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// ARIA INDUSTRIAL — POSTE RH
+// Hiérarchie : salarie / responsable / drh / dirigeant
+// ════════════════════════════════════════════════════════════
+
+var POSTE_COURANT = 'rh';
+var RELAY = 'https://aria-forgelis.onrender.com';
+var SESSION = {};
+var estResponsable = false; // responsable, drh, dirigeant
+var estDRH = false;         // drh, dirigeant
+var estDirigeant = false;   // dirigeant uniquement
+var _salaries = []; var _taches = []; var _candidats = [];
+
+// ── Session ──
+function getSession() { try { SESSION = JSON.parse(localStorage.getItem('aria_industrial_session') || '{}'); return SESSION; } catch(e) { return {}; } }
+function getToken() { return SESSION.salarie_id || ''; }
+function getEntrepriseId() { return SESSION.entreprise_id || ''; }
+function getNom() { return SESSION.nom || ''; }
+function getRole() { return SESSION.role || 'salarie'; }
+function getPoste() { return SESSION.poste || 'rh'; }
+function lireStockageSecurise(k) { try { return window.localStorage.getItem(k); } catch(e) { return null; } }
+
+// ── API ──
+async function api(endpoint, body, method) {
+  method = method || (body ? 'POST' : 'GET');
+  var url = RELAY + endpoint;
+  if (method === 'GET' && body) { url += '?' + new URLSearchParams(body).toString(); body = null; }
+  try {
+    var r = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : null });
+    return await r.json();
+  } catch(e) { return { ok: false, erreur: 'Erreur réseau' }; }
+}
+
+async function apiAsk(prompt, contexte) {
+  try {
+    var r = await fetch(RELAY + '/ask-industrial', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: getToken(), message: (contexte ? '[CONTEXTE] ' + contexte + '\n\n' : '') + prompt, poste: 'rh', max_tokens: 2500 })
+    });
+    var d = await r.json(); return d.reponse || d.message || '';
+  } catch(e) { return 'Erreur de connexion à Aria.'; }
+}
+
+function contexteRH() {
+  var role = getRole();
+  return 'Poste: RH | Rôle: ' + role + ' | Entreprise: ' + (SESSION.entreprise_nom || getEntrepriseId()) +
+    ' | Salariés: ' + _salaries.length;
+}
+
+// ── Modale Aria ──
+var _ariaRes = null;
+function ariaConfirm(msg, titre, danger) {
+  return new Promise(function(resolve) {
+    _ariaRes = resolve;
+    document.getElementById('aria-modal-ico').textContent = danger ? '⚠️' : '❓';
+    document.getElementById('aria-modal-title').textContent = titre || 'Confirmation';
+    document.getElementById('aria-modal-msg').textContent = msg;
+    document.getElementById('aria-modal-input').style.display = 'none';
+    document.getElementById('aria-modal-confirm').className = 'aria-modal-confirm ' + (danger ? 'danger' : 'primary');
+    document.getElementById('aria-modal-overlay').classList.add('open');
+  });
+}
+function ariaPrompt(msg, titre, placeholder) {
+  return new Promise(function(resolve) {
+    _ariaRes = resolve;
+    document.getElementById('aria-modal-ico').textContent = '✏️';
+    document.getElementById('aria-modal-title').textContent = titre || 'Saisie';
+    document.getElementById('aria-modal-msg').textContent = msg;
+    var inp = document.getElementById('aria-modal-input');
+    inp.style.display = 'block'; inp.value = ''; inp.placeholder = placeholder || ''; inp.focus();
+    document.getElementById('aria-modal-confirm').className = 'aria-modal-confirm primary';
+    document.getElementById('aria-modal-overlay').classList.add('open');
+  });
+}
+function _ariaModalConfirm() {
+  var inp = document.getElementById('aria-modal-input');
+  var v = inp.style.display !== 'none' ? inp.value : true;
+  document.getElementById('aria-modal-overlay').classList.remove('open');
+  if (_ariaRes) { _ariaRes(v); _ariaRes = null; }
+}
+function _ariaModalCancel() {
+  document.getElementById('aria-modal-overlay').classList.remove('open');
+  if (_ariaRes) { _ariaRes(null); _ariaRes = null; }
+}
+
+// ── Navigation ──
+function goToView(viewId, tabEl) {
+  document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+  var v = document.getElementById(viewId); if (v) v.classList.add('active');
+  var n = tabEl || document.querySelector('.nav-item[data-view="' + viewId + '"]');
+  if (n) n.classList.add('active');
+  chargerVue(viewId);
+  window.scrollTo(0, 0);
+}
+function toggleSidebar() {
+  var sb = document.getElementById('app-sidebar');
+  sb.style.display = (sb.style.display === 'none') ? 'flex' : 'none';
+}
+
+function chargerVue(id) {
+  var m = {
+    'v-dash': chargerDash,
+    'v-conges': chargerAbsences,
+    'v-mes-conges': chargerMesAbsences,
+    'v-temps': chargerPointages,
+    'v-dossiers': chargerVueDossiers,
+    'v-taches': chargerTaches,
+    'v-hs': function() { chargerSalariesPourSelect(); chargerHistoriqueHS(); },
+    'v-recrutement': chargerRecrutement,
+    'v-onboarding': chargerOnboarding,
+    'v-entretiens': chargerEntretiens,
+    'v-formation': chargerFormations,
+    'v-gpec': chargerGPEC,
+    'v-organigramme': chargerOrganigramme,
+    'v-paie': chargerMasseSalariale,
+    'v-reporting': chargerReporting,
+    'v-absences-proactives': chargerAbsencesProactives,
+    'v-frais': function() { chargerMesFrais(); if (estResponsable) chargerFraisEquipe(); },
+    'v-fiche-salarie': function() {},
+  };
+  if (m[id]) m[id]();
+}
+
+// ── Session & hiérarchie ──
+function verifierSession() {
+  var s = getSession();
+  if (!s.salarie_id || !s.entreprise_id || lireStockageSecurise('aria_session_active') !== 'rh') {
+    window.location.href = 'connexion-industrial.html'; return;
+  }
+  var role = s.role || 'salarie';
+  estResponsable = (role === 'responsable' || role === 'drh' || role === 'dirigeant');
+  estDRH = (role === 'drh' || role === 'dirigeant');
+  estDirigeant = (role === 'dirigeant');
+
+  // Badge topbar
+  var badge = document.getElementById('role-badge-el');
+  var nomTag = document.getElementById('poste-tag-nom');
+  var labels = { salarie: '👥 Salarié RH', responsable: '👔 Responsable RH', drh: '🏆 DRH', dirigeant: '👑 Dirigeant' };
+  var classes = { salarie: 'role-sal', responsable: 'role-resp', drh: 'role-drh', dirigeant: 'role-dir' };
+  if (badge) { badge.textContent = labels[role] || labels['salarie']; badge.className = 'role-badge ' + (classes[role] || 'role-sal'); }
+  if (nomTag) nomTag.textContent = s.nom || '';
+
+  adaptSidebarRole();
+  initPoste();
+}
+
+function adaptSidebarRole() {
+  // Afficher/cacher les nav items selon rôle
+  document.querySelectorAll('.nav-item.resp-nav').forEach(function(el) {
+    el.style.display = estResponsable ? 'flex' : 'none';
+  });
+  document.querySelectorAll('.nav-item.drh-nav').forEach(function(el) {
+    el.style.display = estDRH ? 'flex' : 'none';
+  });
+  // Afficher les éléments resp-el / drh-el dans les vues
+  document.querySelectorAll('.resp-el').forEach(function(el) {
+    el.style.display = estResponsable ? '' : 'none';
+  });
+  document.querySelectorAll('.drh-el').forEach(function(el) {
+    el.style.display = estDRH ? '' : 'none';
+  });
+}
+
+function appliquerGardeVue(guardId, dataId, autorise) {
+  var g = document.getElementById(guardId); var d = document.getElementById(dataId);
+  if (g) g.style.display = autorise ? 'none' : 'block';
+  if (d) d.style.display = autorise ? 'block' : 'none';
+}
+
+function initPoste() {
+  chargerDash();
+  chargerSalariesBase().then(function() {
+    remplirSelectsSalaries();
+  });
+}
+
+function deconnexion() {
+  ['aria_industrial_session', 'aria_industrial_token', 'aria_industrial_entreprise_id',
+   'aria_industrial_nom', 'aria_session_active', 'aria_industrial_email',
+   'aria_industrial_poste', 'aria_industrial_role']
+    .forEach(function(k) { try { localStorage.removeItem(k); } catch(e) {} });
+  window.location.href = 'connexion-industrial.html';
+}
+
+// ════════════════════════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════════════════════════
+var labelsAbsence = { conges_payes:'Congés payés', maladie:'Maladie', accident_travail:'Accident travail', maternite:'Maternité', paternite:'Paternité', sans_solde:'Sans solde', formation:'Formation', autre:'Autre' };
+var labelsStatut = { en_attente:'⏳ En attente', approuve:'✅ Approuvé', refuse:'❌ Refusé', annule:'Annulé' };
+
+async function chargerDash() {
+  var desc = document.getElementById('dash-role-desc');
+  var labels = { salarie: 'Vue Salarié RH — vos tâches et informations personnelles.', responsable: 'Vue Responsable RH — gestion de l\'équipe et des absences.', drh: 'Vue DRH — pilotage global RH, masse salariale, reporting.', dirigeant: 'Vue Dirigeant — vision transversale.' };
+  if (desc) desc.textContent = labels[getRole()] || labels['salarie'];
+
+  var calls = [
+    api('/industrial/taches', { token: getToken(), entreprise_id: getEntrepriseId(), poste: 'rh' }, 'GET'),
+  ];
+  if (estResponsable) {
+    calls.push(api('/industrial/salaries', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET'));
+    calls.push(api('/industrial/absences', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET'));
+    calls.push(api('/industrial/pointages', { token: getToken(), entreprise_id: getEntrepriseId(), date: new Date().toISOString().slice(0, 10) }, 'GET'));
+  }
+
+  var results = await Promise.all(calls);
+  var taches = results[0].taches || [];
+  setStat('stat-taches', taches.filter(function(t) { return t.statut !== 'termine'; }).length);
+
+  if (estResponsable) {
+    var sals = results[1].salaries || [];
+    var abs = results[2].absences || [];
+    var pts = results[3].pointages || [];
+    _salaries = sals;
+    setStat('stat-salaries', sals.length);
+    var attente = abs.filter(function(a) { return a.statut === 'en_attente'; });
+    setStat('stat-absences', attente.length, attente.length > 0 ? 'warn' : '');
+    setStat('stat-pointages', pts.filter(function(p) { return p.type === 'arrivee'; }).length, 'ok');
+
+    // Absences à approuver — bloc resp
+    var elAbs = document.getElementById('dash-absences-attente');
+    var blocResp = document.querySelector('.resp-el');
+    if (blocResp) blocResp.style.display = '';
+    if (elAbs) elAbs.innerHTML = attente.length ? attente.map(function(a) {
+      return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(a.nom_salarie || '—') + ' — ' + (labelsAbsence[a.type_absence] || a.type_absence) + '</div>' +
+        '<div class="ri-sub">' + fmtDate(a.date_debut) + ' → ' + fmtDate(a.date_fin) + '</div></div>' +
+        '<div class="ri-actions">' +
+        '<button class="btn-act btn-ok btn-sm" onclick="approuverAbsence(\'' + a.id + '\',\'approuve\')">✅</button>' +
+        '<button class="btn-act btn-err btn-sm" onclick="approuverAbsence(\'' + a.id + '\',\'refuse\')">❌</button>' +
+        '</div></div>';
+    }).join('') : '<div class="empty-state"><div class="es-ic">📭</div>Aucune demande.</div>';
+
+    // Alertes
+    var alertes = [];
+    if (attente.length > 0) alertes.push({ type: 'warn', m: attente.length + ' demande(s) d\'absence à traiter' });
+    var finProche = sals.filter(function(s) {
+      if (!s.date_fin_contrat) return false;
+      var d = new Date(s.date_fin_contrat); var now = new Date();
+      return (d - now) < 30 * 24 * 3600 * 1000 && d > now;
+    });
+    if (finProche.length) alertes.push({ type: 'crit', m: finProche.length + ' contrat(s) arrivent à échéance dans 30 jours' });
+
+    if (estDRH) {
+      var brute = sals.reduce(function(s, e) { return s + (parseFloat(e.salaire_brut || 0)); }, 0);
+      setStat('masse-sal-brute', fmtMontant(brute), 'warn');
+      setStat('stat-masse-sal', fmtMontant(brute), 'warn');
+      setStat('stat-fin-contrat', finProche.length, finProche.length > 0 ? 'err' : 'ok');
+    }
+
+    var elA = document.getElementById('dash-alertes');
+    if (elA) elA.innerHTML = alertes.length ? alertes.map(function(a) {
+      return '<div class="alert-item ' + (a.type === 'crit' ? 'crit' : '') + '"><div class="alert-title">' + esc(a.m) + '</div></div>';
+    }).join('') : '<div class="empty-state"><div class="es-ic">✅</div>Aucune alerte.</div>';
+
+  } else {
+    setStat('stat-salaries', '—');
+    setStat('stat-absences', '—');
+    setStat('stat-pointages', '—');
+    document.querySelectorAll('.resp-el').forEach(function(el) { el.style.display = 'none'; });
+  }
+  logAction('Dashboard RH chargé (' + getRole() + ')');
+}
+
+// ════════════════════════════════════════════════════════════
+// SALARIÉS DE BASE
+// ════════════════════════════════════════════════════════════
+async function chargerSalariesBase() {
+  if (!estResponsable) return;
+  var data = await api('/industrial/salaries', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  _salaries = data.salaries || [];
+  return _salaries;
+}
+
+function remplirSelectsSalaries() {
+  var ids = ['hs-salarie', 't-assignee', 'onboard-sal-select', 'gpec-sal-select',
+             'ent-sal-select', 'form-sal-select', 'dep-sal'];
+  ids.forEach(function(id) {
+    var sel = document.getElementById(id); if (!sel) return;
+    var first = sel.options[0]; sel.innerHTML = '';
+    if (first) sel.appendChild(first);
+    _salaries.forEach(function(s) {
+      var o = document.createElement('option'); o.value = s.id;
+      o.textContent = s.nom + ' (' + s.poste + ')'; sel.appendChild(o);
+    });
+  });
+}
+
+async function chargerVueDossiers() {
+  if (estResponsable) {
+    document.getElementById('bloc-dossiers-resp').style.display = 'block';
+    document.getElementById('bloc-dossiers-sal').style.display = 'none';
+    appliquerGardeVue('dossiers-guard', 'bloc-dossiers-resp', true);
+    await chargerSalaries();
+  } else {
+    document.getElementById('bloc-dossiers-resp').style.display = 'none';
+    document.getElementById('bloc-dossiers-sal').style.display = 'block';
+    var dossierGuard = document.getElementById('dossiers-guard');
+    if (dossierGuard) dossierGuard.style.display = 'none';
+    await chargerMaFiche();
+  }
+}
+
+async function chargerSalaries() {
+  var data = await api('/industrial/salaries', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  _salaries = data.salaries || [];
+  afficherSalaries(_salaries);
+  remplirSelectsSalaries();
+}
+
+function afficherSalaries(liste) {
+  var el = document.getElementById('liste-salaries'); if (!el) return;
+  el.innerHTML = liste.length ? liste.map(function(s) {
+    return '<div class="row-item" onclick="ouvrirFiche(\'' + s.id + '\',\'' + esc(s.nom) + '\',\'' + esc(s.poste) + '\')" style="cursor:pointer">' +
+      '<div class="ri-main"><div class="ri-title">' + esc(s.nom) + '</div>' +
+      '<div class="ri-sub">' + esc(s.poste) + ' · ' + (s.role === 'responsable' ? 'Responsable' : 'Salarié') + ' · ' + esc(s.email_entreprise || '') + '</div></div>' +
+      '<span class="badge badge-' + (s.actif ? 'ok' : 'err') + '">' + (s.actif ? 'Actif' : 'Inactif') + '</span>' +
+      '<div class="ri-actions" onclick="event.stopPropagation()">' +
+        '<button class="btn-act btn-ghost btn-sm" onclick="ouvrirChangeMdp(\'' + s.id + '\',\'' + esc(s.nom) + '\',\'' + esc(s.email_entreprise || '') + '\')">🔑</button>' +
+        '<button class="btn-act btn-err btn-sm" onclick="desactiverSalarie(\'' + s.id + '\',\'' + esc(s.nom) + '\')">🗑️</button>' +
+      '</div></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">👥</div>Aucun salarié.</div>';
+}
+
+function filtrerSalaries(q) {
+  afficherSalaries(_salaries.filter(function(s) {
+    return (s.nom || '').toLowerCase().includes(q.toLowerCase()) || (s.poste || '').toLowerCase().includes(q.toLowerCase());
+  }));
+}
+
+async function creerSalarie() {
+  var nom = document.getElementById('ns-nom').value.trim();
+  var email = document.getElementById('ns-email').value.trim().toLowerCase();
+  var mdp = document.getElementById('ns-mdp').value.trim();
+  var poste = document.getElementById('ns-poste').value;
+  var errEl = document.getElementById('ns-erreur');
+  if (!nom || !email || !mdp || !poste) { errEl.textContent = 'Tous les champs obligatoires'; errEl.style.display = 'block'; return; }
+  var btn = document.getElementById('btn-creer-sal'); btn.textContent = '⏳...'; btn.disabled = true;
+  var data = await api('/industrial/salarie/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    nom: nom, email: email, mot_de_passe: mdp, poste: poste,
+    role: document.getElementById('ns-role').value,
+    langue: document.getElementById('ns-langue').value
+  });
+  btn.textContent = 'Créer'; btn.disabled = false;
+  if (data.ok) { fermerModal('modal-creer-salarie'); notifOk('Salarié créé : ' + nom); logAction('Salarié créé : ' + nom); chargerSalaries(); }
+  else { errEl.textContent = data.erreur || 'Erreur'; errEl.style.display = 'block'; }
+}
+
+async function desactiverSalarie(id, nom) {
+  var ok = await ariaConfirm('Désactiver ' + nom + ' ? Il ne pourra plus se connecter.', 'Désactiver salarié', true);
+  if (!ok) return;
+  var data = await api('/industrial/salarie/supprimer', { token: getToken(), entreprise_id: getEntrepriseId(), salarie_id: id }, 'DELETE');
+  if (data.ok) { notifOk(nom + ' désactivé'); logAction('Salarié désactivé : ' + nom); chargerSalaries(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+function ouvrirChangeMdp(id, nom, email) {
+  document.getElementById('mdp-sal-email').value = email;
+  document.getElementById('mdp-sal-nom').value = nom;
+  document.getElementById('mdp-modal-titre').textContent = 'MDP — ' + nom;
+  document.getElementById('mdp-sal-valeur').value = '';
+  ouvrirModal('modal-mdp-sal');
+}
+async function confirmerChangeMdp() {
+  var mdp = document.getElementById('mdp-sal-valeur').value.trim();
+  var email = document.getElementById('mdp-sal-email').value;
+  var nom = document.getElementById('mdp-sal-nom').value;
+  if (!mdp) { notifErr('Mot de passe obligatoire'); return; }
+  var data = await api('/industrial/salarie/mdp', { token: getToken(), entreprise_id: getEntrepriseId(), email: email, nom: nom, mot_de_passe: mdp });
+  if (data.ok) { fermerModal('modal-mdp-sal'); notifOk('MDP modifié pour ' + nom); logAction('MDP changé : ' + nom); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+// ── FICHE SALARIÉ ──
+async function ouvrirFiche(id, nom, poste) {
+  document.getElementById('fiche-salarie-id').value = id;
+  document.getElementById('fiche-nom-titre').textContent = nom;
+  document.getElementById('fiche-poste-titre').textContent = poste;
+  goToView('v-fiche-salarie');
+  var data = await api('/industrial/fiche-rh', { token: getToken(), entreprise_id: getEntrepriseId(), salarie_id: id }, 'GET');
+  var f = data.fiche || {};
+  var champs = ['prenom', 'sexe', 'nationalite', 'num_secu', 'adresse', 'ville', 'code_postal', 'telephone', 'email_perso', 'type_contrat', 'temps_travail', 'convention', 'notes'];
+  champs.forEach(function(k) { var el = document.getElementById('f-' + k); if (el && f[k] !== undefined) el.value = f[k] || ''; });
+  if (f.date_naissance) document.getElementById('f-date-naissance').value = f.date_naissance;
+  if (f.date_embauche) document.getElementById('f-date-embauche').value = f.date_embauche;
+  if (f.date_fin_contrat) document.getElementById('f-date-fin-contrat').value = f.date_fin_contrat;
+  if (f.salaire_brut) document.getElementById('f-salaire-brut').value = f.salaire_brut;
+  if (f.contact_urgence_nom) document.getElementById('f-urg-nom').value = f.contact_urgence_nom;
+  if (f.contact_urgence_tel) document.getElementById('f-urg-tel').value = f.contact_urgence_tel;
+  logAction('Fiche ouverte : ' + nom);
+}
+
+async function sauverFiche() {
+  var sid = document.getElementById('fiche-salarie-id').value;
+  var data = await api('/industrial/fiche-rh/sauvegarder', {
+    token: getToken(), entreprise_id: getEntrepriseId(), salarie_id: sid,
+    prenom: document.getElementById('f-prenom').value,
+    date_naissance: document.getElementById('f-date-naissance').value,
+    sexe: document.getElementById('f-sexe').value,
+    nationalite: document.getElementById('f-nationalite').value,
+    num_secu: document.getElementById('f-num-secu').value,
+    adresse: document.getElementById('f-adresse').value,
+    ville: document.getElementById('f-ville').value,
+    code_postal: document.getElementById('f-code-postal').value,
+    telephone: document.getElementById('f-telephone').value,
+    email_perso: document.getElementById('f-email-perso').value,
+    type_contrat: document.getElementById('f-type-contrat').value,
+    date_embauche: document.getElementById('f-date-embauche').value,
+    date_fin_contrat: document.getElementById('f-date-fin-contrat').value,
+    salaire_brut: parseFloat(document.getElementById('f-salaire-brut').value) || null,
+    temps_travail: document.getElementById('f-temps-travail').value,
+    convention_collective: document.getElementById('f-convention').value,
+    contact_urgence_nom: document.getElementById('f-urg-nom').value,
+    contact_urgence_tel: document.getElementById('f-urg-tel').value,
+    notes: document.getElementById('f-notes').value,
+  });
+  if (data.ok) { notifOk('Fiche sauvegardée'); logAction('Fiche salarié mise à jour'); }
+  else notifErr(data.erreur || 'Erreur sauvegarde');
+}
+
+async function chargerMaFiche() {
+  var data = await api('/industrial/fiche-rh', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var f = data.fiche || {};
+  var el = document.getElementById('ma-fiche-resume'); if (!el) return;
+  var lines = [
+    f.prenom ? '👤 Prénom : ' + esc(f.prenom) : null,
+    f.date_naissance ? '🎂 Date de naissance : ' + esc(f.date_naissance) : null,
+    f.adresse ? '📍 Adresse : ' + [f.adresse, f.ville, f.code_postal].filter(Boolean).map(esc).join(', ') : null,
+    f.telephone ? '📞 Téléphone : ' + esc(f.telephone) : null,
+    f.email_perso ? '📧 Email perso : ' + esc(f.email_perso) : null,
+    f.type_contrat ? '📄 Contrat : ' + esc(f.type_contrat) : null,
+    f.date_embauche ? '📅 Embauché(e) le : ' + esc(f.date_embauche) : null,
+    f.temps_travail ? '⏱️ Temps de travail : ' + esc(f.temps_travail) : null,
+    f.contact_urgence_nom ? '🆘 Urgence : ' + esc(f.contact_urgence_nom) + ' ' + esc(f.contact_urgence_tel || '') : null,
+  ].filter(Boolean);
+  el.innerHTML = lines.length ? lines.map(function(l) {
+    return '<div style="padding:6px 0;border-bottom:1px solid var(--line);font-size:13px">' + l + '</div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">📭</div>Fiche non encore renseignée par le service RH.</div>';
+}
+
+// ════════════════════════════════════════════════════════════
+// ABSENCES
+// ════════════════════════════════════════════════════════════
+async function chargerAbsences() {
+  if (!estResponsable) { notifErr('Accès réservé au Responsable RH'); return; }
+  var data = await api('/industrial/absences', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var abs = data.absences || [];
+  var attente = abs.filter(function(a) { return a.statut === 'en_attente'; });
+  var autres = abs.filter(function(a) { return a.statut !== 'en_attente'; });
+  var render = function(liste, elId, actions) {
+    var el = document.getElementById(elId); if (!el) return;
+    el.innerHTML = liste.length ? liste.map(function(a) {
+      return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(a.nom_salarie || '—') + ' — ' + (labelsAbsence[a.type_absence] || a.type_absence) + '</div>' +
+        '<div class="ri-sub">' + fmtDate(a.date_debut) + ' → ' + fmtDate(a.date_fin) + (a.nb_jours ? ' (' + a.nb_jours + ' j)' : '') + '</div></div>' +
+        (actions ? '<div class="ri-actions"><button class="btn-act btn-ok btn-sm" onclick="approuverAbsence(\'' + a.id + '\',\'approuve\')">✅</button><button class="btn-act btn-err btn-sm" onclick="approuverAbsence(\'' + a.id + '\',\'refuse\')">❌</button></div>'
+          : '<span class="badge badge-' + (a.statut === 'approuve' ? 'ok' : a.statut === 'refuse' ? 'err' : 'warn') + '">' + (labelsStatut[a.statut] || a.statut) + '</span>') +
+        '</div>';
+    }).join('') : '<div class="empty-state"><div class="es-ic">📭</div>Aucun enregistrement.</div>';
+  };
+  render(attente, 'absences-attente', true);
+  render(autres, 'absences-historique', false);
+}
+
+async function chargerMesAbsences() {
+  var data = await api('/industrial/absences', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var abs = data.absences || [];
+  var el = document.getElementById('mes-absences');
+  if (el) el.innerHTML = abs.length ? abs.map(function(a) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + (labelsAbsence[a.type_absence] || a.type_absence) + '</div>' +
+      '<div class="ri-sub">' + fmtDate(a.date_debut) + ' → ' + fmtDate(a.date_fin) + '</div></div>' +
+      '<span class="badge badge-' + (a.statut === 'approuve' ? 'ok' : a.statut === 'refuse' ? 'err' : 'warn') + '">' + (labelsStatut[a.statut] || a.statut) + '</span></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">🏖️</div>Aucune demande.</div>';
+
+  var s = getSession();
+  if (s.fiche && s.fiche.date_embauche) {
+    var mois = Math.floor((Date.now() - new Date(s.fiche.date_embauche)) / (1000 * 60 * 60 * 24 * 30.44));
+    var acquis = Math.min(mois * 2.08, 25);
+    var pris = abs.filter(function(a) { return a.statut === 'approuve' && a.type_absence === 'conges_payes'; }).reduce(function(s, a) { return s + (a.nb_jours || 0); }, 0);
+    var el2 = document.getElementById('solde-conges');
+    if (el2) el2.textContent = 'Acquis : ' + acquis.toFixed(1) + ' j · Pris : ' + pris + ' j · Solde : ' + (acquis - pris).toFixed(1) + ' j';
+  }
+}
+
+async function soumettreAbsence() {
+  var debut = document.getElementById('abs-debut').value;
+  var fin = document.getElementById('abs-fin').value;
+  if (!debut || !fin) { notifErr('Dates obligatoires'); return; }
+  var data = await api('/industrial/absence/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    type_absence: document.getElementById('abs-type').value,
+    date_debut: debut, date_fin: fin,
+    commentaire: document.getElementById('abs-commentaire').value,
+  });
+  if (data.ok) { fermerModal('modal-absence'); notifOk('Demande envoyée'); logAction('Demande absence soumise'); chargerMesAbsences(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+async function approuverAbsence(id, statut) {
+  var data = await api('/industrial/absence/approuver', { token: getToken(), entreprise_id: getEntrepriseId(), absence_id: id, statut: statut });
+  if (data.ok) { notifOk(statut === 'approuve' ? 'Absence approuvée' : 'Absence refusée'); logAction('Absence ' + statut + ' : ' + id); chargerAbsences(); chargerDash(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+// ════════════════════════════════════════════════════════════
+// POINTAGE & TEMPS
+// ════════════════════════════════════════════════════════════
+async function pointerWeb(type) {
+  var labels = { arrivee: 'Arrivée', depart: 'Départ', pause_debut: 'Début pause', pause_fin: 'Fin pause' };
+  var data = await api('/industrial/pointer', { salarie_id: getToken(), entreprise_id: getEntrepriseId(), nom_salarie: getNom(), poste: getPoste(), type: type });
+  var msg = document.getElementById('mon-pointage-msg');
+  var h = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  if (data.ok) {
+    if (msg) { msg.textContent = labels[type] + ' pointé à ' + h; msg.style.color = 'var(--ok)'; }
+    notifOk(labels[type] + ' à ' + h); logAction('Pointage ' + labels[type] + ' à ' + h);
+  } else {
+    if (msg) { msg.textContent = data.erreur || 'Erreur'; msg.style.color = 'var(--err)'; }
+    notifErr(data.erreur || 'Erreur');
+  }
+}
+
+async function chargerPointages() {
+  if (!estResponsable) return;
+  var today = new Date().toISOString().slice(0, 10);
+  var data = await api('/industrial/pointages', { token: getToken(), entreprise_id: getEntrepriseId(), date: today }, 'GET');
+  var el = document.getElementById('liste-pointages'); if (!el) return;
+  var pts = data.pointages || [];
+  var types = { arrivee: '✅ Arrivée', depart: '🚪 Départ', pause_debut: '⏸ Pause', pause_fin: '▶️ Reprise' };
+  el.innerHTML = pts.length ? pts.map(function(p) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(p.nom_salarie || '—') + ' — ' + (types[p.type] || p.type) + '</div>' +
+      '<div class="ri-sub">' + new Date(p.horodatage).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + ' · ' + esc(p.poste || '') + '</div></div></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">⏱️</div>Aucun pointage.</div>';
+}
+
+// ════════════════════════════════════════════════════════════
+// HEURES SUPPLÉMENTAIRES
+// ════════════════════════════════════════════════════════════
+function chargerSalariesPourSelect() { if (_salaries.length) remplirSelectsSalaries(); else chargerSalariesBase().then(remplirSelectsSalaries); }
+
+function calculerEtSauverHS() {
+  var hs25 = parseFloat(document.getElementById('hs-25').value) || 0;
+  var hs50 = parseFloat(document.getElementById('hs-50').value) || 0;
+  var salaire = 2500;
+  var tauxH = salaire / 151.67;
+  var m25 = hs25 * tauxH * 1.25;
+  var m50 = hs50 * tauxH * 1.50;
+  var total = m25 + m50;
+  var div = document.getElementById('hs-calcul');
+  div.style.display = 'block';
+  div.innerHTML = '<strong>Calcul Aria :</strong><br>HS 25% (' + hs25 + 'h) : ' + m25.toFixed(2) + '€<br>' +
+    'HS 50% (' + hs50 + 'h) : ' + m50.toFixed(2) + '€<br><strong>Total : ' + total.toFixed(2) + '€</strong>';
+  notifOk('HS enregistrées'); logAction('HS : ' + hs25 + 'h à 25% + ' + hs50 + 'h à 50% = ' + total.toFixed(2) + '€');
+}
+
+async function chargerHistoriqueHS() {
+  var data = await api('/industrial/taches', { token: getToken(), entreprise_id: getEntrepriseId(), poste: 'rh' }, 'GET');
+  var el = document.getElementById('hs-historique'); if (!el) return;
+  var hs = (data.taches || []).filter(function(t) { return (t.titre || '').toLowerCase().includes('heure'); });
+  el.innerHTML = hs.length ? hs.map(function(h) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(h.titre) + '</div><div class="ri-sub">' + fmtDate(h.created_at) + '</div></div></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">📭</div>Aucune HS.</div>';
+}
+
+// ════════════════════════════════════════════════════════════
+// CONTRATS & AVENANTS
+// ════════════════════════════════════════════════════════════
+var contratGenere = '';
+
+function chargerVueContrats() {
+  var blocSal = document.getElementById('bloc-contrats-sal');
+  var blocResp = document.querySelectorAll('.card.resp-el');
+  if (blocSal) blocSal.style.display = estResponsable ? 'none' : 'block';
+  blocResp.forEach(function(b) { b.style.display = estResponsable ? 'block' : 'none'; });
+}
+
+async function genererContrat() {
+  var nom = document.getElementById('c-nom').value.trim();
+  var poste = document.getElementById('c-poste-txt').value.trim();
+  var sal = document.getElementById('c-salaire').value;
+  var debut = document.getElementById('c-debut').value;
+  var type = document.getElementById('c-type').value;
+  if (!nom || !poste || !sal || !debut) { notifErr('Nom, poste, salaire et date obligatoires'); return; }
+  var fin = document.getElementById('c-fin').value;
+  var temps = document.getElementById('c-temps').value || '35h/semaine';
+  var conv = document.getElementById('c-convention').value;
+  var prec = document.getElementById('c-precisions').value;
+  var prompt = 'Génère un contrat de travail ' + type + ' complet et légalement correct pour la France.\n' +
+    'Salarié : ' + nom + '\nPoste : ' + poste + '\nSalaire brut mensuel : ' + sal + '€\n' +
+    'Date de début : ' + debut + (fin ? '\nDate de fin : ' + fin : '') +
+    '\nTemps de travail : ' + temps + (conv ? '\nConvention collective : ' + conv : '') +
+    (prec ? '\nPrécisions : ' + prec : '') + '\n\nInclure : parties, objet, durée, rémunération, congés, clause confidentialité, période d\'essai si applicable. Format avec ARTICLE 1, ARTICLE 2, etc.';
+  var btn = document.querySelector('#v-contrats .btn-amber'); if (btn) { btn.textContent = '⏳ Génération...'; btn.disabled = true; }
+  contratGenere = await apiAsk(prompt);
+  if (btn) { btn.textContent = '✨ Générer avec Aria'; btn.disabled = false; }
+  if (contratGenere) {
+    document.getElementById('contrat-preview').textContent = contratGenere;
+    document.getElementById('bloc-contrat-genere').style.display = 'block';
+    logAction('Contrat ' + type + ' généré pour ' + nom);
+  }
+}
+
+async function appliquerModifContrat() {
+  var modif = document.getElementById('modif-contrat-input').value.trim();
+  if (!modif || !contratGenere) return;
+  var nouveau = await apiAsk('Voici un contrat de travail :\n\n' + contratGenere + '\n\nModification demandée : ' + modif + '\n\nRetourne le contrat complet modifié.');
+  if (nouveau) { contratGenere = nouveau; document.getElementById('contrat-preview').textContent = nouveau; document.getElementById('modif-contrat-input').value = ''; logAction('Contrat modifié : ' + modif); }
+}
+
+function demanderModifContrat() { document.getElementById('modif-contrat-input').focus(); }
+
+function telechargerContratPDF() {
+  if (!contratGenere) return;
+  var win = window.open('', '_blank');
+  win.document.write('<html><head><title>Contrat</title><style>body{font-family:Georgia,serif;padding:40px;font-size:13px;line-height:1.8;max-width:800px;margin:0 auto}pre{white-space:pre-wrap;font-family:inherit}</style></head><body><pre>' + contratGenere.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre></body></html>');
+  win.document.close(); win.print(); logAction('Contrat téléchargé PDF');
+}
+
+async function genererAvenant() {
+  var sal = document.getElementById('av-salarie').value.trim();
+  var type = document.getElementById('av-type').value;
+  var prec = document.getElementById('av-precisions').value;
+  if (!sal) { notifErr('Nom du salarié obligatoire'); return; }
+  var zone = document.getElementById('avenant-preview');
+  zone.style.display = 'block'; zone.textContent = '⏳ Génération...';
+  var rep = await apiAsk('Génère un avenant au contrat de travail de type "' + type + '" pour ' + sal + '. Précisions : ' + prec + '. Format légal français, daté, signé des deux parties.', contexteRH());
+  zone.textContent = rep; logAction('Avenant généré pour ' + sal);
+}
+
+async function demanderDocumentRH() {
+  var type = document.getElementById('dem-type-doc').value;
+  var motif = document.getElementById('dem-motif').value.trim();
+  var labels = { attestation_emploi: 'Attestation d\'emploi', attestation_salaire: 'Attestation de salaire', avenant_contrat: 'Avenant au contrat', solde_tout_compte: 'Solde de tout compte', autre: 'Document contractuel' };
+  var data = await api('/industrial/tache/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    titre: (labels[type] || type) + ' — ' + getNom(),
+    description: 'Document demandé : ' + (labels[type] || type) + '\nSalarié : ' + getNom() + (motif ? '\nMotif : ' + motif : ''),
+    priorite: 'normale', poste_cible: 'rh'
+  });
+  var msg = document.getElementById('dem-doc-msg');
+  if (data.ok) { msg.textContent = '✅ Demande transmise au service RH.'; msg.style.color = 'var(--ok)'; msg.style.display = 'block'; logAction('Demande document RH : ' + labels[type]); }
+  else { msg.textContent = '❌ ' + (data.erreur || 'Erreur'); msg.style.color = 'var(--err)'; msg.style.display = 'block'; }
+}
+
+// ════════════════════════════════════════════════════════════
+// NOTES DE FRAIS
+// ════════════════════════════════════════════════════════════
+async function soumettreNoteFrais() {
+  var date = document.getElementById('nf-date').value;
+  var montant = document.getElementById('nf-montant').value;
+  var desc = document.getElementById('nf-desc').value.trim();
+  if (!date || !montant || !desc) { notifErr('Date, montant et description obligatoires'); return; }
+  var data = await api('/industrial/frais/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    date: date, categorie: document.getElementById('nf-cat').value,
+    montant: parseFloat(montant), description: desc
+  });
+  if (data.ok) { notifOk('Note de frais soumise'); logAction('Note frais : ' + montant + '€ — ' + desc); chargerMesFrais(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+async function chargerMesFrais() {
+  var data = await api('/industrial/frais', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var el = document.getElementById('mes-frais'); if (!el) return;
+  var frais = data.frais || [];
+  el.innerHTML = frais.length ? frais.map(function(f) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(f.description || '—') + '</div>' +
+      '<div class="ri-sub">' + fmtDate(f.date) + ' · ' + esc(f.categorie || '') + '</div></div>' +
+      '<span class="badge badge-' + (f.statut === 'valide' ? 'ok' : f.statut === 'refuse' ? 'err' : 'warn') + '">' + (f.statut || 'en_attente') + '</span>' +
+      '<span style="font-family:monospace;font-size:13px;font-weight:700;color:var(--amber)">' + fmtMontant(parseFloat(f.montant || 0)) + '</span></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">🧳</div>Aucune note de frais.</div>';
+}
+async function chargerFraisEquipe() {
+  var data = await api('/industrial/frais', { token: getToken(), entreprise_id: getEntrepriseId(), all: true }, 'GET');
+  var el = document.getElementById('frais-a-valider'); if (!el) return;
+  var frais = (data.frais || []).filter(function(f) { return f.statut === 'en_attente'; });
+  el.innerHTML = frais.length ? frais.map(function(f) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(f.nom_salarie || '—') + ' — ' + esc(f.description || '') + '</div>' +
+      '<div class="ri-sub">' + fmtDate(f.date) + ' · ' + fmtMontant(parseFloat(f.montant || 0)) + '</div></div>' +
+      '<div class="ri-actions">' +
+      '<button class="btn-act btn-ok btn-sm" onclick="validerFrais(\'' + f.id + '\',\'valide\')">✅</button>' +
+      '<button class="btn-act btn-err btn-sm" onclick="validerFrais(\'' + f.id + '\',\'refuse\')">❌</button>' +
+      '</div></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">🧳</div>Aucune note à valider.</div>';
+}
+async function validerFrais(id, statut) {
+  var data = await api('/industrial/frais/valider', { token: getToken(), entreprise_id: getEntrepriseId(), frais_id: id, statut: statut });
+  if (data.ok) { notifOk(statut === 'valide' ? 'Frais validé' : 'Frais refusé'); chargerFraisEquipe(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+// ════════════════════════════════════════════════════════════
+// RECRUTEMENT
+// ════════════════════════════════════════════════════════════
+async function chargerRecrutement() {
+  appliquerGardeVue('recrutement-guard', 'recrutement-data', estResponsable);
+  if (!estResponsable) return;
+  var data = await api('/industrial/candidats', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  _candidats = data.candidats || [];
+  var etapes = { nouveau: [], entretien1: [], entretien2: [], offre: [], refuse: [] };
+  _candidats.forEach(function(c) { if (etapes[c.etape]) etapes[c.etape].push(c); else etapes.nouveau.push(c); });
+  Object.entries(etapes).forEach(function(kv) {
+    var el = document.getElementById('pipe-' + kv[0]); if (!el) return;
+    el.innerHTML = kv[1].map(function(c) {
+      return '<div class="pipe-card"><div class="pn">' + esc(c.nom) + '</div><div class="pd">' + esc(c.poste_vise || '—') + '</div></div>';
+    }).join('') || '<div style="font-size:11px;color:var(--ink-faint);text-align:center;padding:8px">Vide</div>';
+  });
+}
+async function ajouterCandidat() {
+  var nom = document.getElementById('cand-nom').value.trim(); if (!nom) { notifErr('Nom obligatoire'); return; }
+  var data = await api('/industrial/candidat/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    nom: nom, poste_vise: document.getElementById('cand-poste').value,
+    source: document.getElementById('cand-source').value,
+    email: document.getElementById('cand-email').value,
+    telephone: document.getElementById('cand-tel').value,
+    etape: 'nouveau'
+  });
+  if (data.ok) { fermerModal('modal-candidat'); notifOk('Candidat ajouté'); logAction('Candidat ajouté : ' + nom); chargerRecrutement(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+async function genererOffreEmploi() {
+  var poste = document.getElementById('rec-poste').value.trim();
+  if (!poste) { notifErr('Intitulé du poste obligatoire'); return; }
+  var zone = document.getElementById('offre-emploi-result');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria rédige l\'offre...';
+  var rep = await apiAsk('Rédige une offre d\'emploi professionnelle et attractive pour le poste : ' + poste +
+    ' (' + document.getElementById('rec-type').value + '). Compétences : ' + (document.getElementById('rec-competences').value || 'à définir') +
+    '. Format : introduction, missions, profil recherché, conditions, candidature.', contexteRH());
+  zone.textContent = rep; logAction('Offre emploi générée : ' + poste);
+}
+
+// ════════════════════════════════════════════════════════════
+// ONBOARDING
+// ════════════════════════════════════════════════════════════
+var _checklistOnboarding = [
+  'Remise du matériel informatique', 'Création des accès systèmes', 'Présentation de l\'équipe',
+  'Visite des locaux', 'Lecture du règlement intérieur', 'Formation sécurité', 'Signature du contrat',
+  'Remise du badge', 'Briefing avec le manager', 'Formation outils métier', 'Bilan J+7', 'Bilan J+30'
+];
+var _checkStates = {};
+
+async function chargerOnboarding() {
+  appliquerGardeVue('onboarding-guard', 'onboarding-data', estResponsable);
+  if (!estResponsable) return;
+  remplirSelectsSalaries();
+}
+
+function chargerChecklistOnboarding() {
+  var salId = document.getElementById('onboard-sal-select').value;
+  var el = document.getElementById('onboarding-checklist');
+  if (!salId) { el.innerHTML = '<div class="empty-state"><div class="es-ic">🚪</div>Sélectionnez un salarié.</div>'; return; }
+  if (!_checkStates[salId]) _checkStates[salId] = {};
+  el.innerHTML = _checklistOnboarding.map(function(item, i) {
+    var done = !!_checkStates[salId][i];
+    return '<div class="check-item" onclick="toggleCheck(this,' + JSON.stringify(salId) + ',' + i + ')">' +
+      '<div class="check-box ' + (done ? 'done' : '') + '">' + (done ? '✓' : '') + '</div>' +
+      '<div class="check-txt ' + (done ? 'done' : '') + '">' + esc(item) + '</div></div>';
+  }).join('');
+  logAction('Checklist onboarding ouverte pour salarié ' + salId);
+}
+
+function toggleCheck(el, salId, idx) {
+  if (!_checkStates[salId]) _checkStates[salId] = {};
+  _checkStates[salId][idx] = !_checkStates[salId][idx];
+  chargerChecklistOnboarding();
+}
+
+async function genererPlanOnboarding() {
+  var poste = document.getElementById('onb-poste').value.trim();
+  var secteur = document.getElementById('onb-secteur').value.trim();
+  if (!poste) { notifErr('Poste obligatoire'); return; }
+  var zone = document.getElementById('plan-onboarding-result');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria crée le plan...';
+  var rep = await apiAsk('Crée un plan d\'intégration personnalisé sur 90 jours pour un nouveau ' + poste + ' dans le secteur ' + (secteur || 'non précisé') + '. Semaine 1, mois 1, mois 2, mois 3. Actions concrètes, personnes à rencontrer, compétences à acquérir.', contexteRH());
+  zone.textContent = rep; logAction('Plan onboarding généré : ' + poste);
+}
+
+// ════════════════════════════════════════════════════════════
+// FICHE DE POSTE
+// ════════════════════════════════════════════════════════════
+async function genererFichePoste() {
+  var intitule = document.getElementById('fp-intitule').value.trim();
+  if (!intitule) { notifErr('Intitulé obligatoire'); return; }
+  var zone = document.getElementById('fiche-poste-result');
+  zone.style.display = 'block'; zone.textContent = '⏳ Génération...';
+  var rep = await apiAsk('Génère une fiche de poste complète pour : ' + intitule +
+    ' | Service : ' + (document.getElementById('fp-service').value || '—') +
+    ' | Contrat : ' + document.getElementById('fp-contrat').value +
+    ' | Salaire : ' + (document.getElementById('fp-salaire').value || 'NC') + '€' +
+    ' | Missions : ' + (document.getElementById('fp-missions').value || 'à définir') +
+    ' | Compétences : ' + (document.getElementById('fp-competences').value || 'à définir') +
+    '. Format : intitulé, positionnement hiérarchique, missions, compétences requises, conditions.', contexteRH());
+  zone.textContent = rep; logAction('Fiche poste générée : ' + intitule);
+}
+
+// ════════════════════════════════════════════════════════════
+// ENTRETIENS & ÉVALUATIONS
+// ════════════════════════════════════════════════════════════
+async function chargerEntretiens() {
+  appliquerGardeVue('entretiens-guard', 'entretiens-data', estResponsable);
+  if (!estResponsable) return;
+  remplirSelectsSalaries();
+  var data = await api('/industrial/entretiens', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var el = document.getElementById('entretiens-liste'); if (!el) return;
+  var ents = data.entretiens || [];
+  el.innerHTML = ents.length ? ents.map(function(e) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(e.nom_salarie || '—') + ' — ' + esc(e.type || '') + '</div>' +
+      '<div class="ri-sub">' + fmtDate(e.date) + ' · ' + esc(e.lieu || '') + '</div></div>' +
+      '<span class="badge badge-' + (e.statut === 'realise' ? 'ok' : 'warn') + '">' + (e.statut || 'planifié') + '</span></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">💬</div>Aucun entretien planifié.</div>';
+}
+async function planifierEntretien() {
+  var salId = document.getElementById('ent-sal-select').value;
+  var date = document.getElementById('ent-date').value;
+  if (!salId || !date) { notifErr('Salarié et date obligatoires'); return; }
+  var data = await api('/industrial/entretien/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    salarie_id: salId, type: document.getElementById('ent-type').value,
+    date: date, lieu: document.getElementById('ent-lieu').value
+  });
+  if (data.ok) { fermerModal('modal-entretien'); notifOk('Entretien planifié'); logAction('Entretien planifié : ' + date); chargerEntretiens(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+async function preparerEntretien() {
+  var sal = document.getElementById('ent-sal').value.trim();
+  var poste = document.getElementById('ent-poste').value.trim();
+  var points = document.getElementById('ent-points').value;
+  if (!sal) { notifErr('Nom du salarié obligatoire'); return; }
+  var zone = document.getElementById('entretien-prep-result');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria prépare...';
+  var rep = await apiAsk('Prépare un guide d\'entretien annuel pour ' + sal + ' (' + (poste || 'poste non précisé') + '). Points à aborder : ' + (points || 'non précisés') + '. Fournir : questions à poser, grille d\'évaluation, axes de développement, points d\'attention.', contexteRH());
+  zone.textContent = rep; logAction('Entretien préparé : ' + sal);
+}
+
+// ════════════════════════════════════════════════════════════
+// FORMATION
+// ════════════════════════════════════════════════════════════
+async function chargerFormations() {
+  appliquerGardeVue('formation-guard', 'formation-data', estResponsable);
+  if (!estResponsable) return;
+  remplirSelectsSalaries();
+  var data = await api('/industrial/formations', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var el = document.getElementById('formations-liste'); if (!el) return;
+  var forms = data.formations || [];
+  el.innerHTML = forms.length ? forms.map(function(f) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(f.intitule || '—') + '</div>' +
+      '<div class="ri-sub">' + esc(f.organisme || '') + ' · ' + (f.duree ? f.duree + ' j' : '') + ' · ' + fmtDate(f.date_debut) + '</div></div>' +
+      '<span class="badge badge-amber">' + fmtMontant(parseFloat(f.cout || 0)) + '</span></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">🎓</div>Aucune formation.</div>';
+}
+async function enregistrerFormation() {
+  var intitule = document.getElementById('form-intitule').value.trim();
+  if (!intitule) { notifErr('Intitulé obligatoire'); return; }
+  var data = await api('/industrial/formation/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    intitule: intitule, organisme: document.getElementById('form-organisme').value,
+    duree: parseFloat(document.getElementById('form-duree').value) || null,
+    date_debut: document.getElementById('form-debut').value || null,
+    cout: parseFloat(document.getElementById('form-cout').value) || 0,
+    salarie_id: document.getElementById('form-sal-select').value || null
+  });
+  if (data.ok) { fermerModal('modal-formation'); notifOk('Formation enregistrée'); logAction('Formation : ' + intitule); chargerFormations(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+async function recommanderFormations() {
+  var contexte = document.getElementById('form-contexte').value.trim();
+  var zone = document.getElementById('formation-recomm-result');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria analyse...';
+  var rep = await apiAsk('Recommande des formations adaptées au service RH. Contexte : ' + (contexte || 'amélioration globale des compétences RH') + '. Droit du travail, outils SIRH, management, RGPD. Budget, durée, organismes recommandés.', contexteRH());
+  zone.textContent = rep; logAction('Recommandations formation générées');
+}
+
+// ════════════════════════════════════════════════════════════
+// GPEC
+// ════════════════════════════════════════════════════════════
+async function chargerGPEC() {
+  appliquerGardeVue('gpec-guard', 'gpec-data', estResponsable);
+  if (!estResponsable) return;
+  remplirSelectsSalaries();
+}
+async function chargerCompetences() {
+  var salId = document.getElementById('gpec-sal-select').value;
+  var el = document.getElementById('gpec-competences');
+  if (!salId) { el.innerHTML = '<div class="empty-state"><div class="es-ic">📈</div>Sélectionnez un collaborateur.</div>'; return; }
+  var data = await api('/industrial/competences', { token: getToken(), entreprise_id: getEntrepriseId(), salarie_id: salId }, 'GET');
+  var comps = data.competences || [];
+  el.innerHTML = comps.length ? comps.map(function(c) {
+    var pct = Math.round((c.niveau || 0) * 20);
+    return '<div class="skill-row"><div class="skill-name">' + esc(c.nom) + '</div>' +
+      '<div class="skill-bar"><span style="width:' + pct + '%"></span></div>' +
+      '<div class="skill-lvl">' + (c.niveau || 0) + '/5</div></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">📈</div>Aucune compétence enregistrée.</div>';
+}
+async function analyseGPEC() {
+  var contexte = document.getElementById('gpec-contexte').value.trim();
+  var zone = document.getElementById('gpec-analyse-result');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria analyse...';
+  var rep = await apiAsk('Analyse les écarts de compétences de l\'équipe et propose un plan de développement. Contexte : ' + (contexte || 'développement général') + '. Fournir : compétences prioritaires, plan d\'action, timeline.', contexteRH());
+  zone.textContent = rep; logAction('Analyse GPEC générée');
+}
+
+// ════════════════════════════════════════════════════════════
+// ORGANIGRAMME
+// ════════════════════════════════════════════════════════════
+async function chargerOrganigramme() {
+  appliquerGardeVue('organigramme-guard', 'organigramme-data', estDRH);
+  if (!estDRH) return;
+  if (!_salaries.length) await chargerSalariesBase();
+  var el = document.getElementById('organigramme-content'); if (!el) return;
+  var par_poste = {};
+  _salaries.forEach(function(s) {
+    var p = s.poste || 'autre';
+    if (!par_poste[p]) par_poste[p] = [];
+    par_poste[p].push(s);
+  });
+  var icons = { rh: '👥', comptabilite: '🧾', achats: '📦', 'service-client': '🎧', logistique: '🏭', 'technicien-sav': '🔧', dirigeant: '👑' };
+  el.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">' +
+    Object.entries(par_poste).map(function(kv) {
+      var poste = kv[0]; var membres = kv[1];
+      return '<div class="org-node' + (poste === 'dirigeant' ? ' top' : '') + '">' +
+        '<div style="font-weight:700;font-size:13px">' + (icons[poste] || '👤') + ' ' + poste + '</div>' +
+        '<div style="font-size:11px;color:var(--ink-dim);margin-top:5px">' + membres.map(function(m) { return esc(m.nom) + (m.role === 'responsable' ? ' (Resp.)' : ''); }).join(', ') + '</div>' +
+        '<div class="badge badge-amber" style="margin-top:6px">' + membres.length + ' membre(s)</div></div>';
+    }).join('') + '</div>';
+  logAction('Organigramme chargé');
+}
+async function analyseOrganigramme() {
+  var zone = document.getElementById('org-analyse-result');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria analyse...';
+  var rep = await apiAsk('Analyse la structure organisationnelle de l\'entreprise. Identifie les risques (dépendances, surcharge, silos), les forces, et propose des recommandations structurelles.', contexteRH() + ' | Équipes: ' + JSON.stringify(_salaries.map(function(s) { return { nom: s.nom, poste: s.poste, role: s.role }; })));
+  zone.textContent = rep; logAction('Analyse organisationnelle générée');
+}
+
+// ════════════════════════════════════════════════════════════
+// DÉPART SALARIÉ
+// ════════════════════════════════════════════════════════════
+async function chargerDepartSalarie() { appliquerGardeVue('depart-guard', 'depart-data', estDRH); if (estDRH) remplirSelectsSalaries(); }
+async function initierDepart() {
+  appliquerGardeVue('depart-guard', 'depart-data', estDRH);
+  if (!estDRH) return;
+  var salId = document.getElementById('dep-sal').value;
+  var type = document.getElementById('dep-type').value;
+  var date = document.getElementById('dep-date').value;
+  if (!salId || !date) { notifErr('Salarié et date obligatoires'); return; }
+  var sal = _salaries.find(function(s) { return s.id === salId; }) || {};
+  var zone = document.getElementById('depart-checklist-result');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria prépare la checklist...';
+  var rep = await apiAsk('Génère une checklist complète de départ pour ' + (sal.nom || 'le salarié') + ' (' + type + '), date de départ ' + date + '. Inclure : préavis, documents à remettre (attestation, solde de tout compte, certificat de travail, portabilité mutuelle, Pôle Emploi), restitution matériel, clôture accès, bilan RH.', contexteRH());
+  zone.textContent = rep; logAction('Départ initié : ' + (sal.nom || salId));
+}
+
+// ════════════════════════════════════════════════════════════
+// SANCTIONS
+// ════════════════════════════════════════════════════════════
+async function chargerSanctions() {
+  appliquerGardeVue('sanctions-guard', 'sanctions-data', estDRH);
+  if (!estDRH) return;
+  var data = await api('/industrial/sanctions', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var el = document.getElementById('sanctions-liste'); if (!el) return;
+  var sancs = data.sanctions || [];
+  el.innerHTML = sancs.length ? sancs.map(function(s) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(s.nom_salarie || '—') + ' — ' + esc(s.type || '') + '</div>' +
+      '<div class="ri-sub">' + fmtDate(s.date) + ' · ' + esc(s.statut || '') + '</div></div>' +
+      '<span class="badge badge-' + (s.statut === 'clos' ? 'ok' : 'err') + '">' + esc(s.statut || '—') + '</span></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">⚠️</div>Aucune procédure en cours.</div>';
+}
+async function aideProceduire() {
+  appliquerGardeVue('sanctions-guard', 'sanctions-data', estDRH);
+  if (!estDRH) return;
+  var sal = document.getElementById('sanc-sal').value.trim();
+  var type = document.getElementById('sanc-type').value;
+  var desc = document.getElementById('sanc-desc').value;
+  if (!sal || !desc) { notifErr('Salarié et description des faits obligatoires'); return; }
+  var zone = document.getElementById('sanction-procedure-result');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria consulte le droit du travail...';
+  var rep = await apiAsk('Tu es expert en droit du travail français. Décris la procédure disciplinaire à suivre pour : ' + type + ' concernant ' + sal + '. Faits : ' + desc + '. Inclure : délais légaux, convocation, entretien préalable, notification, voies de recours. Citer les articles du Code du travail applicables.', contexteRH());
+  zone.textContent = rep; logAction('Procédure disciplinaire guidée : ' + sal);
+}
+
+// ════════════════════════════════════════════════════════════
+// MASSE SALARIALE
+// ════════════════════════════════════════════════════════════
+async function chargerMasseSalariale() {
+  appliquerGardeVue('paie-guard', 'paie-data', estDRH);
+  if (!estDRH) return;
+  if (!_salaries.length) await chargerSalariesBase();
+  var brute = _salaries.reduce(function(s, e) { return s + parseFloat(e.salaire_brut || 0); }, 0);
+  var moy = _salaries.length ? brute / _salaries.length : 0;
+  var charges = brute * 0.42;
+  setStat('masse-sal-brute', fmtMontant(brute), 'warn');
+  setStat('masse-sal-moy', fmtMontant(moy));
+  setStat('masse-sal-charge', fmtMontant(charges), 'err');
+  setStat('masse-sal-nb', _salaries.length, 'ok');
+  var par_poste = {};
+  _salaries.forEach(function(s) {
+    var p = s.poste || 'autre';
+    if (!par_poste[p]) par_poste[p] = { nb: 0, total: 0 };
+    par_poste[p].nb++; par_poste[p].total += parseFloat(s.salaire_brut || 0);
+  });
+  var el = document.getElementById('masse-sal-detail'); if (!el) return;
+  el.innerHTML = Object.entries(par_poste).map(function(kv) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(kv[0]) + '</div>' +
+      '<div class="ri-sub">' + kv[1].nb + ' salarié(s)</div></div>' +
+      '<span style="font-family:monospace;font-weight:700;color:var(--amber)">' + fmtMontant(kv[1].total) + '</span></div>';
+  }).join('') || '<div class="empty-state"><div class="es-ic">💰</div>Aucune donnée.</div>';
+  logAction('Masse salariale calculée');
+}
+async function analyseMasseSalariale() {
+  var zone = document.getElementById('masse-sal-analyse');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria analyse...';
+  var rep = await apiAsk('Analyse la masse salariale de l\'entreprise : répartition par poste, risques, recommandations d\'optimisation (sans licenciements), évolution prévisionnelle.', contexteRH() + ' | Salariés: ' + JSON.stringify(_salaries.map(function(s) { return { poste: s.poste, salaire: s.salaire_brut }; })));
+  zone.textContent = rep; logAction('Analyse masse salariale générée');
+}
+
+// ════════════════════════════════════════════════════════════
+// REPORTING RH
+// ════════════════════════════════════════════════════════════
+async function chargerReporting() {
+  appliquerGardeVue('reporting-guard', 'reporting-data', estDRH);
+  if (!estDRH) return;
+  if (!_salaries.length) await chargerSalariesBase();
+  setStat('rep-effectif', _salaries.length);
+  var data = await api('/industrial/absences', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var abs = data.absences || [];
+  var taux = _salaries.length ? ((abs.filter(function(a) { return a.statut === 'approuve'; }).length / _salaries.length) * 100).toFixed(1) : 0;
+  setStat('rep-turnover', taux + '%', parseFloat(taux) > 5 ? 'warn' : 'ok');
+  setStat('rep-anciennete', '—');
+  logAction('Reporting RH chargé');
+}
+async function genererRapportRH() {
+  var zone = document.getElementById('rapport-rh-result');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria génère le rapport...';
+  var rep = await apiAsk('Génère un rapport RH mensuel structuré : effectifs, absences, recrutements, formations, masse salariale, indicateurs de performance RH (absentéisme, turnover, ancienneté), recommandations pour le mois suivant.', contexteRH() + ' | Effectif: ' + _salaries.length);
+  zone.textContent = rep; logAction('Rapport RH mensuel généré');
+}
+
+// ════════════════════════════════════════════════════════════
+// POLITIQUE RH
+// ════════════════════════════════════════════════════════════
+async function genererPolitiqueRH() {
+  appliquerGardeVue('politique-guard', 'politique-data', estDRH);
+  if (!estDRH) return;
+  var type = document.getElementById('pol-type').value;
+  var prec = document.getElementById('pol-precisions').value;
+  var zone = document.getElementById('politique-result');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria rédige la politique...';
+  var rep = await apiAsk('Rédige un document de politique RH complet sur : ' + type + '. Précisions : ' + (prec || 'standard') + '. Format officiel : objet, champ d\'application, règles, droits et devoirs, procédures, sanctions, entrée en vigueur.', contexteRH());
+  zone.textContent = rep; logAction('Politique RH rédigée : ' + type);
+}
+
+// ════════════════════════════════════════════════════════════
+// ABSENCES PROACTIVES
+// ════════════════════════════════════════════════════════════
+async function chargerAbsencesProactives() {
+  appliquerGardeVue('abs-proact-guard', 'abs-proact-data', estDRH);
+  if (!estDRH) return;
+  var data = await api('/industrial/absences', { token: getToken(), entreprise_id: getEntrepriseId() }, 'GET');
+  var abs = data.absences || [];
+  var par_sal = {};
+  abs.forEach(function(a) {
+    var k = a.salarie_id || a.nom_salarie || '—';
+    if (!par_sal[k]) par_sal[k] = { nom: a.nom_salarie || k, count: 0, jours: 0 };
+    par_sal[k].count++; par_sal[k].jours += (a.nb_jours || 1);
+  });
+  var el = document.getElementById('abs-proact-content'); if (!el) return;
+  var liste = Object.values(par_sal).sort(function(a, b) { return b.jours - a.jours; });
+  el.innerHTML = liste.length ? liste.map(function(s) {
+    var alerte = s.count >= 3 || s.jours >= 10;
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + esc(s.nom) + '</div>' +
+      '<div class="ri-sub">' + s.count + ' absence(s) · ' + s.jours + ' jour(s)</div></div>' +
+      '<span class="badge badge-' + (alerte ? 'err' : 'ok') + '">' + (alerte ? '⚠️ Attention' : '✓ Normal') + '</span></div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">✅</div>Aucun pattern détecté.</div>';
+  logAction('Analyse absentéisme effectuée');
+}
+async function recommandationsAbsenteisme() {
+  var zone = document.getElementById('abs-proact-recomm');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria analyse...';
+  var rep = await apiAsk('Analyse les patterns d\'absentéisme et propose des actions préventives : entretiens de retour, amélioration conditions de travail, plan d\'action RH, indicateurs de suivi.', contexteRH());
+  zone.textContent = rep; logAction('Recommandations absentéisme générées');
+}
+
+// ════════════════════════════════════════════════════════════
+// MES DROITS
+// ════════════════════════════════════════════════════════════
+async function demanderDroits() {
+  var q = document.getElementById('droits-question').value.trim(); if (!q) return;
+  var zone = document.getElementById('droits-reponse');
+  zone.style.display = 'block'; zone.textContent = '⏳ Aria consulte la législation...';
+  var rep = await apiAsk('Tu es expert en droit du travail français. Réponds clairement et précisément, avec les textes de loi applicables : ' + q, 'Droits du salarié RH');
+  zone.textContent = rep; logAction('Question droits : ' + q.slice(0, 60));
+}
+
+// ════════════════════════════════════════════════════════════
+// TÂCHES
+// ════════════════════════════════════════════════════════════
+async function chargerTaches() {
+  var data = await api('/industrial/taches', { token: getToken(), entreprise_id: getEntrepriseId(), poste: 'rh' }, 'GET');
+  _taches = data.taches || [];
+  var el = document.getElementById('liste-taches'); if (!el) return;
+  var prior = { urgente: '🔴', haute: '🟠', normale: '🟡', basse: '🟢' };
+  var statuts = { a_faire: 'À faire', en_cours: 'En cours', bloque: 'Bloqué', termine: 'Terminé ✅', annule: 'Annulé' };
+  el.innerHTML = _taches.length ? _taches.map(function(t) {
+    return '<div class="row-item"><div class="ri-main"><div class="ri-title">' + (prior[t.priorite] || '🟡') + ' ' + esc(t.titre) + '</div>' +
+      '<div class="ri-sub">' + (statuts[t.statut] || t.statut) + (t.deadline ? ' · ' + fmtDate(t.deadline) : '') + '</div></div>' +
+      (t.statut !== 'termine' ? '<button class="btn-act btn-ok btn-sm" onclick="terminerTache(\'' + t.id + '\')">✓</button>' : '<span class="badge badge-ok">✓</span>') +
+      '</div>';
+  }).join('') : '<div class="empty-state"><div class="es-ic">📋</div>Aucune tâche.</div>';
+}
+async function creerTache() {
+  var titre = document.getElementById('t-titre').value.trim();
+  if (!titre) { notifErr('Titre obligatoire'); return; }
+  var data = await api('/industrial/tache/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    titre: titre, description: document.getElementById('t-desc').value,
+    priorite: document.getElementById('t-priorite').value,
+    deadline: document.getElementById('t-deadline').value || null,
+    assignee_id: document.getElementById('t-assignee').value || null,
+    poste_cible: 'rh'
+  });
+  if (data.ok) { fermerModal('modal-tache'); notifOk('Tâche créée'); logAction('Tâche : ' + titre); chargerTaches(); }
+  else notifErr(data.erreur || 'Erreur');
+}
+async function terminerTache(id) {
+  await api('/industrial/tache/modifier', { token: getToken(), entreprise_id: getEntrepriseId(), tache_id: id, statut: 'termine' });
+  notifOk('Tâche terminée'); chargerTaches();
+}
+
+// ════════════════════════════════════════════════════════════
+// MODIFICATION FICHE (SALARIÉ)
+// ════════════════════════════════════════════════════════════
+async function envoyerDemandeModifFiche() {
+  var champ = document.getElementById('modif-champ').value;
+  var detail = document.getElementById('modif-detail').value.trim();
+  if (!detail) { notifErr('Précisez la modification'); return; }
+  var data = await api('/industrial/tache/creer', {
+    token: getToken(), entreprise_id: getEntrepriseId(),
+    titre: 'Modification fiche — ' + champ + ' (' + getNom() + ')',
+    description: 'Salarié : ' + getNom() + '\nChamp : ' + champ + '\nDemande : ' + detail,
+    priorite: 'normale', poste_cible: 'rh'
+  });
+  if (data.ok) { fermerModal('modal-modif-fiche'); notifOk('Demande envoyée au service RH'); logAction('Demande modif fiche : ' + champ); }
+  else notifErr(data.erreur || 'Erreur');
+}
+
+// ════════════════════════════════════════════════════════════
+// QCM FORMATION
+// ════════════════════════════════════════════════════════════
+async function lancerQCM() {
+  var zone = document.getElementById('qcm-zone');
+  zone.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-dim)">⏳ Aria prépare les questions...</div>';
+  var rep = await apiAsk('Génère 3 questions QCM sur le droit du travail français niveau RH (congés, licenciement, conventions collectives, RGPD RH). Format JSON UNIQUEMENT sans markdown : [{"q":"question","options":["A. ...","B. ...","C. ...","D. ..."],"rep":"A"}]');
+  try {
+    var s = rep.indexOf('['); var e = rep.lastIndexOf(']');
+    var questions = JSON.parse(rep.slice(s, e + 1));
+    var html = '';
+    questions.forEach(function(q, i) {
+      html += '<div style="background:var(--panel2);border-radius:10px;padding:14px;margin-bottom:12px">' +
+        '<div style="font-weight:600;margin-bottom:10px">' + (i + 1) + '. ' + esc(q.q) + '</div>' +
+        q.options.map(function(opt, j) {
+          var l = ['A', 'B', 'C', 'D'][j];
+          return '<button onclick="repondreQCM(this,\'' + l + '\',\'' + q.rep + '\')" style="display:block;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--ink);cursor:pointer;margin-bottom:4px;font-size:13px">' + esc(opt) + '</button>';
+        }).join('') + '</div>';
+    });
+    zone.innerHTML = html;
+  } catch(e) {
+    zone.innerHTML = '<div class="empty-state"><div class="es-ic">❌</div>Erreur. <button class="btn-act btn-amber btn-sm" onclick="lancerQCM()">Réessayer</button></div>';
+  }
+}
+function repondreQCM(btn, rep, bonne) {
+  btn.parentElement.querySelectorAll('button').forEach(function(b) { b.disabled = true; });
+  btn.style.background = rep === bonne ? 'rgba(79,191,139,.2)' : 'rgba(225,91,91,.2)';
+  btn.style.borderColor = rep === bonne ? 'var(--ok)' : 'var(--err)';
+  if (rep !== bonne) {
+    btn.parentElement.querySelectorAll('button').forEach(function(b) {
+      if (b.textContent.trim().startsWith(bonne)) { b.style.background = 'rgba(79,191,139,.2)'; b.style.borderColor = 'var(--ok)'; }
+    });
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════════
+function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function fmtDate(d) { if (!d) return '—'; try { return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch(e) { return d; } }
+function fmtMontant(v) { return (parseFloat(v) || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
+function setStat(id, val, cls) { var el = document.getElementById(id); if (!el) return; el.textContent = val; el.className = 'stat-val' + (cls ? ' ' + cls : ''); }
+function ouvrirModal(id) { var el = document.getElementById(id); if (el) el.style.display = 'flex'; }
+function fermerModal(id) { var el = document.getElementById(id); if (el) el.style.display = 'none'; }
+function notifOk(msg) { _notif(msg, 'var(--ok)'); }
+function notifErr(msg) { _notif(msg, 'var(--err)'); }
+function _notif(msg, color) {
+  var el = document.createElement('div');
+  el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:' + color + ';color:#fff;padding:11px 16px;border-radius:10px;font-size:13px;font-weight:600;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,.3);max-width:320px';
+  el.textContent = msg; document.body.appendChild(el);
+  setTimeout(function() { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(function() { el.remove(); }, 300); }, 3000);
+}
+
+// ── Journal ──
+var _journal = [];
+function logAction(msg) {
+  _journal.unshift({ msg: msg, h: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) });
+  if (_journal.length > 100) _journal.pop();
+  var el = document.getElementById('journal-list'); var empty = document.getElementById('journal-empty');
+  if (el) el.innerHTML = _journal.map(function(j) {
+    return '<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)">' +
+      '<span style="font-family:monospace;font-size:11px;color:var(--ink-faint);width:40px;flex-shrink:0">' + j.h + '</span>' +
+      '<span style="font-size:12.5px;color:var(--ink-dim)">' + esc(j.msg) + '</span></div>';
+  }).join('');
+  if (empty) empty.style.display = 'none';
+}
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', function() {
+  verifierSession();
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-overlay').forEach(function(m) { m.style.display = 'none'; });
+      _ariaModalCancel();
+    }
+  });
+});
+</script>
+</body>
+</html>

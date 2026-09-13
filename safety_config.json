@@ -1,0 +1,1245 @@
+{
+  "version": "2.0.0",
+  "last_updated": "2026-08-25",
+  "maintainer": "contact@forgedis.fr",
+  "global_rules": {
+    "never_store_illegal_media": true,
+    "never_transmit_to_authorities_automatically": true,
+    "message_neutral": "Merci de l'avoir signalé. Ta sécurité est prioritaire.",
+    "metadata_only_storage": [
+      "timestamp",
+      "incident_category",
+      "country_code",
+      "escalation_level",
+      "authority_shown",
+      "alert_sent_to"
+    ],
+    "fail_closed": true,
+    "max_config_age_days": 365
+  },
+  "incident_categories": {
+    "danger_physique_immédiat": {
+      "urgence": 3,
+      "route": "emergency_only"
+    },
+    "maltraitance_suspicion": {
+      "urgence": 2,
+      "route": "child_protection"
+    },
+    "risque_suicidaire": {
+      "urgence": 3,
+      "route": "mental_health_emergency"
+    },
+    "CSAM": {
+      "urgence": 3,
+      "route": "csam_hotline",
+      "never_store_content": true
+    },
+    "grooming": {
+      "urgence": 2,
+      "route": "child_protection"
+    },
+    "exploitation_sexuelle": {
+      "urgence": 3,
+      "route": "child_protection"
+    },
+    "cyberharcèlement": {
+      "urgence": 1,
+      "route": "cybercrime"
+    },
+    "menace": {
+      "urgence": 2,
+      "route": "cybercrime"
+    },
+    "extorsion": {
+      "urgence": 2,
+      "route": "cybercrime"
+    },
+    "violence": {
+      "urgence": 2,
+      "route": "emergency_or_child_protection"
+    },
+    "haine_discrimination": {
+      "urgence": 1,
+      "route": "cybercrime"
+    },
+    "escroquerie": {
+      "urgence": 1,
+      "route": "fraud"
+    },
+    "divulgation_données": {
+      "urgence": 1,
+      "route": "cybercrime"
+    },
+    "autre_illicite": {
+      "urgence": 1,
+      "route": "general"
+    }
+  },
+  "alert_recipients": {
+    "rules": [
+      {
+        "trigger": [
+          "danger_physique_immédiat",
+          "risque_suicidaire"
+        ],
+        "recipients": [
+          "parent_compte"
+        ],
+        "delay": "immediate"
+      },
+      {
+        "trigger": [
+          "CSAM",
+          "grooming",
+          "exploitation_sexuelle"
+        ],
+        "recipients": [
+          "parent_compte",
+          "forgedis_moderator"
+        ],
+        "delay": "immediate"
+      },
+      {
+        "trigger": [
+          "cyberharcèlement",
+          "menace",
+          "extorsion",
+          "maltraitance_suspicion"
+        ],
+        "recipients": [
+          "parent_compte"
+        ],
+        "delay": "within_session"
+      },
+      {
+        "trigger": [
+          "haine_discrimination",
+          "escroquerie",
+          "divulgation_données",
+          "violence",
+          "autre_illicite"
+        ],
+        "recipients": [
+          "parent_compte"
+        ],
+        "delay": "next_login"
+      }
+    ],
+    "forgedis_moderator": {
+      "when": [
+        "CSAM",
+        "grooming",
+        "exploitation_sexuelle"
+      ],
+      "access": "métadonnées_seulement",
+      "never": "contenu_illicite"
+    }
+  },
+  "storage_rules": {
+    "never_store_illegal_media": true,
+    "allowed_metadata": [
+      "timestamp",
+      "incident_category",
+      "country_code",
+      "escalation_level",
+      "authority_shown",
+      "alert_sent_to"
+    ],
+    "forbidden": [
+      "screenshots",
+      "media_content",
+      "CSAM_any_form",
+      "conversation_verbatim"
+    ],
+    "retention_days": 90
+  },
+  "countries": [
+    {
+      "country_code": "FR",
+      "country_name": "France",
+      "active": true,
+      "emergency_number": "112",
+      "last_verified": "2026-08-25",
+      "next_review": "2027-02-25",
+      "authorities": [
+        {
+          "id": "SAMU_POLICE_POMPIERS",
+          "name": "Urgences France",
+          "phone": "15 / 17 / 18 / 112",
+          "url": null,
+          "active": true,
+          "categories": [
+            "danger_physique_immédiat"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.gouvernement.fr/numeros-d-urgence",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-08-25"
+        },
+        {
+          "id": "SNATED_119",
+          "name": "119 — Enfance en danger",
+          "phone": "119",
+          "url": "https://www.allo119.gouv.fr",
+          "active": true,
+          "categories": [
+            "maltraitance_suspicion",
+            "grooming",
+            "exploitation_sexuelle",
+            "violence"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.allo119.gouv.fr",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-02-25"
+        },
+        {
+          "id": "NUMERO_3114",
+          "name": "3114 — Prévention du suicide",
+          "phone": "3114",
+          "url": "https://www.3114.fr",
+          "active": true,
+          "categories": [
+            "risque_suicidaire"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.3114.fr",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-02-25"
+        },
+        {
+          "id": "PHAROS",
+          "name": "PHAROS — Signalement contenus illicites",
+          "phone": null,
+          "url": "https://www.internet-signalement.gouv.fr/PharosS1/",
+          "active": true,
+          "categories": [
+            "CSAM",
+            "grooming",
+            "exploitation_sexuelle",
+            "cyberharcèlement",
+            "menace",
+            "extorsion",
+            "haine_discrimination",
+            "escroquerie",
+            "divulgation_données",
+            "autre_illicite"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.masecurite.interieur.gouv.fr/fr/demarches-en-ligne/portail-officiel-signalement-contenus-illicites-internet-pharos",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-02-25"
+        },
+        {
+          "id": "POINT_DE_CONTACT",
+          "name": "Point de Contact",
+          "phone": null,
+          "url": "https://www.pointdecontact.net/cliquez-signalez/",
+          "active": true,
+          "categories": [
+            "CSAM",
+            "autre_illicite"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.pointdecontact.net",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-02-25"
+        }
+      ],
+      "routing": {
+        "danger_physique_immédiat": [
+          "SAMU_POLICE_POMPIERS"
+        ],
+        "maltraitance_suspicion": [
+          "SNATED_119"
+        ],
+        "risque_suicidaire": [
+          "NUMERO_3114"
+        ],
+        "CSAM": [
+          "PHAROS",
+          "POINT_DE_CONTACT"
+        ],
+        "grooming": [
+          "SNATED_119",
+          "PHAROS"
+        ],
+        "exploitation_sexuelle": [
+          "SNATED_119",
+          "PHAROS"
+        ],
+        "cyberharcèlement": [
+          "PHAROS"
+        ],
+        "menace": [
+          "PHAROS"
+        ],
+        "extorsion": [
+          "PHAROS"
+        ],
+        "violence": [
+          "SNATED_119"
+        ],
+        "haine_discrimination": [
+          "PHAROS"
+        ],
+        "escroquerie": [
+          "PHAROS"
+        ],
+        "divulgation_données": [
+          "PHAROS"
+        ],
+        "autre_illicite": [
+          "PHAROS"
+        ]
+      }
+    },
+    {
+      "country_code": "GB",
+      "country_name": "Royaume-Uni",
+      "active": true,
+      "emergency_number": "999",
+      "last_verified": "2026-08-25",
+      "next_review": "2027-02-25",
+      "authorities": [
+        {
+          "id": "UK_EMERGENCY",
+          "name": "Urgences UK",
+          "phone": "999",
+          "url": null,
+          "active": true,
+          "categories": [
+            "danger_physique_immédiat",
+            "violence"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.gov.uk/call-999-when-to",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-08-25"
+        },
+        {
+          "id": "UK_SAMARITANS",
+          "name": "Samaritans",
+          "phone": "116123",
+          "url": "https://www.samaritans.org",
+          "active": true,
+          "categories": [
+            "risque_suicidaire"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.samaritans.org",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-08-25"
+        },
+        {
+          "id": "CEOP",
+          "name": "CEOP — Child Exploitation and Online Protection",
+          "phone": null,
+          "url": "https://www.ceop.police.uk/safety-centre/",
+          "active": true,
+          "categories": [
+            "grooming",
+            "exploitation_sexuelle",
+            "CSAM",
+            "maltraitance_suspicion"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.ceop.police.uk",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-02-25"
+        },
+        {
+          "id": "IWF",
+          "name": "IWF — Internet Watch Foundation",
+          "phone": null,
+          "url": "https://report.iwf.org.uk",
+          "active": true,
+          "categories": [
+            "CSAM"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.iwf.org.uk",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-02-25"
+        },
+        {
+          "id": "REPORT_HARMFUL",
+          "name": "Report Harmful Content",
+          "phone": null,
+          "url": "https://reportharmfulcontent.com",
+          "active": true,
+          "note": "Résidents UK uniquement. 13+ directement ; sous 13 ans : parent/tuteur.",
+          "categories": [
+            "cyberharcèlement",
+            "menace",
+            "extorsion",
+            "haine_discrimination",
+            "divulgation_données"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://reportharmfulcontent.com",
+          "last_verified": "2026-08-25",
+          "next_review": "2026-12-01"
+        }
+      ],
+      "routing": {
+        "danger_physique_immédiat": [
+          "UK_EMERGENCY"
+        ],
+        "risque_suicidaire": [
+          "UK_SAMARITANS"
+        ],
+        "maltraitance_suspicion": [
+          "CEOP"
+        ],
+        "CSAM": [
+          "IWF",
+          "CEOP"
+        ],
+        "grooming": [
+          "CEOP"
+        ],
+        "exploitation_sexuelle": [
+          "CEOP"
+        ],
+        "cyberharcèlement": [
+          "REPORT_HARMFUL"
+        ],
+        "menace": [
+          "REPORT_HARMFUL"
+        ],
+        "extorsion": [
+          "REPORT_HARMFUL"
+        ],
+        "violence": [
+          "UK_EMERGENCY"
+        ],
+        "haine_discrimination": [
+          "REPORT_HARMFUL"
+        ],
+        "escroquerie": [
+          "REPORT_HARMFUL"
+        ],
+        "divulgation_données": [
+          "REPORT_HARMFUL"
+        ],
+        "autre_illicite": [
+          "REPORT_HARMFUL"
+        ]
+      }
+    },
+    {
+      "country_code": "US",
+      "country_name": "États-Unis",
+      "active": true,
+      "emergency_number": "911",
+      "last_verified": "2026-08-25",
+      "next_review": "2027-02-25",
+      "authorities": [
+        {
+          "id": "US_EMERGENCY",
+          "name": "Urgences USA",
+          "phone": "911",
+          "url": null,
+          "active": true,
+          "categories": [
+            "danger_physique_immédiat",
+            "violence"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.usa.gov/emergency-contacts",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-08-25"
+        },
+        {
+          "id": "US_CRISIS_LINE",
+          "name": "988 Suicide & Crisis Lifeline",
+          "phone": "988",
+          "url": "https://988lifeline.org",
+          "active": true,
+          "categories": [
+            "risque_suicidaire"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://988lifeline.org",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-08-25"
+        },
+        {
+          "id": "NCMEC_PUBLIC",
+          "name": "NCMEC CyberTipline — canal public",
+          "phone": "1-800-843-5678",
+          "url": "https://www.missingkids.org/gethelpnow/cybertipline",
+          "active": true,
+          "note": "Canal public uniquement. API ESP désactivée — pending_legal_validation.",
+          "categories": [
+            "CSAM",
+            "grooming",
+            "exploitation_sexuelle",
+            "maltraitance_suspicion"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.missingkids.org/gethelpnow/cybertipline",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-02-25"
+        },
+        {
+          "id": "FBI_TIPS",
+          "name": "FBI Tips",
+          "phone": null,
+          "url": "https://tips.fbi.gov",
+          "active": true,
+          "categories": [
+            "CSAM",
+            "exploitation_sexuelle",
+            "extorsion",
+            "menace",
+            "haine_discrimination"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://tips.fbi.gov",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-02-25"
+        },
+        {
+          "id": "IC3",
+          "name": "IC3 — Internet Crime Complaint Center",
+          "phone": null,
+          "url": "https://www.ic3.gov",
+          "active": true,
+          "categories": [
+            "escroquerie",
+            "extorsion",
+            "cyberharcèlement",
+            "divulgation_données"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.ic3.gov",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-02-25"
+        }
+      ],
+      "routing": {
+        "danger_physique_immédiat": [
+          "US_EMERGENCY"
+        ],
+        "risque_suicidaire": [
+          "US_CRISIS_LINE"
+        ],
+        "maltraitance_suspicion": [
+          "NCMEC_PUBLIC"
+        ],
+        "CSAM": [
+          "NCMEC_PUBLIC",
+          "FBI_TIPS"
+        ],
+        "grooming": [
+          "NCMEC_PUBLIC",
+          "FBI_TIPS"
+        ],
+        "exploitation_sexuelle": [
+          "NCMEC_PUBLIC",
+          "FBI_TIPS"
+        ],
+        "cyberharcèlement": [
+          "IC3"
+        ],
+        "menace": [
+          "FBI_TIPS"
+        ],
+        "extorsion": [
+          "IC3",
+          "FBI_TIPS"
+        ],
+        "violence": [
+          "US_EMERGENCY"
+        ],
+        "haine_discrimination": [
+          "FBI_TIPS"
+        ],
+        "escroquerie": [
+          "IC3"
+        ],
+        "divulgation_données": [
+          "IC3"
+        ],
+        "autre_illicite": [
+          "IC3"
+        ]
+      }
+    },
+    {
+      "country_code": "CA",
+      "country_name": "Canada",
+      "active": true,
+      "emergency_number": "911",
+      "last_verified": "2026-08-25",
+      "next_review": "2027-02-25",
+      "authorities": [
+        {
+          "id": "CA_EMERGENCY",
+          "name": "Urgences Canada",
+          "phone": "911",
+          "url": null,
+          "active": true,
+          "categories": [
+            "danger_physique_immédiat",
+            "violence"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.canada.ca/en/public-health/services/emergency-preparedness.html",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-08-25"
+        },
+        {
+          "id": "CA_CRISIS_LINE",
+          "name": "Ligne de crise Canada — 988",
+          "phone": "988",
+          "url": "https://www.crisisservicescanada.ca",
+          "active": true,
+          "categories": [
+            "risque_suicidaire"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.canada.ca/en/public-health/services/mental-health-services/mental-health-get-help.html",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-08-25"
+        },
+        {
+          "id": "CYBERAIDE",
+          "name": "Cyberaide.ca",
+          "phone": "1-866-658-9022",
+          "url": "https://www.cyberaide.ca",
+          "active": true,
+          "categories": [
+            "CSAM",
+            "grooming",
+            "exploitation_sexuelle",
+            "maltraitance_suspicion"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.rcmp-grc.gc.ca/fr/cyberexploitation-sexuelle-denfants",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-02-25"
+        },
+        {
+          "id": "CAFC",
+          "name": "Centre antifraude du Canada",
+          "phone": "1-888-495-8501",
+          "url": "https://www.antifraudcentre-centreantifraude.ca",
+          "active": true,
+          "categories": [
+            "escroquerie",
+            "extorsion",
+            "divulgation_données"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.antifraudcentre-centreantifraude.ca",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-02-25"
+        }
+      ],
+      "routing": {
+        "danger_physique_immédiat": [
+          "CA_EMERGENCY"
+        ],
+        "risque_suicidaire": [
+          "CA_CRISIS_LINE"
+        ],
+        "maltraitance_suspicion": [
+          "CYBERAIDE"
+        ],
+        "CSAM": [
+          "CYBERAIDE"
+        ],
+        "grooming": [
+          "CYBERAIDE"
+        ],
+        "exploitation_sexuelle": [
+          "CYBERAIDE"
+        ],
+        "cyberharcèlement": [
+          "FALLBACK"
+        ],
+        "menace": [
+          "CA_EMERGENCY"
+        ],
+        "extorsion": [
+          "CAFC"
+        ],
+        "violence": [
+          "CA_EMERGENCY"
+        ],
+        "haine_discrimination": [
+          "FALLBACK"
+        ],
+        "escroquerie": [
+          "CAFC"
+        ],
+        "divulgation_données": [
+          "CAFC"
+        ],
+        "autre_illicite": [
+          "FALLBACK"
+        ]
+      }
+    },
+    {
+      "country_code": "DE",
+      "country_name": "Allemagne",
+      "active": true,
+      "emergency_number": "110",
+      "last_verified": "2026-08-25",
+      "next_review": "2027-02-25",
+      "authorities": [
+        {
+          "id": "DE_EMERGENCY",
+          "name": "Urgences Allemagne",
+          "phone": "110 / 112",
+          "url": null,
+          "active": true,
+          "categories": [
+            "danger_physique_immédiat",
+            "violence"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.bmi.bund.de",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-08-25"
+        },
+        {
+          "id": "DE_CRISIS",
+          "name": "Telefonseelsorge",
+          "phone": "0800 111 0 111",
+          "url": "https://www.telefonseelsorge.de",
+          "active": true,
+          "categories": [
+            "risque_suicidaire"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.telefonseelsorge.de",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-08-25"
+        },
+        {
+          "id": "JUGENDSCHUTZ",
+          "name": "jugendschutz.net",
+          "phone": null,
+          "url": "https://www.jugendschutz.net/en/hotline",
+          "active": true,
+          "categories": [
+            "CSAM",
+            "grooming",
+            "cyberharcèlement",
+            "haine_discrimination",
+            "maltraitance_suspicion"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.jugendschutz.net",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-02-25"
+        },
+        {
+          "id": "ECO_DE",
+          "name": "eco Internet Complaints Office",
+          "phone": null,
+          "url": "https://www.internet-beschwerdestelle.de",
+          "active": true,
+          "categories": [
+            "CSAM",
+            "autre_illicite"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://international.eco.de",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-02-25"
+        }
+      ],
+      "routing": {
+        "danger_physique_immédiat": [
+          "DE_EMERGENCY"
+        ],
+        "risque_suicidaire": [
+          "DE_CRISIS"
+        ],
+        "maltraitance_suspicion": [
+          "JUGENDSCHUTZ"
+        ],
+        "CSAM": [
+          "ECO_DE",
+          "JUGENDSCHUTZ"
+        ],
+        "grooming": [
+          "JUGENDSCHUTZ"
+        ],
+        "exploitation_sexuelle": [
+          "JUGENDSCHUTZ"
+        ],
+        "cyberharcèlement": [
+          "JUGENDSCHUTZ"
+        ],
+        "menace": [
+          "DE_EMERGENCY"
+        ],
+        "violence": [
+          "DE_EMERGENCY"
+        ],
+        "haine_discrimination": [
+          "JUGENDSCHUTZ"
+        ],
+        "escroquerie": [
+          "FALLBACK"
+        ],
+        "extorsion": [
+          "FALLBACK"
+        ],
+        "divulgation_données": [
+          "FALLBACK"
+        ],
+        "autre_illicite": [
+          "ECO_DE"
+        ]
+      }
+    },
+    {
+      "country_code": "BE",
+      "country_name": "Belgique",
+      "active": true,
+      "emergency_number": "101",
+      "last_verified": "2026-08-25",
+      "next_review": "2027-02-25",
+      "authorities": [
+        {
+          "id": "BE_EMERGENCY",
+          "name": "Urgences Belgique",
+          "phone": "101 / 112",
+          "url": null,
+          "active": true,
+          "categories": [
+            "danger_physique_immédiat",
+            "violence"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.belgium.be/fr/famille/sante/urgences",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-08-25"
+        },
+        {
+          "id": "BE_CRISIS",
+          "name": "Centre de Prévention du Suicide",
+          "phone": "0800 32 123",
+          "url": "https://www.preventionsuicide.be",
+          "active": true,
+          "categories": [
+            "risque_suicidaire"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.preventionsuicide.be",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-08-25"
+        },
+        {
+          "id": "CHILD_FOCUS",
+          "name": "Child Focus",
+          "phone": "116000",
+          "url": "https://childfocus.be",
+          "active": true,
+          "categories": [
+            "CSAM",
+            "grooming",
+            "exploitation_sexuelle",
+            "maltraitance_suspicion"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://childfocus.be",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-02-25"
+        },
+        {
+          "id": "STOPCHILDPORNO_BE",
+          "name": "stopchildporno.be",
+          "phone": null,
+          "url": "https://www.stopchildporno.be",
+          "active": true,
+          "categories": [
+            "CSAM"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.stopchildporno.be",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-02-25"
+        }
+      ],
+      "routing": {
+        "danger_physique_immédiat": [
+          "BE_EMERGENCY"
+        ],
+        "risque_suicidaire": [
+          "BE_CRISIS"
+        ],
+        "maltraitance_suspicion": [
+          "CHILD_FOCUS"
+        ],
+        "CSAM": [
+          "STOPCHILDPORNO_BE",
+          "CHILD_FOCUS"
+        ],
+        "grooming": [
+          "CHILD_FOCUS"
+        ],
+        "exploitation_sexuelle": [
+          "CHILD_FOCUS"
+        ],
+        "cyberharcèlement": [
+          "FALLBACK"
+        ],
+        "menace": [
+          "BE_EMERGENCY"
+        ],
+        "violence": [
+          "BE_EMERGENCY"
+        ],
+        "haine_discrimination": [
+          "FALLBACK"
+        ],
+        "escroquerie": [
+          "FALLBACK"
+        ],
+        "extorsion": [
+          "FALLBACK"
+        ],
+        "divulgation_données": [
+          "FALLBACK"
+        ],
+        "autre_illicite": [
+          "FALLBACK"
+        ]
+      }
+    },
+    {
+      "country_code": "CH",
+      "country_name": "Suisse",
+      "active": true,
+      "emergency_number": "117",
+      "last_verified": "2026-08-25",
+      "next_review": "2027-02-25",
+      "authorities": [
+        {
+          "id": "CH_EMERGENCY",
+          "name": "Urgences Suisse",
+          "phone": "117 / 112",
+          "url": null,
+          "active": true,
+          "categories": [
+            "danger_physique_immédiat",
+            "violence"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.ch.ch/fr/urgences",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-08-25"
+        },
+        {
+          "id": "CH_CRISIS",
+          "name": "Die Dargebotene Hand",
+          "phone": "143",
+          "url": "https://www.143.ch",
+          "active": true,
+          "categories": [
+            "risque_suicidaire"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.143.ch",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-08-25"
+        },
+        {
+          "id": "CLICKANDSTOP",
+          "name": "clickandstop.ch",
+          "phone": null,
+          "url": "https://www.clickandstop.ch",
+          "active": true,
+          "categories": [
+            "CSAM"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.clickandstop.ch",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-04-25"
+        }
+      ],
+      "routing": {
+        "danger_physique_immédiat": [
+          "CH_EMERGENCY"
+        ],
+        "risque_suicidaire": [
+          "CH_CRISIS"
+        ],
+        "maltraitance_suspicion": [
+          "FALLBACK"
+        ],
+        "CSAM": [
+          "CLICKANDSTOP"
+        ],
+        "grooming": [
+          "FALLBACK"
+        ],
+        "exploitation_sexuelle": [
+          "FALLBACK"
+        ],
+        "cyberharcèlement": [
+          "FALLBACK"
+        ],
+        "menace": [
+          "CH_EMERGENCY"
+        ],
+        "violence": [
+          "CH_EMERGENCY"
+        ],
+        "haine_discrimination": [
+          "FALLBACK"
+        ],
+        "escroquerie": [
+          "FALLBACK"
+        ],
+        "extorsion": [
+          "FALLBACK"
+        ],
+        "divulgation_données": [
+          "FALLBACK"
+        ],
+        "autre_illicite": [
+          "FALLBACK"
+        ]
+      }
+    },
+    {
+      "country_code": "ES",
+      "country_name": "Espagne",
+      "active": true,
+      "emergency_number": "112",
+      "last_verified": "2026-08-25",
+      "next_review": "2027-02-25",
+      "authorities": [
+        {
+          "id": "ES_EMERGENCY",
+          "name": "Urgences Espagne",
+          "phone": "112",
+          "url": null,
+          "active": true,
+          "categories": [
+            "danger_physique_immédiat",
+            "violence"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.interior.gob.es",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-08-25"
+        },
+        {
+          "id": "ES_CRISIS",
+          "name": "Teléfono de la Esperanza",
+          "phone": "717 003 717",
+          "url": "https://www.telefonodelaesperanza.org",
+          "active": true,
+          "categories": [
+            "risque_suicidaire"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.telefonodelaesperanza.org",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-08-25"
+        },
+        {
+          "id": "INCIBE_HOTLINE",
+          "name": "INCIBE Hotline CSAM",
+          "phone": "017",
+          "url": "https://www.incibe.es/menores/hotline",
+          "active": true,
+          "note": "Transmis forces de l'ordre ES + INHOPE. Ne constitue pas une plainte officielle.",
+          "categories": [
+            "CSAM",
+            "grooming",
+            "exploitation_sexuelle"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.incibe.es/menores/hotline",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-02-25"
+        }
+      ],
+      "routing": {
+        "danger_physique_immédiat": [
+          "ES_EMERGENCY"
+        ],
+        "risque_suicidaire": [
+          "ES_CRISIS"
+        ],
+        "maltraitance_suspicion": [
+          "FALLBACK"
+        ],
+        "CSAM": [
+          "INCIBE_HOTLINE"
+        ],
+        "grooming": [
+          "INCIBE_HOTLINE"
+        ],
+        "exploitation_sexuelle": [
+          "INCIBE_HOTLINE"
+        ],
+        "cyberharcèlement": [
+          "FALLBACK"
+        ],
+        "menace": [
+          "ES_EMERGENCY"
+        ],
+        "violence": [
+          "ES_EMERGENCY"
+        ],
+        "haine_discrimination": [
+          "FALLBACK"
+        ],
+        "escroquerie": [
+          "FALLBACK"
+        ],
+        "extorsion": [
+          "FALLBACK"
+        ],
+        "divulgation_données": [
+          "FALLBACK"
+        ],
+        "autre_illicite": [
+          "FALLBACK"
+        ]
+      }
+    },
+    {
+      "country_code": "IT",
+      "country_name": "Italie",
+      "active": true,
+      "emergency_number": "113",
+      "last_verified": "2026-08-25",
+      "next_review": "2027-02-25",
+      "authorities": [
+        {
+          "id": "IT_EMERGENCY",
+          "name": "Urgences Italie",
+          "phone": "113 / 112",
+          "url": null,
+          "active": true,
+          "categories": [
+            "danger_physique_immédiat",
+            "violence"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://www.interno.gov.it",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-08-25"
+        },
+        {
+          "id": "TELEFONO_AZZURRO",
+          "name": "Telefono Azzurro",
+          "phone": "19696",
+          "url": "https://azzurro.it/clicca-e-segnala/",
+          "active": true,
+          "categories": [
+            "CSAM",
+            "grooming",
+            "exploitation_sexuelle",
+            "maltraitance_suspicion",
+            "violence",
+            "risque_suicidaire"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://azzurro.it/wp-content/uploads/2025/02/dossier-Il-bambino-al-centro.pdf",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-02-25"
+        },
+        {
+          "id": "SAVE_CHILDREN_IT",
+          "name": "Save the Children — stop-it",
+          "phone": null,
+          "url": "https://stop-it.savethechildren.it",
+          "active": true,
+          "categories": [
+            "CSAM"
+          ],
+          "verification_status": "verified",
+          "source_url": "https://stop-it.savethechildren.it",
+          "last_verified": "2026-08-25",
+          "next_review": "2027-02-25"
+        }
+      ],
+      "routing": {
+        "danger_physique_immédiat": [
+          "IT_EMERGENCY"
+        ],
+        "risque_suicidaire": [
+          "TELEFONO_AZZURRO"
+        ],
+        "maltraitance_suspicion": [
+          "TELEFONO_AZZURRO"
+        ],
+        "CSAM": [
+          "SAVE_CHILDREN_IT",
+          "TELEFONO_AZZURRO"
+        ],
+        "grooming": [
+          "TELEFONO_AZZURRO"
+        ],
+        "exploitation_sexuelle": [
+          "TELEFONO_AZZURRO"
+        ],
+        "cyberharcèlement": [
+          "FALLBACK"
+        ],
+        "menace": [
+          "IT_EMERGENCY"
+        ],
+        "violence": [
+          "IT_EMERGENCY",
+          "TELEFONO_AZZURRO"
+        ],
+        "haine_discrimination": [
+          "FALLBACK"
+        ],
+        "escroquerie": [
+          "FALLBACK"
+        ],
+        "extorsion": [
+          "FALLBACK"
+        ],
+        "divulgation_données": [
+          "FALLBACK"
+        ],
+        "autre_illicite": [
+          "FALLBACK"
+        ]
+      }
+    },
+    {
+      "country_code": "PT",
+      "country_name": "Portugal",
+      "active": false,
+      "emergency_number": "112",
+      "last_verified": "2026-08-25",
+      "next_review": "2026-10-01",
+      "note": "DÉSACTIVÉ — source officielle directe safe.pt non confirmée.",
+      "authorities": [],
+      "routing": {
+        "_all": [
+          "FALLBACK"
+        ]
+      }
+    }
+  ],
+  "fallback": {
+    "message": "Merci de l'avoir signalé. Ta sécurité est prioritaire. Aria ne dispose pas d'un dispositif officiel confirmé pour ton pays ou cette situation. Contacte un adulte de confiance et les autorités locales. En cas de danger immédiat, appelle le numéro d'urgence de ton pays.",
+    "emergency_eu": "112",
+    "emergency_na": "911",
+    "alert_parent_compte": true,
+    "never_store_illegal_media": true,
+    "conserve_metadata_only": true
+  }
+}

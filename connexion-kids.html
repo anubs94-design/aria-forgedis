@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connexion — Aria Kids</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+:root {
+  --bg:#070B18; --bg2:#0C1226; --panel:#111934; --panel2:#162040;
+  --text:#F0F3FB; --soft:#A6B0CC; --dim:#6D7799;
+  --coral:#FF7A59; --coral-dk:#E5623F;
+  --cyan:#5BE3D8; --violet:#9B8CFF;
+  --ok:#2ECC71; --line:rgba(255,255,255,0.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:'Inter',sans-serif;
+  background:var(--bg); color:var(--text);
+  min-height:100vh; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; padding:24px;
+  position:relative; overflow:hidden;
+}
+
+/* Glow */
+.bg-glow{
+  position:fixed; top:-200px; left:50%; transform:translateX(-50%);
+  width:800px; height:600px;
+  background:radial-gradient(ellipse,rgba(255,122,89,0.06) 0%,rgba(155,140,255,0.04) 40%,transparent 70%);
+  pointer-events:none; z-index:0;
+}
+
+/* Logo */
+.logo{
+  font-family:'Sora',sans-serif; font-weight:800; font-size:1.3rem;
+  color:var(--text); text-decoration:none; margin-bottom:32px;
+  position:relative; z-index:1;
+}
+.logo span{color:var(--coral);}
+
+/* Card */
+.card{
+  background:var(--panel); border:1px solid var(--line);
+  border-radius:20px; padding:40px; width:100%; max-width:440px;
+  box-shadow:0 24px 64px rgba(0,0,0,0.35);
+  position:relative; z-index:1;
+}
+
+/* Titres */
+.card-title{
+  font-family:'Sora',sans-serif; font-size:1.6rem; font-weight:800;
+  letter-spacing:-0.02em; margin-bottom:6px;
+}
+.card-sub{color:var(--soft); font-size:14px; margin-bottom:28px; line-height:1.5;}
+
+/* Bouton Google */
+.btn-google{
+  width:100%; display:flex; align-items:center; justify-content:center; gap:10px;
+  background:var(--panel2); border:1px solid var(--line);
+  color:var(--text); font-size:14px; font-weight:600;
+  padding:12px 20px; border-radius:12px; cursor:pointer;
+  transition:all .15s; font-family:'Inter',sans-serif;
+  margin-bottom:20px;
+}
+.btn-google:hover{border-color:rgba(255,255,255,0.2); background:rgba(255,255,255,0.04);}
+.btn-google svg{flex-shrink:0;}
+
+/* Séparateur */
+.separator{
+  display:flex; align-items:center; gap:12px; margin-bottom:20px;
+}
+.separator::before,.separator::after{content:'';flex:1;height:1px;background:var(--line);}
+.separator span{font-size:12px;color:var(--dim);}
+
+/* Champs */
+.field{margin-bottom:16px;}
+.field label{
+  display:block; font-size:12px; font-weight:700;
+  color:var(--soft); text-transform:uppercase; letter-spacing:.06em;
+  margin-bottom:6px;
+}
+.field-wrap{position:relative;}
+.field input{
+  width:100%; background:var(--bg2); border:1px solid var(--line);
+  border-radius:10px; padding:12px 16px; color:var(--text);
+  font-size:15px; font-family:'Inter',sans-serif;
+  outline:none; transition:border .2s;
+}
+.field input:focus{border-color:var(--coral); box-shadow:0 0 0 3px rgba(255,122,89,0.08);}
+.field-wrap .eye{
+  position:absolute; right:12px; top:50%; transform:translateY(-50%);
+  cursor:pointer; color:var(--dim); font-size:16px;
+  background:none; border:none; padding:4px;
+  transition:color .15s;
+}
+.field-wrap .eye:hover{color:var(--soft);}
+
+/* Mot de passe oublié */
+.forgot{
+  text-align:right; margin-top:-8px; margin-bottom:16px;
+}
+.forgot a{font-size:12px;color:var(--dim);text-decoration:none;}
+.forgot a:hover{color:var(--coral);}
+
+/* Bouton principal */
+.btn-main{
+  width:100%; background:var(--coral); color:#fff;
+  font-weight:700; padding:13px; border-radius:12px;
+  border:none; font-size:15px; cursor:pointer;
+  font-family:'Inter',sans-serif; transition:all .15s;
+  letter-spacing:0.01em; min-height:48px;
+}
+.btn-main:hover{background:var(--coral-dk); transform:translateY(-1px);}
+.btn-main:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+
+/* Messages */
+.msg-error{
+  display:none; background:rgba(239,68,68,.08);
+  border:1px solid rgba(239,68,68,.25); color:#f87171;
+  border-radius:10px; padding:11px 14px; font-size:13px;
+  margin-bottom:14px; line-height:1.5;
+}
+.msg-success{
+  display:none; background:rgba(46,204,113,.08);
+  border:1px solid rgba(46,204,113,.25); color:var(--ok);
+  border-radius:10px; padding:11px 14px; font-size:13px;
+  margin-bottom:14px; line-height:1.5;
+}
+.msg-loading{
+  display:none; text-align:center; color:var(--soft);
+  font-size:13px; padding:8px 0;
+}
+.spinner{
+  display:inline-block; width:16px; height:16px;
+  border:2px solid rgba(255,122,89,0.25); border-top-color:var(--coral);
+  border-radius:50%; animation:spin .8s linear infinite;
+  vertical-align:middle; margin-right:6px;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Toggle inscription/connexion */
+.toggle{
+  text-align:center; font-size:13px; color:var(--dim);
+  margin-top:20px;
+}
+.toggle a{color:var(--coral);text-decoration:none;font-weight:600;}
+.toggle a:hover{color:var(--coral-dk);}
+
+/* Pas encore abonné */
+.not-subscribed{
+  text-align:center; font-size:13px; color:var(--dim);
+  margin-top:10px;
+}
+.not-subscribed a{color:var(--soft);text-decoration:none;}
+.not-subscribed a:hover{color:var(--coral);}
+
+/* Slogan */
+.slogan{
+  text-align:center; margin-top:28px; font-size:12px;
+  color:var(--dim); font-style:italic;
+  position:relative; z-index:1;
+}
+
+/* RESPONSIVE */
+@media(max-width:480px){
+  body{padding:16px;}
+  .logo{font-size:1.1rem; margin-bottom:24px;}
+  .card{padding:28px 20px; border-radius:16px;}
+  .card-title{font-size:1.4rem;}
+  .field input{font-size:14px;}
+  .btn-main{font-size:14px;}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-glow"></div>
+
+<a href="/" class="logo">FORGE<span>DIS</span></a>
+
+<div class="card">
+  <!-- TITRE dynamique selon mode -->
+  <div class="card-title" id="card-title">Connexion</div>
+  <div class="card-sub" id="card-sub">Accédez à votre espace Aria Kids</div>
+
+  <!-- Google -->
+  <button class="btn-google" id="btn-google" onclick="connecterGoogle()">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+      <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+      <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+    </svg>
+    Continuer avec Google
+  </button>
+
+  <div class="separator"><span>ou</span></div>
+
+  <!-- Formulaire -->
+  <form id="auth-form" onsubmit="event.preventDefault(); valider();">
+
+    <div class="field">
+      <label>Adresse email</label>
+      <input type="email" id="f-email" placeholder="votre@email.com" autocomplete="email" required>
+    </div>
+
+    <div class="field" id="field-mdp">
+      <label>Mot de passe</label>
+      <div class="field-wrap">
+        <input type="password" id="f-mdp" placeholder="••••••••" autocomplete="current-password">
+        <button type="button" class="eye" onclick="toggleMdp()" id="btn-eye" title="Afficher">👁</button>
+      </div>
+    </div>
+
+    <div class="forgot" id="div-forgot">
+      <a href="#" onclick="modeMdpOublie(); return false;">Mot de passe oublié ?</a>
+    </div>
+
+    <!-- Champ confirmation mdp (inscription) -->
+    <div class="field" id="field-mdp2" style="display:none">
+      <label>Confirmer le mot de passe</label>
+      <div class="field-wrap">
+        <input type="password" id="f-mdp2" placeholder="••••••••" autocomplete="new-password">
+      </div>
+    </div>
+
+    <div class="msg-error" id="msg-error"></div>
+    <div class="msg-success" id="msg-success"></div>
+    <div class="msg-loading" id="msg-loading"><span class="spinner"></span> <span id="loading-text">Connexion en cours...</span></div>
+
+    <button type="submit" class="btn-main" id="btn-main">Se connecter →</button>
+  </form>
+
+  <div class="toggle" id="div-toggle">
+    Pas encore de compte ? <a href="#" onclick="modeInscription(); return false;">S'inscrire</a>
+  </div>
+  <div class="not-subscribed">
+    Pas encore abonné ? <a href="/">Découvrir Aria</a>
+  </div>
+</div>
+
+<div style="text-align:center;margin-top:20px;font-size:13px;color:#6D7799;">
+  Vous cherchez <a href="/connexion.html" style="color:#FF7A59;text-decoration:none;">Aria Facility</a>
+  ou <a href="/connexion-industrial.html" style="color:#E8873A;text-decoration:none;">Aria Industrial</a> ?
+</div>
+<div class="slogan">L'IA française qui n'oublie personne.</div>
+
+<script>
+// ── CONFIG ──
+var SUPABASE_URL  = 'https://dvlrilklbspuckbplglz.supabase.co';
+var SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2bHJpbGtsYnNwdWNrYnBsZ2x6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNzYyNjIsImV4cCI6MjA5Njk1MjI2Mn0.lC1rt8bvfIpi1c78L8OWGXjjYhXzqzNkIgykHTle6eM';
+var RELAY_URL     = 'https://aria-forgelis.onrender.com/client-token-kids';
+var ADMIN_EMAILS  = ['contact@forgedis.fr']; // seul contact@ va sur admin.html
+var DIRIGEANT_EMAILS = ['anubs94@gmail.com']; // anubs94@ va sur poste-dirigeant comme un client
+
+var mode = 'connexion'; // 'connexion' | 'inscription' | 'mdp-oublie'
+
+// ── TOGGLE MOT DE PASSE ──
+function esc(s){var d=document.createElement('div');d.appendChild(document.createTextNode(String(s===null||s===undefined?'':s)));return d.innerHTML;}
+function toggleMdp() {
+  var inp = document.getElementById('f-mdp');
+  var eye = document.getElementById('btn-eye');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    eye.textContent = '🙈';
+  } else {
+    inp.type = 'password';
+    eye.textContent = '👁';
+  }
+}
+
+// ── MODES ──
+function modeConnexion() {
+  mode = 'connexion';
+  document.getElementById('card-title').textContent = 'Connexion';
+  document.getElementById('card-sub').textContent = 'Accédez à votre espace Aria Kids';
+  document.getElementById('field-mdp').style.display = '';
+  document.getElementById('field-mdp2').style.display = 'none';
+  document.getElementById('div-forgot').style.display = '';
+  document.getElementById('btn-main').textContent = 'Se connecter →';
+  document.getElementById('div-toggle').innerHTML = 'Pas encore de compte ? <a href="#" onclick="modeInscription(); return false;">S\'inscrire</a>';
+  document.getElementById('f-mdp').setAttribute('autocomplete','current-password');
+  cacherMessages();
+}
+
+function modeInscription() {
+  mode = 'inscription';
+  document.getElementById('card-title').textContent = 'Créer un compte';
+  document.getElementById('card-sub').textContent = 'Inscrivez-vous avec votre email';
+  document.getElementById('field-mdp').style.display = '';
+  document.getElementById('field-mdp2').style.display = '';
+  document.getElementById('div-forgot').style.display = 'none';
+  document.getElementById('btn-main').textContent = 'Créer mon compte →';
+  document.getElementById('div-toggle').innerHTML = 'Déjà un compte ? <a href="#" onclick="modeConnexion(); return false;">Se connecter</a>';
+  document.getElementById('f-mdp').setAttribute('autocomplete','new-password');
+  cacherMessages();
+}
+
+function modeMdpOublie() {
+  mode = 'mdp-oublie';
+  document.getElementById('card-title').textContent = 'Mot de passe oublié';
+  document.getElementById('card-sub').textContent = 'Entrez votre email — nous vous envoyons un lien de réinitialisation';
+  document.getElementById('field-mdp').style.display = 'none';
+  document.getElementById('field-mdp2').style.display = 'none';
+  document.getElementById('div-forgot').style.display = 'none';
+  document.getElementById('btn-main').textContent = 'Envoyer le lien →';
+  document.getElementById('div-toggle').innerHTML = '<a href="#" onclick="modeConnexion(); return false;">← Retour à la connexion</a>';
+  cacherMessages();
+}
+
+// ── MESSAGES ──
+function cacherMessages() {
+  document.getElementById('msg-error').style.display = 'none';
+  document.getElementById('msg-success').style.display = 'none';
+  document.getElementById('msg-loading').style.display = 'none';
+}
+function showError(msg) {
+  cacherMessages();
+  var el = document.getElementById('msg-error');
+  el.textContent = msg; el.style.display = 'block';
+}
+function showSuccess(msg) {
+  cacherMessages();
+  var el = document.getElementById('msg-success');
+  el.textContent = msg; el.style.display = 'block';
+}
+function showLoading(msg) {
+  cacherMessages();
+  document.getElementById('loading-text').textContent = msg || 'Connexion en cours...';
+  document.getElementById('msg-loading').style.display = 'block';
+  document.getElementById('btn-main').disabled = true;
+}
+function stopLoading() {
+  document.getElementById('msg-loading').style.display = 'none';
+  document.getElementById('btn-main').disabled = false;
+}
+
+// ── REDIRECT — KIDS UNIQUEMENT ──
+function redirecter(email, forfait) {
+  // Sauvegarder
+  localStorage.setItem('aria_email', email);
+  sessionStorage.setItem('aria_email', email);
+
+  // Admin FORGEDIS → dashboard admin
+  if (ADMIN_EMAILS.indexOf(email.toLowerCase()) !== -1 || forfait === 'admin') {
+    window.location.href = '/admin.html';
+    return;
+  }
+  // Kids → espace Aria Kids
+  window.location.href = '/app-kids.html';
+}
+
+// ── VALIDER ──
+function valider() {
+  var email = document.getElementById('f-email').value.trim().toLowerCase();
+  var mdp   = document.getElementById('f-mdp').value;
+
+  if (!email || !email.includes('@')) { showError('Veuillez entrer une adresse email valide.'); return; }
+
+  // Mode mot de passe oublié
+  if (mode === 'mdp-oublie') {
+    envoyerResetMdp(email);
+    return;
+  }
+
+  if (!mdp || mdp.length < 6) { showError('Le mot de passe doit contenir au moins 6 caractères.'); return; }
+
+  if (mode === 'inscription') {
+    var mdp2 = document.getElementById('f-mdp2').value;
+    if (mdp !== mdp2) { showError('Les mots de passe ne correspondent pas.'); return; }
+    sInscrire(email, mdp);
+  } else {
+    seConnecter(email, mdp);
+  }
+}
+
+// ── CONNEXION email + mdp ──
+function seConnecter(email, mdp) {
+  showLoading('Connexion en cours...');
+  fetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
+    body:JSON.stringify({email:email, password:mdp})
+  })
+  .then(function(r){ return r.json().then(function(d){ return {ok:r.ok,d:d}; }); })
+  .then(function(res) {
+    if (!res.ok || !res.d.access_token) {
+      stopLoading();
+      showError('Email ou mot de passe incorrect.');
+      return;
+    }
+    finaliserConnexion(email, res.d.access_token);
+  })
+  .catch(function() { stopLoading(); showError('Erreur réseau. Réessayez.'); });
+}
+
+// ── INSCRIPTION ──
+function sInscrire(email, mdp) {
+  showLoading('Création du compte...');
+  fetch(SUPABASE_URL + '/auth/v1/signup', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
+    body:JSON.stringify({email:email, password:mdp})
+  })
+  .then(function(r){ return r.json().then(function(d){ return {ok:r.ok,d:d}; }); })
+  .then(function(res) {
+    stopLoading();
+    if (!res.ok) { showError(res.d.msg || res.d.error_description || 'Erreur lors de l\'inscription.'); return; }
+    if (res.d.access_token) {
+      finaliserConnexion(email, res.d.access_token);
+    } else {
+      showSuccess('Compte créé ! Vérifiez votre boîte mail pour confirmer votre adresse.');
+    }
+  })
+  .catch(function() { stopLoading(); showError('Erreur réseau. Réessayez.'); });
+}
+
+// ── MOT DE PASSE OUBLIÉ ──
+function envoyerResetMdp(email) {
+  showLoading('Envoi en cours...');
+  fetch(SUPABASE_URL + '/auth/v1/recover', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
+    body:JSON.stringify({email:email})
+  })
+  .then(function() {
+    stopLoading();
+    showSuccess('Lien de réinitialisation envoyé ! Vérifiez votre boîte mail.');
+  })
+  .catch(function() { stopLoading(); showError('Erreur réseau. Réessayez.'); });
+}
+
+// ── FINALISER après auth Supabase ──
+function finaliserConnexion(email, accessToken) {
+  showLoading('Chargement de votre espace...');
+  // Récupérer le forfait via le relay
+  fetch(RELAY_URL, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email:email})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data) {
+    stopLoading();
+    if (data.token) {
+      localStorage.setItem('aria_token', data.token);
+      sessionStorage.setItem('aria_token', data.token);
+    }
+    if (data.forfait) {
+      sessionStorage.setItem('aria_forfait', data.forfait);
+    }
+    redirecter(email, data.forfait || '');
+  })
+  .catch(function() {
+    // Relay injoignable — rediriger quand même selon email admin
+    stopLoading();
+    redirecter(email, '');
+  });
+}
+
+// ── GOOGLE OAuth ──
+function connecterGoogle() {
+  var redirectTo = window.location.origin + '/connexion-kids.html';
+  window.location.href = SUPABASE_URL + '/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(redirectTo);
+}
+
+// ── Gérer retour OAuth (hash dans URL) ──
+function gererRetourOAuth() {
+  if (!window.location.hash || window.location.hash.indexOf('access_token=') === -1) return false;
+  var params = new URLSearchParams(window.location.hash.substring(1));
+  var token = params.get('access_token');
+  var type  = params.get('type');
+  if (!token) return false;
+  history.replaceState(null,'',window.location.pathname);
+  if (type === 'recovery') {
+    // Mode reset mdp
+    localStorage.setItem('aria_recovery_token', token);
+    modeMdpOublie();
+    document.getElementById('card-title').textContent = 'Nouveau mot de passe';
+    document.getElementById('card-sub').textContent = 'Choisissez votre nouveau mot de passe';
+    document.getElementById('field-mdp').style.display = '';
+    document.getElementById('field-mdp2').style.display = '';
+    document.getElementById('btn-main').textContent = 'Enregistrer →';
+    mode = 'nouveau-mdp';
+    return true;
+  }
+  // Connexion OAuth réussie
+  showLoading('Connexion en cours...');
+  fetch(SUPABASE_URL + '/auth/v1/user', {
+    headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+token}
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(user) {
+    var email = user && user.email ? user.email : '';
+    finaliserConnexion(email, token);
+  })
+  .catch(function(){ stopLoading(); showError('Erreur lors de la connexion Google.'); });
+  return true;
+}
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded', function() {
+  // Vérifier si déjà connecté
+  var email = localStorage.getItem('aria_email');
+  var token = localStorage.getItem('aria_token');
+  if (email && token) {
+    var forfait = sessionStorage.getItem('aria_forfait') || '';
+    redirecter(email, forfait);
+    return;
+  }
+  // Retour OAuth
+  if (!gererRetourOAuth()) {
+    // Pré-remplir email si connu
+    if (email) document.getElementById('f-email').value = email;
+  }
+});
+
+// Enter sur les champs
+document.addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') valider();
+});
+</script>
+
+<script src="/aria-i18n.js"></script>
+</body>
+</html>

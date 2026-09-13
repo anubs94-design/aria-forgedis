@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aria Facility — L'IA française pour les seniors | FORGEDIS</title>
+<meta name="description" content="Aria Facility pilote votre ordinateur à la voix depuis votre smartphone. Conçue pour les seniors et les personnes à mobilité réduite. Essai gratuit 14 jours.">
+<link rel="icon" href="/favicon.ico">
+<style>
+:root {
+  --bg:#070B18; --bg2:#0C1226; --panel:#0F1830; --panel2:#162040;
+  --text:#F0F3FB; --soft:#A6B0CC; --dim:#6D7799;
+  --coral:#FF7A59; --coral-dk:#E5623F; --coral-light:rgba(255,122,89,0.12);
+  --line:rgba(255,255,255,0.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(7,11,24,0.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--line);}
+.nav-inner{max-width:1100px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between;}
+.nav-logo{font-family:'Sora',sans-serif;font-weight:800;font-size:1.1rem;color:var(--text);text-decoration:none;}
+.nav-logo span{color:var(--coral);}
+.nav-links{display:flex;align-items:center;gap:28px;}
+.nav-links a{color:var(--soft);text-decoration:none;font-size:14px;font-weight:500;transition:color .15s;}
+.nav-links a:hover{color:var(--text);}
+.nav-cta{background:var(--coral);color:#fff;padding:8px 20px;border-radius:20px;font-weight:700;font-size:14px;text-decoration:none;transition:all .15s;}
+.nav-cta:hover{background:var(--coral-dk);color:#fff;}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px;}
+.hamburger span{width:24px;height:2px;background:var(--text);border-radius:2px;transition:all .2s;}
+.mobile-menu{display:none;position:fixed;inset:0;background:rgba(7,11,24,0.98);z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:32px;}
+.mobile-menu a{color:var(--text);text-decoration:none;font-size:1.4rem;font-weight:700;}
+.mobile-menu.open{display:flex;}
+
+/* ── HERO ── */
+.hero{min-height:100vh;display:flex;align-items:center;padding:100px 24px 60px;position:relative;overflow:hidden;}
+.hero-glow{position:absolute;top:-200px;left:50%;transform:translateX(-50%);width:900px;height:700px;background:radial-gradient(ellipse,rgba(255,122,89,0.1) 0%,rgba(255,122,89,0.04) 40%,transparent 70%);pointer-events:none;}
+.hero-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:var(--coral-light);border:1px solid rgba(255,122,89,0.25);color:var(--coral);padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;margin-bottom:20px;text-transform:uppercase;letter-spacing:.06em;}
+.hero-badge::before{content:"🇫🇷";font-size:14px;}
+h1{font-family:'Sora',sans-serif;font-size:clamp(2rem,4vw,3rem);font-weight:800;line-height:1.15;letter-spacing:-0.02em;margin-bottom:16px;}
+h1 span{color:var(--coral);}
+.hero-sub{font-size:1.1rem;color:var(--soft);line-height:1.7;margin-bottom:28px;max-width:480px;}
+.hero-actions{display:flex;flex-direction:column;gap:12px;margin-bottom:32px;}
+.btn-coral{display:inline-flex;align-items:center;justify-content:center;background:var(--coral);color:#fff;padding:16px 32px;border-radius:12px;font-weight:700;font-size:1rem;text-decoration:none;transition:all .15s;border:none;cursor:pointer;}
+.btn-coral:hover{background:var(--coral-dk);transform:translateY(-2px);}
+.btn-outline{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);color:var(--soft);padding:14px 28px;border-radius:12px;font-weight:600;font-size:.95rem;text-decoration:none;transition:all .15s;}
+.btn-outline:hover{border-color:rgba(255,255,255,.2);color:var(--text);}
+.hero-proof{display:flex;gap:24px;flex-wrap:wrap;}
+.proof-item{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--soft);}
+.proof-item::before{content:"✓";color:var(--coral);font-weight:700;}
+
+/* ── PHONE MOCKUP ── */
+.phone-wrap{position:relative;display:flex;justify-content:center;}
+.phone{width:260px;height:520px;background:var(--panel);border-radius:36px;border:2px solid rgba(255,122,89,0.3);padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 0 60px rgba(255,122,89,0.15);}
+.phone-status{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);}
+.phone-aria{text-align:center;padding:16px 0 8px;}
+.aria-circle{width:64px;height:64px;background:var(--coral-light);border:2px solid var(--coral);border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:28px;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,122,89,.3)}50%{box-shadow:0 0 0 12px rgba(255,122,89,0)}}
+.aria-name{font-family:'Sora',sans-serif;font-weight:700;color:var(--text);font-size:15px;}
+.aria-status{font-size:12px;color:var(--coral);}
+.phone-bubble{background:var(--panel2);border-radius:12px;padding:12px;font-size:12px;color:var(--soft);line-height:1.5;border-left:2px solid var(--coral);}
+.phone-mic{background:var(--coral);border-radius:12px;padding:12px;text-align:center;font-size:12px;font-weight:700;color:#fff;margin-top:auto;}
+
+/* ── SECTION COMMUNE ── */
+.section{padding:100px 24px;}
+.section-inner{max-width:1100px;margin:0 auto;}
+.section-badge{display:inline-flex;background:var(--coral-light);color:var(--coral);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;}
+h2{font-family:'Sora',sans-serif;font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;letter-spacing:-0.02em;line-height:1.2;margin-bottom:16px;}
+h2 span{color:var(--coral);}
+.section-sub{font-size:1rem;color:var(--soft);line-height:1.7;max-width:560px;margin-bottom:48px;}
+
+/* ── DEUX AUDIENCES ── */
+.audiences{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:60px;}
+.audience-card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:32px;position:relative;overflow:hidden;}
+.audience-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--coral);}
+.audience-tag{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--coral);margin-bottom:12px;}
+.audience-title{font-family:'Sora',sans-serif;font-size:1.3rem;font-weight:800;margin-bottom:12px;line-height:1.3;}
+.audience-text{font-size:.95rem;color:var(--soft);line-height:1.7;margin-bottom:20px;}
+.audience-quote{font-style:italic;color:var(--soft);font-size:.9rem;border-left:2px solid var(--coral);padding-left:12px;line-height:1.6;}
+
+/* ── FONCTIONNALITÉS ── */
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+.feature-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;transition:border-color .2s;}
+.feature-card:hover{border-color:rgba(255,122,89,.3);}
+.feature-ico{font-size:28px;margin-bottom:14px;}
+.feature-title{font-family:'Sora',sans-serif;font-size:1rem;font-weight:700;margin-bottom:8px;}
+.feature-desc{font-size:.9rem;color:var(--soft);line-height:1.6;}
+.feature-tag{display:inline-block;background:var(--coral-light);color:var(--coral);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-top:10px;text-transform:uppercase;letter-spacing:.06em;}
+
+/* ── COMMENT ÇA MARCHE ── */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;position:relative;}
+.steps::before{content:'';position:absolute;top:40px;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,var(--coral),transparent);}
+.step{text-align:center;padding:24px 16px;}
+.step-num{width:56px;height:56px;background:var(--coral-light);border:2px solid var(--coral);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Sora',sans-serif;font-weight:800;font-size:1.1rem;color:var(--coral);margin:0 auto 16px;}
+.step-title{font-weight:700;margin-bottom:8px;font-size:.95rem;}
+.step-desc{font-size:.85rem;color:var(--soft);line-height:1.6;}
+
+/* ── TÉMOIGNAGES ── */
+.temoignages{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+.temoignage{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;}
+.temo-stars{color:var(--coral);font-size:14px;margin-bottom:12px;}
+.temo-text{font-size:.95rem;color:var(--soft);line-height:1.7;margin-bottom:16px;font-style:italic;}
+.temo-author{font-size:.85rem;font-weight:700;color:var(--text);}
+.temo-role{font-size:.8rem;color:var(--dim);}
+
+/* ── COMPARATIF ── */
+.comparatif{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+.comp-card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:28px;}
+.comp-card.aria{border-color:rgba(255,122,89,.3);background:rgba(255,122,89,.03);}
+.comp-title{font-family:'Sora',sans-serif;font-weight:700;font-size:1rem;margin-bottom:20px;display:flex;align-items:center;gap:8px;}
+.comp-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:.9rem;}
+.comp-row:last-child{border-bottom:none;}
+.comp-ico{font-size:16px;width:20px;text-align:center;}
+
+/* ── TARIF ── */
+.tarif-card{background:var(--panel);border:2px solid var(--coral);border-radius:24px;padding:40px;max-width:480px;margin:0 auto;text-align:center;position:relative;}
+.tarif-badge{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--coral);color:#fff;padding:4px 20px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap;}
+.tarif-price{font-family:'Sora',sans-serif;font-size:3rem;font-weight:800;color:var(--coral);margin:20px 0 4px;}
+.tarif-period{font-size:.9rem;color:var(--dim);margin-bottom:24px;}
+.tarif-features{text-align:left;margin-bottom:28px;}
+.tarif-feature{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:.95rem;color:var(--soft);border-bottom:1px solid var(--line);}
+.tarif-feature:last-child{border-bottom:none;}
+.tarif-feature::before{content:"✓";color:var(--coral);font-weight:700;font-size:1rem;flex-shrink:0;}
+.tarif-garanties{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin-top:20px;}
+.garantie{font-size:12px;color:var(--dim);display:flex;align-items:center;gap:4px;}
+.garantie::before{content:"🛡️";font-size:12px;}
+
+/* ── FAQ ── */
+.faq{max-width:700px;margin:0 auto;}
+.faq-item{border-bottom:1px solid var(--line);padding:20px 0;}
+.faq-q{font-weight:700;font-size:1rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px;}
+.faq-q::after{content:"+";font-size:1.4rem;color:var(--coral);flex-shrink:0;transition:transform .2s;}
+.faq-item.open .faq-q::after{transform:rotate(45deg);}
+.faq-a{font-size:.95rem;color:var(--soft);line-height:1.7;margin-top:12px;display:none;}
+.faq-item.open .faq-a{display:block;}
+
+/* ── CTA FINAL ── */
+.cta-final{text-align:center;padding:80px 24px;background:linear-gradient(135deg,rgba(255,122,89,.06) 0%,transparent 60%);}
+.cta-final h2{margin-bottom:16px;}
+.cta-final p{color:var(--soft);margin-bottom:36px;font-size:1rem;}
+.cta-buttons{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;}
+
+/* ── FOOTER ── */
+footer{border-top:1px solid var(--line);padding:40px 24px;text-align:center;}
+.footer-inner{max-width:1100px;margin:0 auto;}
+.footer-logo{font-family:'Sora',sans-serif;font-weight:800;font-size:1.1rem;margin-bottom:12px;}
+.footer-logo span{color:var(--coral);}
+.footer-links{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;margin-bottom:16px;}
+.footer-links a{color:var(--dim);text-decoration:none;font-size:13px;}
+.footer-links a:hover{color:var(--soft);}
+.footer-copy{font-size:12px;color:var(--dim);}
+.footer-slogan{font-size:12px;color:var(--dim);font-style:italic;margin-top:6px;}
+
+/* ── ONDE VOCALE ── */
+.aria-wave{display:flex;align-items:center;justify-content:center;gap:3px;height:24px;margin-top:6px;}
+.aria-wave span{display:inline-block;width:3px;background:var(--coral);border-radius:2px;animation:wave-bar 1.2s ease-in-out infinite;}
+.aria-wave span:nth-child(1){animation-delay:0s;height:6px;}
+.aria-wave span:nth-child(2){animation-delay:.15s;height:14px;}
+.aria-wave span:nth-child(3){animation-delay:.3s;height:20px;}
+.aria-wave span:nth-child(4){animation-delay:.15s;height:14px;}
+.aria-wave span:nth-child(5){animation-delay:0s;height:6px;}
+@keyframes wave-bar{0%,100%{transform:scaleY(.4);opacity:.5;}50%{transform:scaleY(1);opacity:1;}}
+/* ── ÉMOTION CARDS ── */
+.emotion-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;text-align:center;}
+@media(max-width:768px){.emotion-grid{grid-template-columns:1fr!important;}}
+/* ── DÉMO ── */
+.demo-steps{padding:32px 28px;display:flex;flex-direction:column;gap:0;}
+.demo-arrow{text-align:center;color:var(--dim);font-size:18px;margin:4px 0;}
+.demo-step{display:flex;align-items:flex-start;gap:16px;padding:14px 16px;border-radius:14px;transition:all .5s;opacity:.3;}
+.demo-step.active{opacity:1;background:rgba(255,122,89,.07);border:1px solid rgba(255,122,89,.2);}
+.demo-step-ico{font-size:26px;flex-shrink:0;margin-top:2px;}
+.demo-step-label{font-size:.72rem;font-weight:700;color:var(--coral);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;}
+.demo-step-phrase{font-size:.93rem;color:var(--text);line-height:1.5;}
+.demo-ex-btn{background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:6px 14px;font-size:.8rem;color:var(--soft);cursor:pointer;transition:all .2s;font-family:inherit;}
+.demo-ex-btn.active,.demo-ex-btn:hover{background:var(--coral);color:#fff;border-color:var(--coral);}
+/* ── DÉMO RESPONSIVE ── */
+@media(max-width:640px){.demo-steps{padding:20px 16px;}.demo-step-phrase{font-size:.85rem;}}
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .nav-links{display:none;}
+  .hamburger{display:flex;}
+  .hero-inner{grid-template-columns:1fr;}
+  .phone-wrap{display:none;}
+  .audiences{grid-template-columns:1fr;}
+  .features-grid{grid-template-columns:1fr 1fr;}
+  .steps{grid-template-columns:1fr 1fr;}
+  .steps::before{display:none;}
+  .temoignages{grid-template-columns:1fr;}
+  .comparatif{grid-template-columns:1fr;}
+}
+@media(max-width:480px){
+  .features-grid{grid-template-columns:1fr;}
+  .steps{grid-template-columns:1fr;}
+  .section{padding:60px 20px;}
+  h1{font-size:1.8rem;}
+}
+
+/* ── DÉMO ── */
+.demo-steps{padding:32px 28px;display:flex;flex-direction:column;gap:0;}
+.demo-arrow{text-align:center;color:var(--dim);font-size:18px;margin:4px 0;}
+.demo-step{display:flex;align-items:flex-start;gap:16px;padding:14px 16px;border-radius:14px;transition:all .4s;opacity:.3;}
+.demo-step.active{opacity:1;background:rgba(255,122,89,.07);border:1px solid rgba(255,122,89,.2);}
+.demo-step-ico{font-size:26px;flex-shrink:0;margin-top:2px;}
+.demo-step-label{font-size:.72rem;font-weight:700;color:var(--coral);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;}
+.demo-step-phrase{font-size:.93rem;color:var(--text);line-height:1.5;}
+.demo-ex-btn{background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:6px 14px;font-size:.8rem;color:var(--soft);cursor:pointer;transition:all .2s;font-family:inherit;}
+.demo-ex-btn.active,.demo-ex-btn:hover{background:var(--coral);color:#fff;border-color:var(--coral);}
+</style>
+<script defer data-domain="forgedis.fr" src="https://plausible.io/js/script.js"></script>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">FORGE<span>DIS</span></a>
+    <div class="nav-links">
+      <a href="#fonctions">Fonctionnalités</a>
+      <a href="#comment">Comment ça marche</a>
+      <a href="#tarif">Tarif</a>
+      <a href="#faq">FAQ</a>
+      <a href="/inscription-facility.html" class="nav-cta">Commencer gratuitement</a>
+    </div>
+    <div class="hamburger" onclick="toggleMenu()" id="hamburger">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+</nav>
+
+<!-- MENU MOBILE -->
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#fonctions" onclick="toggleMenu()">Fonctionnalités</a>
+  <a href="#comment" onclick="toggleMenu()">Comment ça marche</a>
+  <a href="#tarif" onclick="toggleMenu()">Tarif</a>
+  <a href="#faq" onclick="toggleMenu()">FAQ</a>
+  <a href="/inscription-facility.html" onclick="toggleMenu()" class="nav-cta">Commencer gratuitement</a>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-inner">
+    <div>
+      <div class="hero-badge">Aria Facility · IA française</div>
+      <h1>Vos parents méritent<br>de rester <span>autonomes.</span></h1>
+      <p class="hero-sub">
+        Aria pilote leur ordinateur à leur voix, depuis leur téléphone.
+        Pas besoin de vous appeler. Pas besoin d'attendre.
+        Ils disent ce qu'ils veulent — Aria le fait, là, maintenant.
+      </p>
+      <div class="hero-actions">
+        <a href="/inscription-facility.html" class="btn-coral">Essayer gratuitement 14 jours →</a>
+        <a href="#comment" class="btn-outline">Voir comment ça marche</a>
+      </div>
+      <div class="hero-proof">
+        <div class="proof-item">14 jours gratuits</div>
+        <div class="proof-item">Sans engagement</div>
+        <div class="proof-item">Sans carte bancaire</div>
+        <div class="proof-item">Données chez vous</div>
+      </div>
+    </div>
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-status">
+          <span>9:41</span>
+          <span>●●●</span>
+        </div>
+        <div class="phone-aria">
+          <div class="aria-circle">🎙️</div>
+          <div class="aria-name">Aria</div>
+          <div class="aria-status" id="aria-phone-status">En écoute...</div>
+          <div class="aria-wave" id="aria-wave">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+        <div class="phone-bubble">
+          "Ouvre YouTube et lance une vidéo de jardinage"
+        </div>
+        <div class="phone-bubble" style="border-left-color:#2ECC71;color:#A6B0CC;">
+          ✓ YouTube ouvert. La vidéo "jardinage débutant" est lancée.
+        </div>
+        <div class="phone-mic">🎙️ Appuyez pour parler à Aria</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEUX AUDIENCES -->
+<section class="section" style="padding-top:0;">
+  <div class="section-inner">
+    <div class="audiences">
+      <!-- Senior -->
+      <div class="audience-card">
+        <div class="audience-tag">👴 Pour vous</div>
+        <div class="audience-title">Restez autonome.<br>Aria s'occupe du reste.</div>
+        <p class="audience-text">
+          Plus besoin de demander à vos enfants pour chaque petite chose. 
+          Aria comprend ce que vous lui dites et agit immédiatement sur votre ordinateur.
+          Comme si vous aviez un assistant personnel disponible à toute heure.
+        </p>
+        <div class="audience-quote">
+          "Vous avez tout donné. Il est temps qu'on s'occupe de vous."
+        </div>
+      </div>
+      <!-- Famille -->
+      <div class="audience-card">
+        <div class="audience-tag">👨‍👩‍👧 Pour votre famille</div>
+        <div class="audience-title">Vous dormez.<br>Aria veille.</div>
+        <p class="audience-text">
+          Aria envoie chaque soir un rapport à votre proche de confiance. 
+          Ce qu'elle a fait, les médicaments pris, les alertes détectées. 
+          Votre parent est accompagné. Vous êtes informé. Même à 3h du matin.
+        </p>
+        <div class="audience-quote">
+          "Votre maman est entre de bonnes mains. Même quand vous n'êtes pas là."
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FONCTIONNALITÉS -->
+<!-- ── DÉMO : ARIA EN ACTION ── -->
+<section id="demo" style="background:var(--bg2);padding:80px 24px;">
+  <div class="section-inner">
+    <div class="section-badge">En action</div>
+    <h2>Voyez <span>Aria en 30 secondes</span></h2>
+    <p class="section-sub">Une commande vocale. Une action réelle. C'est tout.</p>
+    <div style="max-width:680px;margin:48px auto 0;background:var(--panel);border:1px solid var(--line);border-radius:24px;overflow:hidden;">
+      <div class="demo-steps">
+        <div class="demo-step active" id="ds1"><div class="demo-step-ico">🎙️</div><div class="demo-step-text"><div class="demo-step-label">Elle parle</div><div class="demo-step-phrase">"Ouvre les photos de mes petits-enfants"</div></div></div>
+        <div class="demo-arrow">↓</div>
+        <div class="demo-step" id="ds2"><div class="demo-step-ico">🧠</div><div class="demo-step-text"><div class="demo-step-label">Aria comprend</div><div class="demo-step-phrase">Ouvrir Photos · dossier Famille</div></div></div>
+        <div class="demo-arrow">↓</div>
+        <div class="demo-step" id="ds3"><div class="demo-step-ico">🖥️</div><div class="demo-step-text"><div class="demo-step-label">Le PC agit</div><div class="demo-step-phrase">Photos ouvertes · diaporama lancé automatiquement</div></div></div>
+        <div class="demo-arrow">↓</div>
+        <div class="demo-step" id="ds4"><div class="demo-step-ico">✅</div><div class="demo-step-text"><div class="demo-step-label">Aria confirme</div><div class="demo-step-phrase" style="color:#2ECC71;font-weight:700;">"C'est fait. Vos photos sont ouvertes."</div></div></div>
+      </div>
+      <div style="padding:20px 28px;border-top:1px solid var(--line);display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="demo-ex-btn active" onclick="changerDemo(this,&quot;Ouvre les photos de mes petits-enfants&quot;,&quot;Photos ouvertes · diaporama lancé&quot;,&quot;Vos photos sont ouvertes.&quot;)">📷 Photos</button>
+        <button class="demo-ex-btn" onclick="changerDemo(this,&quot;Envoie un message à ma fille&quot;,&quot;WhatsApp ouvert · message rédigé et envoyé&quot;,&quot;Message envoyé à votre fille.&quot;)">💬 Message</button>
+        <button class="demo-ex-btn" onclick="changerDemo(this,&quot;Lis-moi cette lettre de la sécu&quot;,&quot;Photo prise · texte analysé · lecture à voix haute&quot;,&quot;Voici ce que dit ce courrier.&quot;)">📄 Courrier</button>
+        <button class="demo-ex-btn" onclick="changerDemo(this,&quot;Lance une vidéo de jardinage&quot;,&quot;YouTube ouvert · vidéo lancée&quot;,&quot;Voilà votre vidéo.&quot;)">🎬 Vidéo</button>
+      </div>
+    </div>
+    <p style="text-align:center;margin-top:32px;font-size:.95rem;color:var(--dim);">Aria agit sur le vrai ordinateur Windows. Pas une simulation.</p>
+  </div>
+</section>
+<section class="section" id="fonctions">
+  <div class="section-inner">
+    <div class="section-badge">Fonctionnalités</div>
+    <h2>Aria <span>agit.</span> Elle ne répond pas.</h2>
+    <p class="section-sub">La différence fondamentale avec tous les autres assistants IA. Aria ne vous dit pas comment faire — elle le fait pour vous.</p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-ico">🎙️</div>
+        <div class="feature-title">Pilotage PC vocal</div>
+        <div class="feature-desc">Votre papa veut regarder les infos mais ne retrouve plus le site. Il dit "Aria, ouvre France 2" — et c'est fait. En 3 secondes, depuis son fauteuil.</div>
+        <div class="feature-tag">Disponible</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-ico">📄</div>
+        <div class="feature-title">Assistant Document</div>
+        <div class="feature-desc">Votre maman reçoit une lettre de la CPAM qu'elle ne comprend pas. Elle la prend en photo. Aria lui explique, lui dit si c'est urgent, et rédige la réponse si besoin.</div>
+        <div class="feature-tag">Disponible</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-ico">🛡️</div>
+        <div class="feature-title">Bouclier anti-arnaque</div>
+        <div class="feature-desc">Aria analyse les documents et sites suspects avant que vous cliquiez. Elle détecte les arnaques courantes et vous alerte immédiatement.</div>
+        <div class="feature-tag">Disponible</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-ico">💊</div>
+        <div class="feature-title">Rappels médicaments</div>
+        <div class="feature-desc">Configurez vos rappels une seule fois. Aria vous envoie une notification à l'heure exacte — même si votre téléphone est en veille ou l'app fermée.</div>
+        <div class="feature-tag">Disponible</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-ico">👁️</div>
+        <div class="feature-title">Surveillance famille</div>
+        <div class="feature-desc">Rapport quotidien automatique envoyé au proche de confiance. Activité du jour, médicaments pris, alertes. Aria veille en permanence.</div>
+        <div class="feature-tag">Disponible</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-ico">✉️</div>
+        <div class="feature-title">Dictée d'emails</div>
+        <div class="feature-desc">Dites "Aria, envoie un email à Marie". Aria retrouve le contact, vous demande votre message, rédige et envoie après votre confirmation.</div>
+        <div class="feature-tag">Disponible</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-ico">🔍</div>
+        <div class="feature-title">Description d'images</div>
+        <div class="feature-desc">Photographiez ce que vous ne voyez pas bien. Aria décrit en détail ce qu'il y a sur la photo — texte, personnes, objets, couleurs.</div>
+        <div class="feature-tag">Disponible</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-ico">♿</div>
+        <div class="feature-title">Accessibilité Windows</div>
+        <div class="feature-desc">Dites "j'ai du mal à voir" — Aria active la loupe, agrandit le texte ou lance le Narrateur. Un mot suffit. Tout revient à la normale à la demande.</div>
+        <div class="feature-tag">Disponible</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-ico">🌍</div>
+        <div class="feature-title">20+ langues</div>
+        <div class="feature-desc">Français, arabe (standard et dialectal), anglais, espagnol, portugais, allemand, italien et plus. Aria vous répond dans votre langue naturellement.</div>
+        <div class="feature-tag">Disponible</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMMENT ÇA MARCHE -->
+<section class="section" id="comment" style="background:var(--bg2);">
+  <div class="section-inner">
+    <div class="section-badge">Installation</div>
+    <h2>Prêt en <span>4 étapes simples</span></h2>
+    <p class="section-sub">Pas besoin de connaissances techniques. Si vous savez installer une application, vous pouvez utiliser Aria.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-title">Téléchargez l'app</div>
+        <div class="step-desc">Installez Aria Facility sur votre smartphone Android ou iPhone. Gratuit sur le Play Store.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-title">Installez l'agent PC</div>
+        <div class="step-desc">Téléchargez et lancez le petit logiciel sur votre ordinateur Windows. L'installation prend 2 minutes.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-title">Connectez-les</div>
+        <div class="step-desc">Entrez votre email dans les deux applications. Elles se reconnaissent automatiquement, même hors de votre wifi.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-title">Parlez à Aria</div>
+        <div class="step-desc">Appuyez sur le bouton et dites ce que vous voulez. Aria s'occupe du reste sur votre ordinateur.</div>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:48px;">
+      <a href="/portail.html" class="btn-outline">⬇ Télécharger l'agent Windows</a>
+    </div>
+  </div>
+</section>
+
+<!-- TÉMOIGNAGES -->
+<section class="section">
+  <div class="section-inner">
+    <div class="section-badge">Ce qu'Aria redonne vraiment</div>
+    <h2>Pas un assistant. <span>Un compagnon.</span></h2>
+    <p class="section-sub">Ce n'est pas une fonctionnalité. C'est quelque chose qu'on rend.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:56px;" class="emotion-grid">
+      <div class="emotion-card">
+        <div style="font-size:36px;margin-bottom:14px;">🌅</div>
+        <div style="font-weight:700;font-size:1rem;margin-bottom:8px;color:var(--text)">L'autonomie retrouvée</div>
+        <div style="font-size:.9rem;color:var(--soft);line-height:1.7;">Ne plus dépendre de ses enfants pour chaque chose. Ouvrir ses emails seul. Chaque action retrouvée est une dignité préservée.</div>
+      </div>
+      <div class="emotion-card">
+        <div style="font-size:36px;margin-bottom:14px;">😮‍💨</div>
+        <div style="font-weight:700;font-size:1rem;margin-bottom:8px;color:var(--text)">La tranquillité des familles</div>
+        <div style="font-size:.9rem;color:var(--soft);line-height:1.7;">Savoir que vos parents sont accompagnés, même quand vous n'êtes pas là. Moins d'appels de détresse. Plus de vrais moments ensemble.</div>
+      </div>
+      <div class="emotion-card">
+        <div style="font-size:36px;margin-bottom:14px;">💙</div>
+        <div style="font-weight:700;font-size:1rem;margin-bottom:8px;color:var(--text)">La confiance en soi</div>
+        <div style="font-size:.9rem;color:var(--soft);line-height:1.7;">Aria dit toujours "C'est fait." Ces deux mots effacent la peur de faire une erreur. Vos parents ne peuvent rien casser.</div>
+      </div>
+    </div>
+    <div class="section-badge">Témoignages</div>
+    <h2>Ils font confiance <span>à Aria</span></h2>
+    <p class="section-sub">Des familles qui ont retrouvé la tranquillité. Des seniors qui ont retrouvé leur autonomie.</p>
+
+    <div class="temoignages">
+      <div class="temoignage">
+        <div class="temo-stars">★★★★★</div>
+        <div class="temo-text">"Ma mère a 81 ans et une vait plus utiliser la souris. Depuis Aria, elle regarde ses vidéos de cuisine tous les soirs et envoie des photos à ses petits-enfants. On reçoit moins d'appels de détresse. On reçoit des sourires."</div>
+        <div class="temo-author">Sophie M.</div>
+        <div class="temo-role">Fille d'une utilisatrice, Lyon</div>
+      </div>
+      <div class="temoignage">
+        <div class="temo-stars">★★★★★</div>
+        <div class="temo-text">"J'ai eu un AVC il y a deux ans. Mon bras droit ne répond plus bien. Je pensais que l'ordinateur, c'était fini. Avec Aria, je commande juste avec ma voix. Je lis le journal, j'écris à mes enfants. J'ai retrouvé mon indépendance."</div>
+        <div class="temo-author">Robert D.</div>
+        <div class="temo-role">Utilisateur, 74 ans · </div>
+      </div>
+      <div class="temoignage">
+        <div class="temo-stars">★★★★★</div>
+        <div class="temo-text">"Le rapport quotidien que je reçois le soir me rassure vraiment. Je sais que ma maman a bien pris ses médicaments, qu'elle a utilisé l'ordinateur. Je dors mieux depuis qu'Aria veille sur elle."</div>
+        <div class="temo-author">Isabelle T.</div>
+        <div class="temo-role">Fille aidante, Paris</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARATIF -->
+<section class="section" style="background:var(--bg2);">
+  <div class="section-inner">
+    <div class="section-badge">Comparatif</div>
+    <h2>Pourquoi <span>Aria</span> et pas autre chose ?</h2>
+    <p class="section-sub">Il existe des assistants vocaux. Mais aucun ne fait ce qu'Aria fait — agir physiquement sur un vrai ordinateur.</p>
+
+    <div class="comparatif">
+      <div class="comp-card">
+        <div class="comp-title">❌ Les autres assistants (Alexa, Siri, Google)</div>
+        <div class="comp-row"><span class="comp-ico">✗</span>Répondent — n'agissent pas sur le PC</div>
+        <div class="comp-row"><span class="comp-ico">✗</span>Ne peuvent pas ouvrir vos applications</div>
+        <div class="comp-row"><span class="comp-ico">✗</span>Ne lisent pas vos courriers</div>
+        <div class="comp-row"><span class="comp-ico">✗</span>Pas de rapport famille quotidien</div>
+        <div class="comp-row"><span class="comp-ico">✗</span>Vos données envoyées aux serveurs US</div>
+        <div class="comp-row"><span class="comp-ico">✗</span>Non conçus pour les seniors</div>
+      </div>
+      <div class="comp-card aria">
+        <div class="comp-title" style="color:var(--coral);">✅ Aria Facility</div>
+        <div class="comp-row"><span class="comp-ico">✓</span>Agit physiquement sur votre ordinateur</div>
+        <div class="comp-row"><span class="comp-ico">✓</span>Ouvre toutes vos applications et sites</div>
+        <div class="comp-row"><span class="comp-ico">✓</span>Lit et explique vos courriers en clair</div>
+        <div class="comp-row"><span class="comp-ico">✓</span>Rapport famille chaque soir à 20h</div>
+        <div class="comp-row"><span class="comp-ico">✓</span>Données 100% chez vous — jamais sur nos serveurs</div>
+        <div class="comp-row"><span class="comp-ico">✓</span>Conçue en France pour les seniors</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TARIF -->
+<section class="section" id="tarif">
+  <div class="section-inner" style="text-align:center;">
+    <div class="section-badge">Tarif</div>
+    <h2>Un prix. <span>Tout inclus.</span></h2>
+    <p class="section-sub" style="margin:0 auto 48px;">Pas de surprise, pas de fonctionnalité cachée. Tout ce qu'Aria sait faire est inclus dès le premier euro.</p>
+
+    <!-- Grille tarifaire -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:860px;margin:0 auto 40px;">
+
+      <!-- Aria Éco -->
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:28px;text-align:left;">
+        <div style="font-family:'Sora',sans-serif;font-weight:800;font-size:1rem;color:var(--soft);margin-bottom:6px;">Aria Éco</div>
+        <div style="font-family:'Sora',sans-serif;font-size:2rem;font-weight:800;color:var(--text);margin-bottom:4px;">Gratuit</div>
+        <div style="font-size:.85rem;color:var(--dim);margin-bottom:20px;">pour toujours · sans carte bancaire</div>
+        <div style="margin-bottom:20px;">
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:.9rem;color:var(--soft);"><span style="color:var(--coral);">✓</span>30 tâches par mois</div>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:.9rem;color:var(--soft);"><span style="color:var(--coral);">✓</span>Pilotage PC vocal basique</div>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:.9rem;color:var(--soft);"><span style="color:var(--coral);">✓</span>Assistant Document (3/mois)</div>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;font-size:.9rem;color:var(--dim);"><span style="color:var(--dim);">✗</span>Rappels médicaments</div>
+        </div>
+        <a href="/inscription-facility.html" class="btn-outline" style="width:100%;display:block;text-align:center;">Commencer gratuitement</a>
+      </div>
+
+      <!-- Aria Facility -->
+    <div class="tarif-card" style="max-width:100%;margin:0;">
+      <div class="tarif-badge">⭐ Le plus populaire</div>
+      <div style="font-family:'Sora',sans-serif;font-weight:800;font-size:1.1rem;color:var(--soft);margin-top:16px;">Aria Facility</div>
+      <div class="tarif-price">12,99€</div>
+      <div class="tarif-period">par mois · sans engagement</div>
+      <div style="font-size:.82rem;color:var(--coral);font-weight:600;margin-top:4px;">≈ 43 centimes par jour</div>
+
+      <div class="tarif-features">
+        <div class="tarif-feature">Pilotage PC complet par la voix</div>
+        <div class="tarif-feature">Assistant Document (lecture + aide réponse)</div>
+        <div class="tarif-feature">Bouclier anti-arnaque en temps réel</div>
+        <div class="tarif-feature">Rappels médicaments (push même app fermée)</div>
+        <div class="tarif-feature">Surveillance famille + rapport quotidien</div>
+        <div class="tarif-feature">Dictée d'emails avec mémoire des contacts</div>
+        <div class="tarif-feature">Accessibilité Windows par la voix</div>
+        <div class="tarif-feature">20+ langues dont arabe dialectal</div>
+        <div class="tarif-feature">Données 100% sur votre appareil</div>
+        <div class="tarif-feature">Support par email sous 24h</div>
+      </div>
+
+      <a href="/inscription-facility.html" class="btn-coral" style="width:100%;margin-bottom:16px;">Commencer l'essai gratuit →</a>
+      <div style="font-size:13px;color:var(--dim);">14 jours gratuits · Sans carte bancaire · Résiliable à tout moment</div>
+
+      <div class="tarif-garanties">
+        <div class="garantie">Résiliation immédiate</div>
+        <div class="garantie">Remboursement 14 jours</div>
+        <div class="garantie">Données chez vous</div>
+      </div>
+    </div>
+    </div>
+
+    <p style="margin-top:32px;font-size:.9rem;color:var(--dim);">
+      Comparé à une aide humaine (20-40€/heure) ou à la téléassistance (25-50€/mois),<br>
+      Aria est disponible 24h/24 pour <strong style="color:var(--soft);">moins d'un euro par jour</strong>.
+    </p>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section" style="background:var(--bg2);" id="faq">
+  <div class="section-inner">
+    <div class="section-badge">Questions fréquentes</div>
+    <h2>Vous avez <span>des questions</span> ?</h2>
+    <p class="section-sub">Les réponses aux questions les plus posées avant de commencer.</p>
+
+    <div class="faq">
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Mon parent doit-il être à l'aise avec l'informatique ?</div>
+        <div class="faq-a">Non. Aria est conçue pour les personnes qui n'utilisent pas l'informatique facilement. Il suffit de savoir appuyer sur un bouton et parler. Aria s'occupe du reste. Les boutons sont grands, le texte est lisible, et Aria guide à chaque étape.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Aria fonctionne-t-elle si mon parent n'est pas sur le wifi ?</div>
+        <div class="faq-a">Oui. Aria passe automatiquement par notre relay sécurisé Render. Votre parent peut être dans une autre ville, chez le médecin ou en vacances — Aria fonctionne partout où il y a une connexion internet.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Mes données sont-elles en sécurité ?</div>
+        <div class="faq-a">Absolument. FORGEDIS ne stocke aucune donnée de contenu sur ses serveurs. Les documents photographiés, les conversations et les fichiers restent sur l'appareil de votre parent. Le relay ne fait que transmettre les instructions — il ne conserve rien.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Que se passe-t-il si l'ordinateur est éteint ?</div>
+        <div class="faq-a">Aria passe en mode conversation. Elle peut répondre aux questions, rappeler les médicaments et discuter normalement. Dès que l'ordinateur se rallume, toutes les fonctions reprennent automatiquement.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Puis-je résilier à tout moment ?</div>
+        <div class="faq-a">Oui, sans condition et sans frais. Vous résiliez depuis votre espace client en 2 clics. Votre abonnement reste actif jusqu'à la fin de la période en cours, puis s'arrête. Aucune démarche compliquée.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">L'installation est-elle difficile ?</div>
+        <div class="faq-a">Non. L'installation prend environ 5 minutes. Vous téléchargez l'app sur le téléphone, vous installez le petit logiciel sur l'ordinateur, vous entrez le même email dans les deux — c'est tout. Si vous avez besoin d'aide, notre support répond en moins de 24h.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="cta-final">
+  <div class="section-inner">
+    <div class="section-badge">Commencer</div>
+    <h2>Prêt à offrir <span>l'autonomie</span> à votre proche ?</h2>
+    <p>14 jours gratuits. Sans carte bancaire. Sans engagement.<br>Conçue en France. Au service de ceux qui ont tout donné.</p>
+    <div class="cta-buttons">
+      <a href="/inscription-facility.html" class="btn-coral">Commencer l'essai gratuit →</a>
+      <a href="mailto:contact@forgedis.fr" class="btn-outline">✉️ Nous contacter</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">FORGE<span>DIS</span></div>
+    <div class="footer-links">
+      <a href="/aria-facility.html">Aria Facility</a>
+      <a href="/kids.html">Aria Kids</a>
+      <a href="/industrial.html">Aria Industrial</a>
+      <a href="/cgv.html">CGV</a>
+      <a href="/mentions-legales.html">Mentions légales</a>
+      <a href="/confidentialite.html">Confidentialité</a>
+    </div>
+    <div class="footer-copy">© 2026 FORGEDIS · SIRET 106 013 899 00013 · Tous droits réservés</div>
+    <div class="footer-slogan">L'IA française qui n'oublie personne.</div>
+  </div>
+</footer>
+
+<script>
+function toggleMenu() {
+  document.getElementById('mobileMenu').classList.toggle('open');
+}
+
+function toggleFaq(el) {
+  el.parentElement.classList.toggle('open');
+}
+
+// Fermer menu au clic extérieur
+document.addEventListener('click', function(e) {
+  const menu = document.getElementById('mobileMenu');
+  const hamburger = document.getElementById('hamburger');
+  if (menu.classList.contains('open') && !menu.contains(e.target) && !hamburger.contains(e.target)) {
+    menu.classList.remove('open');
+  }
+});
+</script>
+
+<script src="/aria-i18n.js"></script>
+
+<script>
+function changerDemo(btn, phrase, action, confirmation) {
+  document.querySelectorAll('.demo-ex-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  document.querySelector('#ds1 .demo-step-phrase').textContent = '"' + phrase + '"';
+  document.querySelector('#ds3 .demo-step-phrase').textContent = action;
+  document.querySelector('#ds4 .demo-step-phrase').textContent = '"' + confirmation + '"';
+  var steps = ['ds1','ds2','ds3','ds4'];
+  steps.forEach(function(id){ document.getElementById(id).classList.remove('active'); });
+  var i = 0;
+  function next() {
+    if(i < steps.length) { document.getElementById(steps[i]).classList.add('active'); i++; setTimeout(next, 650); }
+  }
+  next();
+}
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(function(){
+    var btn = document.querySelector('.demo-ex-btn');
+    if(btn) changerDemo(btn,'Ouvre les photos de mes petits-enfants','Photos ouvertes · diaporama lancé automatiquement','Vos photos sont ouvertes, Madeleine.');
+  }, 900);
+});
+</script>
+</body>
+</html>
