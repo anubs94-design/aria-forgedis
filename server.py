@@ -238,6 +238,43 @@ async def _jwt_vers_email(jwt_token: str, request) -> tuple:
 
 
 
+# ── Helper UTC timestamp — fail-closed ──────────────────────────────
+from datetime import timezone as _tz_utc
+
+def parse_utc_timestamp(value: str):
+    """
+    Parse un timestamp ISO 8601 (avec Z ou +HH:MM) en datetime UTC aware.
+    Retourne None si la valeur est absente, invalide ou ne peut être normalisée.
+    Parsing invalide = fail-closed = jamais pass silencieux.
+    """
+    if not value:
+        return None
+    try:
+        from datetime import datetime as _dt_parse, timezone as _tz_parse
+        s = str(value).strip()
+        if s.endswith("Z"):
+            s = s[:-1] + "+00:00"
+        dt = _dt_parse.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=_tz_parse.utc)
+        return dt.astimezone(_tz_parse.utc)
+    except Exception:
+        return None  # parsing invalide = None = refus en amont
+
+def is_expired(ends_at_value) -> bool:
+    """
+    Retourne True si ends_at est expiré ou non parseable (fail-closed).
+    ends_at=None/vide → non expiré (trial sans date de fin = en cours).
+    """
+    if not ends_at_value:
+        return False
+    from datetime import datetime as _dt_exp, timezone as _tz_exp
+    dt = parse_utc_timestamp(ends_at_value)
+    if dt is None:
+        return True   # parsing invalide = considéré expiré (fail-closed)
+    return dt <= _dt_exp.now(_tz_exp.utc)
+
+
 @app.post("/enroler-installation")
 
 async def enroler_installation(body: dict, request: Request):
@@ -933,17 +970,8 @@ async def verifier_acces(token: str, product: str, capability: str = "") -> tupl
 
                         ends_at = ent.get("ends_at")
 
-                        if ends_at:
-
-                            try:
-
-                                if _dt_va.datetime.fromisoformat(ends_at.replace("Z","")) < _dt_va.datetime.utcnow():
-
-                                    ent_status = "expired"
-
-                            except Exception:
-
-                                pass
+                        if is_expired(ends_at):
+                            ent_status = "expired"
 
             elif product == "industrial":
                 # Résoudre via profiles/user_id -> dirigeant ou salarié
@@ -987,11 +1015,8 @@ async def verifier_acces(token: str, product: str, capability: str = "") -> tupl
                         _ends_at_ind = ent.get("ends_at")
                         if _ends_at_ind:
                             import datetime as _dt_ind
-                            try:
-                                if _dt_ind.datetime.fromisoformat(_ends_at_ind.replace("Z","")) < _dt_ind.datetime.utcnow():
-                                    ent_status = "expired"
-                            except Exception:
-                                pass
+                            if is_expired(_ends_at_ind):
+                                ent_status = "expired"
             # 3. Appliquer la logique d'acces
 
             if ent_status is not None:
@@ -2623,7 +2648,8 @@ async def stripe_webhook(request: Request):
                 # Sync entreprise Industrial (intérieur async with, statut Stripe brut)
                 _sync_ok_sc = await _sync_entreprise_statut(client, sub_id or "", status_str)
                 if not _sync_ok_sc:
-                    print("[webhook] WARN sync entreprise failed for sub.created")
+                    await _fail(client, "sync_entreprise_failed_sub_created")
+                    return JSONResponse(status_code=503, content={"erreur": "sync_entreprise_failed"})
                 ok_c = await _complete(client)
                 if not ok_c:
                     return JSONResponse(status_code=503, content={"erreur": "complete_failed_sub_created"})
@@ -2678,7 +2704,8 @@ async def stripe_webhook(request: Request):
             # Sync entreprise Industrial (intérieur async with, statut Stripe brut)
             _sync_ok_su = await _sync_entreprise_statut(client, sub_id or "", status_str)
             if not _sync_ok_su:
-                print("[webhook] WARN sync entreprise failed for sub.updated")
+                await _fail(client, "sync_entreprise_failed_sub_updated")
+                return JSONResponse(status_code=503, content={"erreur": "sync_entreprise_failed"})
             ok_c = await _complete(client)
             if not ok_c:
                 return JSONResponse(status_code=503, content={"erreur": "complete_failed_sub_updated"})
@@ -2727,7 +2754,8 @@ async def stripe_webhook(request: Request):
             # Sync entreprise Industrial (intérieur async with, statut Stripe brut)
             _sync_ok_sd = await _sync_entreprise_statut(client, sub_id or "", "canceled")
             if not _sync_ok_sd:
-                print("[webhook] WARN sync entreprise failed for sub.deleted")
+                await _fail(client, "sync_entreprise_failed_sub_deleted")
+                return JSONResponse(status_code=503, content={"erreur": "sync_entreprise_failed"})
             ok_c = await _complete(client)
             if not ok_c:
                 return JSONResponse(status_code=503, content={"erreur": "complete_failed_sub_deleted"})
@@ -2790,9 +2818,12 @@ async def stripe_webhook(request: Request):
                     json={"actif": True}
                 )
             # Sync entreprise Industrial (intérieur async with, statut Stripe brut)
-            _sync_ok_ip = await _sync_entreprise_statut(client, sub_id or "", "active")
+            # Statut Stripe brut pour la synchro entreprise
+            _stripe_status_ip = (_rs_ip.json().get("status") or "active") if "json" in dir(_rs_ip) else "active"
+            _sync_ok_ip = await _sync_entreprise_statut(client, sub_id or "", _stripe_status_ip)
             if not _sync_ok_ip:
-                print("[webhook] WARN sync entreprise failed for invoice.paid")
+                await _fail(client, "sync_entreprise_failed_invoice_paid")
+                return JSONResponse(status_code=503, content={"erreur": "sync_entreprise_failed"})
             ok_c = await _complete(client)
             if not ok_c:
                 return JSONResponse(status_code=503, content={"erreur": "complete_failed_invoice_paid"})
@@ -2844,9 +2875,12 @@ async def stripe_webhook(request: Request):
                 await _fail(client, f"invoice_failed_patch_failed:{r_if.status_code}")
                 return JSONResponse(status_code=503, content={"erreur": "patch_failed_invoice_failed"})
             # Sync entreprise Industrial (intérieur async with, statut Stripe brut)
-            _sync_ok_if = await _sync_entreprise_statut(client, sub_id or "", "past_due")
+            # Statut Stripe brut pour la synchro entreprise
+            _stripe_status_if_raw = (_rs_if.json().get("status") or "past_due") if "json" in dir(_rs_if) else "past_due"
+            _sync_ok_if = await _sync_entreprise_statut(client, sub_id or "", _stripe_status_if_raw)
             if not _sync_ok_if:
-                print("[webhook] WARN sync entreprise failed for invoice.failed")
+                await _fail(client, "sync_entreprise_failed_invoice_failed")
+                return JSONResponse(status_code=503, content={"erreur": "sync_entreprise_failed"})
             ok_c = await _complete(client)
             if not ok_c:
                 return JSONResponse(status_code=503, content={"erreur": "complete_failed_invoice_failed"})
@@ -4519,12 +4553,8 @@ async def client_token_kids(body: dict, request: Request):
             import datetime as _dt_ctk
             ent_ctk = ents_ctk[0]
             ends_ctk = ent_ctk.get("ends_at")
-            if ends_ctk:
-                try:
-                    if _dt_ctk.datetime.fromisoformat(ends_ctk.replace("Z","")) < _dt_ctk.datetime.utcnow():
-                        return {"erreur": "Abonnement Kids expire."}
-                except Exception:
-                    pass
+            if ends_ctk and is_expired(ends_ctk):
+                return {"erreur": "Abonnement Kids expire."}
             # Récupérer ou créer le token client legacy
             r_cl = await hx.get(
                 f"{SUPABASE_URL}/rest/v1/clients",
@@ -5784,13 +5814,8 @@ async def industrial_claim_ownership(body: dict, request: Request):
                     if e.get("status") not in ("trialing", "active"):
                         continue
                     ends_at = e.get("ends_at")
-                    if ends_at:
-                        try:
-                            ends_dt = _dt_co2.datetime.fromisoformat(ends_at.replace("Z",""))
-                            if ends_dt < now_utc:
-                                continue  # Expiré
-                        except Exception:
-                            pass
+                    if is_expired(ends_at):
+                        continue  # Expiré ou non parseable (fail-closed)
                     valid_ents.append(e)
                 if not valid_ents:
                     results.append({"entreprise_id": ent_id, "ok": False,
@@ -5814,17 +5839,21 @@ async def industrial_claim_ownership(body: dict, request: Request):
                                     "raison": "Cette entreprise a déjà un dirigeant différent."})
                     continue
                 if existing_dir == auth_uid:
-                    # Idempotent : déjà propriétaire, marquer claimed quand même
-                    await hx.patch(
+                    # Idempotent : déjà propriétaire, mais vérifier le PATCH pending
+                    r_claim_idem = await hx.patch(
                         f"{SUPABASE_URL}/rest/v1/pending_industrial_ownership",
                         params={"id": f"eq.{claim['id']}"},
                         headers={"apikey": SUPABASE_SERVICE_KEY,
                                  "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
                                  "Content-Type": "application/json",
-                                 "Prefer": "return=minimal"},
+                                 "Prefer": "return=representation"},
                         json={"status": "claimed",
                               "claimed_at": now_utc.isoformat()}
                     )
+                    if r_claim_idem.status_code not in (200, 201) or not r_claim_idem.json():
+                        results.append({"entreprise_id": ent_id, "ok": False,
+                                        "raison": f"PATCH pending claimed échoué: {r_claim_idem.status_code}"})
+                        continue
                     results.append({"entreprise_id": ent_id, "ok": True, "action": "already_owned"})
                     continue
                 # PATCH conditionnel atomique : id=ent_id AND dirigeant_id IS NULL

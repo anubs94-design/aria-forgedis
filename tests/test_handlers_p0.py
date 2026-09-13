@@ -480,7 +480,7 @@ class TestVerifierAccesIndustrial:
         ind_block = code[ind_idx:ind_idx+3500]
         assert '_ends_at_ind' in ind_block or 'ends_at' in ind_block
         assert 'expired' in ind_block
-        assert 'fromisoformat' in ind_block
+        assert 'is_expired' in ind_block  # fromisoformat remplacé par helper timezone-safe
 
 
 # ══════════════════════════════════════════════════════════════════════════

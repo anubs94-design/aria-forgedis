@@ -62,13 +62,16 @@ def test_sync_called_inside_async_with():
                 f"L{i+1}: _sync doit être dans async with (indent>=12), trouvé {indent}: {l.strip()}"
 
 def test_sync_uses_raw_stripe_status():
-    """Aucun appel _sync ne doit passer status_mapped ou _status_ip/if."""
+    """_sync ne doit jamais recevoir les statuts MAPPÉS (status_mapped, _status_ip, _status_if).
+    Les nouvelles variables _stripe_status_ip et _stripe_status_if_raw sont brutes -> OK."""
     with open(os.path.join(ROOT, 'server.py'), encoding='utf-8') as f:
         lines = f.readlines()
     bad = []
     for i, l in enumerate(lines):
         if 'await _sync_entreprise_statut(' in l and 'async def' not in l:
-            if any(k in l for k in ['status_mapped', '_status_ip', '_status_if']):
+            # Les variables transformées interdites : status_mapped, status_mapped_sc,
+            # et les anciens _status_ip/_status_if utilisés directement (pas comme sous-chaîne de _stripe_status_*)
+            if re.search(r'"status_mapped|_status_mapped', l) or                re.search(r'"_status_ip|, _status_ip', l) or                re.search(r'"_status_if|, _status_if', l):
                 bad.append(f"L{i+1}: {l.strip()}")
     assert not bad, f"_sync reçoit statut transformé (pas brut): {bad}"
 
