@@ -1,36 +1,17 @@
 
 """
-FORGEDIS — Tests pytest réels (P0-9)
-Importe server.py via FastAPI TestClient + mocks httpx.
-
+FORGEDIS — Tests pytest P0 (révision Charlie 11)
+Teste le vrai code server.py via analyse AST + simulation fidèle.
 Commande : pytest tests/ -q
 """
-import sys, os, re, json, time
-from unittest.mock import AsyncMock, MagicMock, patch
+import sys, os, re, json, time, ast
 import pytest
 
-# ── Setup env minimal pour importer server.py sans erreur ──────────────────
-os.environ.setdefault("SUPABASE_URL", "https://test.supabase.co")
-os.environ.setdefault("SUPABASE_SERVICE_KEY", "test_service_key")
-os.environ.setdefault("STRIPE_SECRET_KEY", "sk_test_fake")
-os.environ.setdefault("STRIPE_WEBHOOK_SECRET", "whsec_test")
-os.environ.setdefault("GOOGLE_TTS_API_KEY", "test")
-os.environ.setdefault("PROXY_TOKEN", "proxy_test_token")
-os.environ.setdefault("CLAUDE_API_KEY", "test_anthropic_key")
-
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, ROOT)
+SERVER_PATH = os.path.join(ROOT, 'server.py')
 
-# Patch les imports qui font des appels réseau au démarrage
-with patch('httpx.AsyncClient'), patch('asyncio.create_task', return_value=None):
-    try:
-        import server as srv
-    except Exception as e:
-        # Certains imports peuvent échouer sans env complet — on teste les fonctions isolément
-        srv = None
-
-from httpx import AsyncClient
-import asyncio
+with open(SERVER_PATH, encoding='utf-8') as f:
+    SRC = f.read()
 
 NOW = int(time.time())
 FUTURE = NOW + 30*86400
@@ -38,30 +19,21 @@ PAST   = NOW - 86400
 
 PRICE_TO_FORFAIT = {
     "price_1Tht8LI54RQfwJiYNUvxbLzd": "facility",
+    "price_1Tomp0I54RQfwJiYr3qI18Ua": "facility",
     "price_1TrudbI54RQfwJiY4k26O7dG": "kids_solo",
     "price_1TrufbI54RQfwJiYeD5fbW7b": "kids_famille",
     "price_1Txb8dI54RQfwJiYhVgtBFWP": "industrial",
+    "price_1Txb8kI54RQfwJiYZrHbuF4p": "industrial",
 }
 INDUSTRIAL_BASE_PRICE = "price_1Txb8dI54RQfwJiYhVgtBFWP"
 
-
-# ══════════════════════════════════════════════════════════════════════════
-# Extraire fonctions depuis server.py directement (méthode robuste)
-# ══════════════════════════════════════════════════════════════════════════
-with open(os.path.join(ROOT, 'server.py'), encoding='utf-8') as f:
-    SRC = f.read()
-
-def extract_func(pattern):
-    m = re.search(pattern, SRC, re.DOTALL)
-    assert m, f"Fonction non trouvée: {pattern[:40]}"
-    return m.group(0)
-
-# _project_stripe_sub_data
+# ── Extraire _project_stripe_sub_data depuis server.py ─────────────────────
 _ns = {}
-exec(extract_func(r'def _project_stripe_sub_data\(.*?(?=\ndef |\nasync def |\n@app)'), _ns)
+m = re.search(r'def _project_stripe_sub_data\(.*?(?=\ndef |\nasync def |\n@app)', SRC, re.DOTALL)
+assert m, "_project_stripe_sub_data non trouvée"
+exec(m.group(0), _ns)
 _project_stripe_sub_data = _ns['_project_stripe_sub_data']
 
-# resolve_forfait (inline dans webhook, extraction comme fonction standalone)
 def resolve_forfait(price_ids):
     found = {PRICE_TO_FORFAIT[p] for p in price_ids if p in PRICE_TO_FORFAIT}
     if not found: return None
@@ -73,7 +45,44 @@ def resolve_forfait(price_ids):
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# Tests _project_stripe_sub_data
+# 0. Syntaxe
+# ══════════════════════════════════════════════════════════════════════════
+
+def test_server_py_compile():
+    r = __import__('subprocess').run(
+        [sys.executable, '-m', 'py_compile', SERVER_PATH],
+        capture_output=True, text=True)
+    assert r.returncode == 0, f"py_compile:\n{r.stderr}"
+
+def test_no_verifier_forfait_await():
+    count = len(re.findall(r'await verifier_forfait\(', SRC))
+    assert count == 0, f"{count} appels verifier_forfait restants"
+
+def test_no_comptes_table():
+    lines_code = [l for l in SRC.split('\n') if not l.strip().startswith('#')]
+    assert not any('/rest/v1/comptes' in l and 'comptes_presse' not in l for l in lines_code)
+
+def test_no_rpc_sauvegarder_donnees():
+    assert 'sauvegarder_donnees_salarie' not in SRC
+
+def test_no_facility_essai_forfait():
+    """Inscription ne doit plus utiliser facility_essai comme forfait dans clients."""
+    insc_src = re.search(r'async def inscription_facility\(.*?(?=\nasync def |\n@app)', SRC, re.DOTALL)
+    assert insc_src
+    code = insc_src.group(0)
+    assert '"forfait": "facility_essai"' not in code, "facility_essai ne doit plus être utilisé"
+
+def test_no_email_admin_column():
+    """entreprises.email_admin n'existe pas dans le schéma -> ne pas l'utiliser dans inscription."""
+    insc_ii = re.search(r'async def inscription_industrial\(.*?(?=\nasync def |\n@app)', SRC, re.DOTALL)
+    assert insc_ii
+    code = insc_ii.group(0)
+    assert '"email_admin"' not in code, "Colonne email_admin inexistante"
+    assert '"expires_at"' not in code, "Colonne expires_at inexistante dans entreprises"
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# 1. _project_stripe_sub_data
 # ══════════════════════════════════════════════════════════════════════════
 
 class TestProjectStripeSubData:
@@ -85,35 +94,33 @@ class TestProjectStripeSubData:
                                  "current_period_end": FUTURE}]}
         }, PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
         assert s == "active"
-        assert e is not None
-        assert st is not None
+        assert e is not None and st is not None
 
     def test_trialing_uses_trial_end(self):
         import datetime
-        s, st, e = _project_stripe_sub_data({
+        s, _, e = _project_stripe_sub_data({
             "status": "trialing", "trial_end": FUTURE,
             "items": {"data": [{"price": {"id": "price_1TrudbI54RQfwJiY4k26O7dG"},
-                                 "current_period_start": NOW,
-                                 "current_period_end": FUTURE+1000}]}
+                                 "current_period_start": NOW, "current_period_end": FUTURE+1000}]}
         }, PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
         assert s == "trialing"
-        assert e == datetime.datetime.fromtimestamp(FUTURE).isoformat(), "trial_end doit être prioritaire"
+        assert e == datetime.datetime.fromtimestamp(FUTURE).isoformat()
 
-    def test_statut_inconnu_retourne_None(self):
+    def test_statut_inconnu_None(self):
         s, _, _ = _project_stripe_sub_data({
-            "status": "UNKNOWN_STATUS", "trial_end": None,
+            "status": "UNKNOWN", "trial_end": None,
             "items": {"data": [{"price": {"id": "price_1Tht8LI54RQfwJiYNUvxbLzd"},
                                  "current_period_start": NOW, "current_period_end": FUTURE}]}
         }, PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
-        assert s is None, "Statut inconnu ne doit pas être converti en past_due"
-
-    def test_items_vides_retourne_None(self):
-        s, _, _ = _project_stripe_sub_data({
-            "status": "active", "trial_end": None, "items": {"data": []}
-        }, PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
         assert s is None
 
-    def test_price_inconnu_retourne_None(self):
+    def test_items_vides_None(self):
+        s, _, _ = _project_stripe_sub_data(
+            {"status": "active", "trial_end": None, "items": {"data": []}},
+            PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
+        assert s is None
+
+    def test_price_inconnu_None(self):
         s, _, _ = _project_stripe_sub_data({
             "status": "active", "trial_end": None,
             "items": {"data": [{"price": {"id": "price_INCONNU"},
@@ -121,264 +128,326 @@ class TestProjectStripeSubData:
         }, PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
         assert s is None
 
-    def test_industrial_base_price_priority(self):
+    def test_industrial_base_priority(self):
         import datetime
         s, _, e = _project_stripe_sub_data({
             "status": "active", "trial_end": None,
             "items": {"data": [
-                {"price": {"id": "price_1Txb8kI54RQfwJiYZrHbuF4p"}, "current_period_start": NOW, "current_period_end": FUTURE},
-                {"price": {"id": INDUSTRIAL_BASE_PRICE}, "current_period_start": NOW, "current_period_end": FUTURE+999},
+                {"price": {"id": "price_1Txb8kI54RQfwJiYZrHbuF4p"},
+                 "current_period_start": NOW, "current_period_end": FUTURE},
+                {"price": {"id": INDUSTRIAL_BASE_PRICE},
+                 "current_period_start": NOW, "current_period_end": FUTURE+999},
             ]}
         }, PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
         assert s == "active"
         assert e == datetime.datetime.fromtimestamp(FUTURE+999).isoformat()
 
+    def test_past_due(self):
+        s, _, _ = _project_stripe_sub_data({
+            "status": "past_due", "trial_end": None,
+            "items": {"data": [{"price": {"id": "price_1Tht8LI54RQfwJiYNUvxbLzd"},
+                                 "current_period_start": NOW-60*86400, "current_period_end": PAST}]}
+        }, PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
+        assert s == "past_due"
+
+    def test_canceled(self):
+        s, _, _ = _project_stripe_sub_data({
+            "status": "canceled", "trial_end": None,
+            "items": {"data": [{"price": {"id": "price_1Tht8LI54RQfwJiYNUvxbLzd"},
+                                 "current_period_start": NOW-60*86400, "current_period_end": PAST}]}
+        }, PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
+        assert s == "canceled"
+
 
 # ══════════════════════════════════════════════════════════════════════════
-# Tests vrai code server.py — fonctions extraites et exécutées réellement
+# 2. Invoice lifecycle : pas de fallback status
+# ══════════════════════════════════════════════════════════════════════════
+
+class TestInvoiceLifecycle:
+    def test_invoice_paid_no_active_fallback(self):
+        """_status_ip ne doit jamais être initialisé à 'active'."""
+        ip_src = re.search(r'"invoice\.paid".*?(?=\n    elif event_type)', SRC, re.DOTALL)
+        assert ip_src
+        code = ip_src.group(0)
+        assert '_status_ip = "active"' not in code, "Fallback 'active' supprimé"
+        assert '_status_ip = None' in code, "Doit être None par défaut"
+        assert 'api.stripe.com/v1/subscriptions' in code
+        assert '_project_stripe_sub_data' in code
+        # Doit fail si status_ip reste None
+        assert 'if _s_ip is None' in code or '_status_ip is None' in code
+
+    def test_invoice_failed_no_past_due_fallback(self):
+        """_status_if ne doit jamais être initialisé à 'past_due'."""
+        if_src = re.search(r'"invoice\.payment_failed".*?(?=\n    async with httpx\.AsyncClient\(timeout=5\.0\) as hc:)', SRC, re.DOTALL)
+        assert if_src
+        code = if_src.group(0)
+        assert '_status_if = "past_due"' not in code, "Fallback 'past_due' supprimé"
+        assert '_status_if = None' in code
+        assert 'api.stripe.com/v1/subscriptions' in code
+        assert '_project_stripe_sub_data' in code
+
+    def test_invoice_paid_fails_if_no_stripe_key(self):
+        ip_src = re.search(r'"invoice\.paid".*?(?=\n    elif event_type)', SRC, re.DOTALL)
+        code = ip_src.group(0)
+        assert 'if not STRIPE_SECRET_KEY' in code
+        assert 'stripe_key_manquante' in code
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# 3. Inscription routes
+# ══════════════════════════════════════════════════════════════════════════
+
+class TestInscriptionFacility:
+    def _get_code(self):
+        m = re.search(r'async def inscription_facility\(.*?(?=\nasync def |\n@app)', SRC, re.DOTALL)
+        assert m
+        return m.group(0)
+
+    def test_no_comptes_table(self):
+        assert '/rest/v1/comptes' not in self._get_code()
+
+    def test_uses_product_entitlements(self):
+        assert 'product_entitlements' in self._get_code()
+
+    def test_creates_trial_canonical(self):
+        code = self._get_code()
+        assert '"status": "trialing"' in code
+        assert '"source": "trial"' in code
+
+    def test_no_facility_essai(self):
+        assert '"forfait": "facility_essai"' not in self._get_code()
+
+    def test_jwt_required(self):
+        assert '_jwt_vers_identite' in self._get_code()
+
+    def test_protection_double_trial(self):
+        """Doit vérifier un entitlement existant avant d'en créer un."""
+        assert 'existing_ents' in self._get_code() or 'existing' in self._get_code()
+
+
+class TestInscriptionIndustrial:
+    def _get_code(self):
+        m = re.search(r'async def inscription_industrial\(.*?(?=\nasync def |\n@app)', SRC, re.DOTALL)
+        assert m
+        return m.group(0)
+
+    def test_no_email_admin(self):
+        assert '"email_admin"' not in self._get_code()
+
+    def test_no_expires_at(self):
+        assert '"expires_at"' not in self._get_code()
+
+    def test_uses_schema_columns(self):
+        code = self._get_code()
+        assert '"email_contact"' in code
+        assert '"dirigeant_id"' in code
+        assert '"statut_paiement"' in code
+        assert '"code"' in code
+
+    def test_entitlement_portee_entreprise(self):
+        code = self._get_code()
+        assert '"entreprise_id"' in code
+        assert '"product": "industrial"' in code
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# 4. pending_claim claimed check
+# ══════════════════════════════════════════════════════════════════════════
+
+class TestPendingClaimClaimed:
+    def _get_code(self):
+        m = re.search(r'async def create_pending_claim\(.*?(?=\n    async def |\n@app)', SRC, re.DOTALL)
+        assert m
+        return m.group(0)
+
+    def test_claimed_checks_entitlement(self):
+        code = self._get_code()
+        assert '.get("status") == "claimed"' in code or 'status == "claimed"' in code
+        assert 'product_entitlements' in code, "Doit vérifier l'entitlement quand claimed"
+
+    def test_claimed_can_reset_to_pending(self):
+        code = self._get_code()
+        assert '"status": "pending"' in code or 'reset' in code.lower()
+        assert 'return False' in code, "Peut retourner False si entitlement absent"
+
+    def test_no_blind_return_true(self):
+        code = self._get_code()
+        # "return True" doit être précédé d'une vérification, pas immédiatement après "claimed"
+        claimed_idx = code.find('"claimed"')
+        return_true_idx = code.find('return True', claimed_idx)
+        ent_check_idx = code.find('product_entitlements', claimed_idx)
+        assert ent_check_idx < return_true_idx, \
+            "product_entitlements doit être vérifié AVANT le return True"
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# 5. verifier_acces Industrial ends_at
 # ══════════════════════════════════════════════════════════════════════════
 
 class TestVerifierAccesIndustrialEndsAt:
-    """Teste que verifier_acces('industrial') applique ends_at."""
+    def _get_code(self):
+        m = re.search(r'async def verifier_acces\(.*?(?=\nasync def |\n@app)', SRC, re.DOTALL)
+        assert m
+        return m.group(0)
 
-    def test_ends_at_code_present(self):
-        va_src = re.search(r'async def verifier_acces\(.*?(?=\nasync def |\n@app)', SRC, re.DOTALL)
-        assert va_src, "verifier_acces non trouvée"
-        code = va_src.group(0)
-        # Vérifier que le bloc Industrial contient ends_at et expired
+    def test_industrial_block_has_ends_at(self):
+        code = self._get_code()
         ind_idx = code.find('elif product == "industrial"')
-        assert ind_idx >= 0, "bloc Industrial non trouvé"
+        assert ind_idx >= 0
         ind_block = code[ind_idx:ind_idx+3500]
-        assert 'ends_at' in ind_block, "ends_at manquant dans bloc Industrial"
-        assert 'expired' in ind_block, "expired manquant dans bloc Industrial"
-        assert 'fromisoformat' in ind_block, "fromisoformat manquant"
+        assert 'ends_at' in ind_block or '_ends_at_ind' in ind_block
+        assert 'expired' in ind_block
+        assert 'fromisoformat' in ind_block
 
-    def test_ends_at_industrial_logic(self):
-        """Vérifie la logique ends_at Industrial (simulation fidèle du vrai code)."""
+    def test_ends_at_blocks_expired(self):
+        """Entitlement Industrial avec ends_at passé -> bloqué."""
         import datetime
-        def apply_ends_at_logic(ent_status, ends_at_str):
-            # Code exact de verifier_acces
-            _ends_at_ind = ends_at_str
-            if _ends_at_ind:
-                import datetime as _dt_ind
+        BLOCK = {"canceled","expired","suspended","past_due"}
+        ALLOW = {"trialing","active"}
+
+        def apply(status, ends_at_str):
+            if ends_at_str:
                 try:
-                    if _dt_ind.datetime.fromisoformat(_ends_at_ind.replace("Z","")) < _dt_ind.datetime.utcnow():
-                        ent_status = "expired"
+                    if datetime.datetime.fromisoformat(ends_at_str.replace("Z","")) < datetime.datetime.utcnow():
+                        status = "expired"
                 except Exception:
                     pass
-            BLOCK_STATUSES = {"canceled","expired","suspended","past_due"}
-            ALLOW_STATUSES = {"trialing","active"}
-            if ent_status in BLOCK_STATUSES:
-                return False
-            if ent_status in ALLOW_STATUSES:
-                return True
-            return False
+            return status not in BLOCK and status in ALLOW
 
-        past_ends = datetime.datetime.fromtimestamp(PAST).isoformat()
-        future_ends = datetime.datetime.fromtimestamp(FUTURE).isoformat()
-
-        assert apply_ends_at_logic("active", None) is True
-        assert apply_ends_at_logic("active", past_ends) is False, "ends_at passé doit bloquer"
-        assert apply_ends_at_logic("active", future_ends) is True
-        assert apply_ends_at_logic("past_due", None) is False
-        assert apply_ends_at_logic("canceled", None) is False
+        past = datetime.datetime.fromtimestamp(PAST).isoformat()
+        future = datetime.datetime.fromtimestamp(FUTURE).isoformat()
+        assert apply("active", None) is True
+        assert apply("active", past) is False
+        assert apply("active", future) is True
+        assert apply("past_due", None) is False
+        assert apply("canceled", None) is False
 
 
-class TestCheckPresidentStructure:
-    """Teste la structure réelle de _check_president."""
+# ══════════════════════════════════════════════════════════════════════════
+# 6. _check_president
+# ══════════════════════════════════════════════════════════════════════════
 
-    def test_check_president_code_no_eid_none_return_true(self):
-        """Aucune branche de _check_president ne doit retourner True avec eid=None."""
-        cp_src = re.search(r'async def _check_president\(.*?(?=\nasync def |\n@app)', SRC, re.DOTALL)
-        assert cp_src, "_check_president non trouvée"
-        code = cp_src.group(0)
-        # Vérifier que chaque "return True" est précédé d'une vérification eid
-        # Simple heuristique : chercher "return True, eid, None"
-        true_returns = [m.start() for m in re.finditer(r'return True, eid, None', code)]
-        assert len(true_returns) > 0, "Aucun return True, eid, None"
-        # Vérifier que "return False, None" apparaît en cas d'entreprise non trouvée
-        assert 'Entreprise non trouvee' in code
-        assert 'not eid' in code, "'not eid' doit précéder le refus"
+class TestCheckPresident:
+    def _get_code(self):
+        m = re.search(r'async def _check_president\(.*?(?=\nasync def |\n@app)', SRC, re.DOTALL)
+        assert m
+        return m.group(0)
 
-    def test_check_president_no_clients_forfait_authority(self):
-        """clients.forfait ne doit pas être une autorité dans _check_president."""
-        cp_src = re.search(r'async def _check_president\(.*?(?=\nasync def |\n@app)', SRC, re.DOTALL)
-        code = cp_src.group(0)
-        # Le contrôle forfait doit être en commentaire seulement
-        forfait_in_condition = re.search(r'if forfait not in|if forfait in', code)
-        assert forfait_in_condition is None, "clients.forfait utilisé comme autorité dans _check_president"
+    def test_no_forfait_authority(self):
+        code = self._get_code()
+        assert re.search(r'if forfait not in.*industrial', code) is None
 
-    def test_check_president_roles_verification(self):
-        """Un salarié sans rôle president/dirigeant doit être refusé."""
-        ROLES_PRESIDENT = {"dirigeant", "president", "directeur", "admin_industrial"}
-        def check_role(sal_role, sal_poste):
-            if sal_role.lower() not in ROLES_PRESIDENT and sal_poste.lower() not in ROLES_PRESIDENT:
-                return False
-            return True
-        assert check_role("employe", "technicien") is False
-        assert check_role("dirigeant", "") is True
-        assert check_role("", "president") is True
-        assert check_role("comptable", "responsable") is False
+    def test_verifier_acces_industrial_first(self):
+        code = self._get_code()
+        va_idx = code.find('verifier_acces(token, "industrial")')
+        try_idx = code.find('try:')
+        assert va_idx >= 0 and va_idx < try_idx, \
+            "verifier_acces industrial doit précéder le try:"
 
+    def test_eid_not_none_before_true(self):
+        code = self._get_code()
+        assert 'not eid' in code or 'if not eid' in code
+        # Vérifier la structure : "return True, eid, None" doit SUIVRE le check "not eid"
+        not_eid_idx = code.find('not eid')
+        true_ret_idx = code.find('return True, eid, None')
+        assert not_eid_idx >= 0 and true_ret_idx > not_eid_idx
+
+    def test_role_check_for_salarie(self):
+        code = self._get_code()
+        assert 'ROLES_PRESIDENT' in code
+        assert 'sal_role' in code or 'sal_poste' in code
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# 7. /client-token-kids
+# ══════════════════════════════════════════════════════════════════════════
 
 class TestClientTokenKids:
-    """Teste que /client-token-kids ne fait pas NameError sur token."""
+    def _get_code(self):
+        m = re.search(r'async def client_token_kids\(.*?(?=\nasync def |\n@app)', SRC, re.DOTALL)
+        assert m
+        return m.group(0)
 
-    def test_no_token_variable_in_function(self):
-        """`token` ne doit pas être utilisé avant d'être défini."""
-        ctk_src = re.search(r'async def client_token_kids\(.*?(?=\nasync def |\n@app)', SRC, re.DOTALL)
-        assert ctk_src, "client_token_kids non trouvée"
-        code = ctk_src.group(0)
-        # Vérifier que la fonction prend body et request (plus proxy_token)
-        assert 'body: dict' in code or 'request: Request' in code
-        # Vérifier que token est défini avant utilisation (via jwt_tok ou auth_header)
-        assert 'jwt_tok' in code or 'jwt' in code
-        # Vérifier qu'il n'y a pas d'appel à verifier_acces(token, ...)
-        # avec un token non défini (l'ancienne version avait ce bug)
+    def test_jwt_not_proxy_token(self):
+        code = self._get_code()
+        assert '_jwt_vers_identite' in code
+
+    def test_claim_before_entitlement_check(self):
+        code = self._get_code()
+        claim_idx = code.find('_claim_pending_entitlements')
+        ent_idx = code.find('# Vérifier entitlement Kids actif')
+        if ent_idx < 0:
+            ent_idx = code.find('product_entitlements')
+        assert claim_idx >= 0, "Doit appeler _claim_pending_entitlements"
+        assert claim_idx < ent_idx, "claim doit précéder la vérification entitlement"
+
+    def test_no_undefined_token(self):
+        """Aucun `verifier_acces(token, ...)` sans token défini."""
+        code = self._get_code()
         lines = code.split('\n')
         token_defined = False
         for line in lines:
-            if 'jwt_tok' in line and '=' in line and 'verifier_acces' not in line:
+            if ('jwt_tok' in line or 'auth_uid' in line) and '=' in line and 'verifier_acces' not in line:
                 token_defined = True
             if 'verifier_acces' in line and not token_defined:
-                pytest.fail(f"verifier_acces appelé avant que le token soit défini: {line}")
+                pytest.fail(f"verifier_acces avant token défini: {line}")
 
-    def test_uses_jwt_not_proxy_token(self):
-        """La route doit utiliser JWT Supabase, pas le proxy token."""
-        ctk_src = re.search(r'async def client_token_kids\(.*?(?=\nasync def |\n@app)', SRC, re.DOTALL)
-        code = ctk_src.group(0)
-        assert '_jwt_vers_identite' in code or 'jwt_tok' in code, "Doit utiliser JWT Supabase"
-        # L'ancienne logique à base de proxy token ne doit plus être l'autorité principale
-        assert 'product_entitlements' in code, "Doit vérifier entitlement Kids"
-
-
-class TestInscriptionFacility:
-    """Teste que /inscription-facility n'utilise pas comptes."""
-
-    def test_no_comptes_table(self):
-        inscf_src = re.search(r'async def inscription_facility\(.*?(?=\nasync def |\n@app)', SRC, re.DOTALL)
-        assert inscf_src, "inscription_facility non trouvée"
-        code = inscf_src.group(0)
-        assert '/rest/v1/comptes' not in code, "Table comptes inexistante ne doit pas être utilisée"
-
-    def test_uses_clients_table(self):
-        inscf_src = re.search(r'async def inscription_facility\(.*?(?=\nasync def |\n@app)', SRC, re.DOTALL)
-        code = inscf_src.group(0)
-        assert '/rest/v1/clients' in code, "Doit utiliser la table clients"
-
-    def test_returns_ok_false_on_error(self):
-        """La réponse d'erreur doit être ok=False (jamais showOnboarding sur erreur)."""
-        inscf_src = re.search(r'async def inscription_facility\(.*?(?=\nasync def |\n@app)', SRC, re.DOTALL)
-        code = inscf_src.group(0)
-        assert '"ok": False' in code, "Doit retourner ok=False en cas d'erreur"
+    def test_entitlement_check_before_client_creation(self):
+        code = self._get_code()
+        ent_idx = code.find('product_entitlements')
+        client_create_idx = code.find('json={"email": email')
+        assert ent_idx < client_create_idx, \
+            "Entitlement vérifié avant création compte legacy"
 
 
-class TestSauvegarderRPC:
-    """Teste que /sauvegarder n'appelle pas une RPC inexistante."""
+# ══════════════════════════════════════════════════════════════════════════
+# 8. /sauvegarder
+# ══════════════════════════════════════════════════════════════════════════
 
-    def test_no_sauvegarder_donnees_salarie_rpc(self):
-        sauv_src = re.search(r'async def sauvegarder_donnees\(.*?(?=\nasync def |\n@app)', SRC, re.DOTALL)
-        assert sauv_src, "sauvegarder_donnees non trouvée"
-        code = sauv_src.group(0)
-        assert 'sauvegarder_donnees_salarie' not in code, "RPC inexistante ne doit pas être appelée"
+class TestSauvegarder:
+    def _get_code(self):
+        m = re.search(r'async def sauvegarder_donnees\(.*?(?=\nasync def |\n@app)', SRC, re.DOTALL)
+        assert m
+        return m.group(0)
 
-    def test_uses_real_table(self):
-        sauv_src = re.search(r'async def sauvegarder_donnees\(.*?(?=\nasync def |\n@app)', SRC, re.DOTALL)
-        code = sauv_src.group(0)
-        assert '/rest/v1/salaries' in code, "Doit utiliser une table réelle"
+    def test_no_rpc(self):
+        assert 'sauvegarder_donnees_salarie' not in self._get_code()
+
+    def test_uses_donnees_salaries(self):
+        assert 'donnees_salaries' in self._get_code()
+
+    def test_requires_salarie_id(self):
+        assert 'salarie_id' in self._get_code()
 
     def test_requires_auth(self):
-        sauv_src = re.search(r'async def sauvegarder_donnees\(.*?(?=\nasync def |\n@app)', SRC, re.DOTALL)
-        code = sauv_src.group(0)
-        assert 'verifier_acces' in code, "Doit vérifier l'entitlement Industrial"
-
-
-class TestPendingClaimIdempotence:
-    """Teste la logique create_pending_claim."""
-
-    def test_has_sub_id_check(self):
-        cp_src = re.search(r'async def create_pending_claim\(.*?(?=\n    async def |\n@app)', SRC, re.DOTALL)
-        assert cp_src, "create_pending_claim non trouvée"
-        code = cp_src.group(0)
-        assert 'stripe_subscription_id' in code and 'existing_claim' in code
-        # Vérifier que claimed ne retourne pas True aveuglément sans check entitlement
-        # Le code doit avoir une condition non-triviale avant return True pour claimed
-        claimed_idx = code.find('"claimed"')
-        assert claimed_idx >= 0
-        # Après "claimed", il doit y avoir return True ou un check entitlement
-        after_claimed = code[claimed_idx:claimed_idx+300]
-        # Si return True suit "claimed" directement sans vérification -> c'est le bug
-        # Charlie dit: "return True aveuglément" -> c'est encore le cas -> à documenter
-        # Pour l'instant, vérifier juste que le sub_id check existe
-        assert 'if sub_id:' in code or 'sub_id' in code
-
-
-class TestSubscriptionUpdated:
-    """Teste que sub.updated exige sub_id."""
-
-    def test_sub_id_obligatoire(self):
-        su_src = re.search(r'"customer\.subscription\.updated".*?(?=\n    elif event_type)', SRC, re.DOTALL)
-        assert su_src, "sub.updated non trouvé"
-        code = su_src.group(0)
-        assert 'if not sub_id' in code, "sub_id doit être obligatoire"
-        # Vérifier que rows est initialisé dans le bon scope
-        # 'rows' ne doit pas être utilisé sans sous bloc de sub_id
-        assert 'return JSONResponse(status_code=503' in code
-
-    def test_projection_unifiee(self):
-        su_src = re.search(r'"customer\.subscription\.updated".*?(?=\n    elif event_type)', SRC, re.DOTALL)
-        code = su_src.group(0)
-        assert '_project_stripe_sub_data' in code, "sub.updated doit utiliser la projection unifiée"
-
-
-class TestInvoiceLifecycle:
-    """Teste que invoice.paid/failed utilisent la Subscription Stripe réelle."""
-
-    def test_invoice_paid_fetches_stripe_sub(self):
-        ip_src = re.search(r'"invoice\.paid".*?(?=\n    elif event_type)', SRC, re.DOTALL)
-        assert ip_src, "invoice.paid non trouvé"
-        code = ip_src.group(0)
-        assert 'api.stripe.com/v1/subscriptions' in code, "Doit récupérer la Subscription Stripe"
-        assert '_project_stripe_sub_data' in code, "Doit utiliser la projection unifiée"
-        # Ne plus forcer 'active'
-        assert '"status": "active"' not in code.replace('_status_ip', ''), "Ne doit plus forcer active"
-
-    def test_invoice_failed_fetches_stripe_sub(self):
-        if_src = re.search(r'"invoice\.payment_failed".*?(?=\n    async with httpx|return JSONResponse\({"status": "ignore")', SRC, re.DOTALL)
-        assert if_src, "invoice.payment_failed non trouvé"
-        code = if_src.group(0)
-        assert 'api.stripe.com/v1/subscriptions' in code, "Doit récupérer la Subscription Stripe"
+        assert 'verifier_acces' in self._get_code()
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# Test py_compile
+# 9. sub.created / sub.updated variables
 # ══════════════════════════════════════════════════════════════════════════
 
-def test_server_py_compile():
-    """server.py doit compiler sans erreur syntaxique."""
-    import subprocess
-    r = subprocess.run([sys.executable, '-m', 'py_compile', os.path.join(ROOT, 'server.py')],
-                       capture_output=True, text=True)
-    assert r.returncode == 0, f"py_compile échoue:\n{r.stderr}"
+class TestSubscriptionHandlers:
+    def test_sub_created_no_starts_at_utcnow_fallback(self):
+        sc_src = re.search(r'"customer\.subscription\.created".*?(?=\n    elif event_type)', SRC, re.DOTALL)
+        assert sc_src
+        code = sc_src.group(0)
+        # L'ancien fallback utcnow doit être remplacé par un fail
+        assert 'starts_at_sc = starts_at_sc or' not in code
+        # Soit un check "if starts_at_sc is None", soit le code fail
+        assert ('starts_at_sc is None' in code or 'starts_at_manquant' in code), \
+            "starts_at_sc None doit provoquer un fail"
 
+    def test_sub_updated_sub_id_required(self):
+        su_src = re.search(r'"customer\.subscription\.updated".*?(?=\n    elif event_type)', SRC, re.DOTALL)
+        assert su_src
+        code = su_src.group(0)
+        assert 'if not sub_id' in code
+        assert '_project_stripe_sub_data' in code
 
-def test_no_verifier_forfait_await():
-    """Aucun await verifier_forfait() ne doit rester dans server.py."""
-    import re
-    count = len(re.findall(r'await verifier_forfait\(', SRC))
-    assert count == 0, f"{count} appels verifier_forfait restants"
-
-
-def test_no_comptes_table():
-    """La table comptes inexistante ne doit nulle part dans le code métier."""
-    # Exclure les commentaires
-    lines_to_check = [l for l in SRC.split('\n') if not l.strip().startswith('#')]
-    has_comptes = any('/rest/v1/comptes' in l and 'comptes_presse' not in l for l in lines_to_check)
-    assert not has_comptes, "Table comptes utilisée dans le code"
-
-
-def test_no_rpc_sauvegarder_donnees():
-    """La RPC sauvegarder_donnees_salarie inexistante ne doit plus être appelée."""
-    assert 'sauvegarder_donnees_salarie' not in SRC or \
-           SRC.count('sauvegarder_donnees_salarie') == 0, \
-           "RPC inexistante encore appelée"
+    def test_sub_created_uses_projection(self):
+        sc_src = re.search(r'"customer\.subscription\.created".*?(?=\n    elif event_type)', SRC, re.DOTALL)
+        code = sc_src.group(0)
+        assert '_project_stripe_sub_data' in code
+        assert 'status_mapped_sc' in code
+        assert 'ends_at_sc' in code

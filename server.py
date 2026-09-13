@@ -2129,21 +2129,27 @@ async def stripe_webhook(request: Request):
                 existing = r_ex.json()
                 if existing:
                     existing_claim = existing[0]
+                    existing_claim = existing[0]
                     if existing_claim.get("status") == "claimed":
-                        # Déjà consommé : vérifier entitlement associé
-                        print(f"[pending_claim] claim {existing_claim['id']} déjà claimed pour sub_id={sub_id}")
-                        return True  # Cohérent, event résolu
-                    # Mettre à jour le claim existant (reconciliation)
-                    r_upd = await hc.patch(
-                        f"{SUPABASE_URL}/rest/v1/pending_entitlement_claims",
-                        params={"id": f"eq.{existing_claim['id']}"},
-                        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                                 "Content-Type": "application/json", "Prefer": "return=minimal"},
-                        json={"stripe_customer_id": cust_id or None,
-                              "status": "pending",
-                              "metadata": {"forfait": forfait, "entitlement_status": ent_status,
-                                           "starts_at": starts_at, "ends_at": ends_at, "reconciled": True}}
-                    )
+                        # Vérifier que l'entitlement associé existe encore
+                        r_check_ent = await hc.get(
+                            f"{SUPABASE_URL}/rest/v1/product_entitlements",
+                            params={"stripe_subscription_id": f"eq.{sub_id}", "select": "id,status,product"},
+                            headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+                        )
+                        ent_check = r_check_ent.json()
+                        if not ent_check:
+                            print(f"[pending_claim] WARN claim {existing_claim['id']} claimed mais entitlement absent -> reset")
+                            await hc.patch(
+                                f"{SUPABASE_URL}/rest/v1/pending_entitlement_claims",
+                                params={"id": f"eq.{existing_claim['id']}"},
+                                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                                         "Content-Type": "application/json", "Prefer": "return=minimal"},
+                                json={"status": "pending"}
+                            )
+                            return False  # Réclamable à nouveau
+                        print(f"[pending_claim] claim {existing_claim['id']} claimed, entitlement present")
+                        return True
                     return r_upd.status_code in (200, 204)
             # INSERT nouveau claim
             r = await hc.post(
@@ -2719,22 +2725,30 @@ async def stripe_webhook(request: Request):
             return JSONResponse(status_code=503, content={"erreur": "sub_id_manquant"})
         async with httpx.AsyncClient(timeout=12.0) as client:
             # Récupérer la vraie Subscription Stripe pour statut autoritaire
-            _status_ip = "active"
+            # Stripe autoritaire : la Subscription DOIT être récupérée avec succès
+            _status_ip = None
             _ends_ip = None
-            if STRIPE_SECRET_KEY:
-                try:
-                    _rs_ip = await client.get(
-                        f"https://api.stripe.com/v1/subscriptions/{sub_id}",
-                        headers={"Authorization": f"Bearer {STRIPE_SECRET_KEY}"}
-                    )
-                    if _rs_ip.status_code == 200:
-                        _s_ip, _, _e_ip = _project_stripe_sub_data(
-                            _rs_ip.json(), PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
-                        if _s_ip is not None:
-                            _status_ip = _s_ip
-                            _ends_ip = _e_ip
-                except Exception as _e_sip:
-                    print(f"[webhook] invoice.paid sub fetch err: {_e_sip}")
+            if not STRIPE_SECRET_KEY:
+                await _fail(client, "invoice_paid_no_stripe_key")
+                return JSONResponse(status_code=503, content={"erreur": "stripe_key_manquante"})
+            try:
+                _rs_ip = await client.get(
+                    f"https://api.stripe.com/v1/subscriptions/{sub_id}",
+                    headers={"Authorization": f"Bearer {STRIPE_SECRET_KEY}"}
+                )
+                if _rs_ip.status_code != 200:
+                    await _fail(client, f"invoice_paid_stripe_get_{_rs_ip.status_code}")
+                    return JSONResponse(status_code=503, content={"erreur": "stripe_sub_get_failed"})
+                _s_ip, _, _e_ip = _project_stripe_sub_data(
+                    _rs_ip.json(), PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
+                if _s_ip is None or _e_ip is None:
+                    await _fail(client, f"invoice_paid_projection_failed")
+                    return JSONResponse(status_code=503, content={"erreur": "projection_failed"})
+                _status_ip = _s_ip
+                _ends_ip = _e_ip
+            except Exception as _e_sip:
+                await _fail(client, f"invoice_paid_stripe_exception:{_e_sip}")
+                return JSONResponse(status_code=503, content={"erreur": "stripe_api_exception"})
             r_ip = await client.patch(
                 f"{SUPABASE_URL}/rest/v1/product_entitlements",
                 params={"stripe_subscription_id": f"eq.{sub_id}"},
@@ -2769,22 +2783,30 @@ async def stripe_webhook(request: Request):
             return JSONResponse(status_code=503, content={"erreur": "sub_id_manquant"})
         async with httpx.AsyncClient(timeout=12.0) as client:
             # Récupérer la vraie Subscription Stripe
-            _status_if = "past_due"
+            # Stripe autoritaire
+            _status_if = None
             _ends_if = None
-            if STRIPE_SECRET_KEY:
-                try:
-                    _rs_if = await client.get(
-                        f"https://api.stripe.com/v1/subscriptions/{sub_id}",
-                        headers={"Authorization": f"Bearer {STRIPE_SECRET_KEY}"}
-                    )
-                    if _rs_if.status_code == 200:
-                        _s_if, _, _e_if = _project_stripe_sub_data(
-                            _rs_if.json(), PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
-                        if _s_if is not None:
-                            _status_if = _s_if
-                            _ends_if = _e_if
-                except Exception as _e_sif:
-                    print(f"[webhook] invoice.failed sub fetch err: {_e_sif}")
+            if not STRIPE_SECRET_KEY:
+                await _fail(client, "invoice_failed_no_stripe_key")
+                return JSONResponse(status_code=503, content={"erreur": "stripe_key_manquante"})
+            try:
+                _rs_if = await client.get(
+                    f"https://api.stripe.com/v1/subscriptions/{sub_id}",
+                    headers={"Authorization": f"Bearer {STRIPE_SECRET_KEY}"}
+                )
+                if _rs_if.status_code != 200:
+                    await _fail(client, f"invoice_failed_stripe_get_{_rs_if.status_code}")
+                    return JSONResponse(status_code=503, content={"erreur": "stripe_sub_get_failed"})
+                _s_if, _, _e_if = _project_stripe_sub_data(
+                    _rs_if.json(), PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
+                if _s_if is None:
+                    await _fail(client, f"invoice_failed_projection_failed")
+                    return JSONResponse(status_code=503, content={"erreur": "projection_failed"})
+                _status_if = _s_if
+                _ends_if = _e_if
+            except Exception as _e_sif:
+                await _fail(client, f"invoice_failed_stripe_exception:{_e_sif}")
+                return JSONResponse(status_code=503, content={"erreur": "stripe_api_exception"})
             r_if = await client.patch(
                 f"{SUPABASE_URL}/rest/v1/product_entitlements",
                 params={"stripe_subscription_id": f"eq.{sub_id}"},
@@ -4454,6 +4476,8 @@ async def client_token_kids(body: dict, request: Request):
     try:
         import httpx as _hx_ctk
         async with _hx_ctk.AsyncClient(timeout=10.0) as hx:
+            # Réclamer les pending claims AVANT de vérifier l'entitlement
+            await _claim_pending_entitlements(hx, auth_uid, email)
             # Vérifier entitlement Kids actif pour cet utilisateur
             r_ent = await hx.get(
                 f"{SUPABASE_URL}/rest/v1/product_entitlements",
@@ -4494,7 +4518,7 @@ async def client_token_kids(body: dict, request: Request):
             )
             if r_ins.status_code not in (200, 201):
                 return {"erreur": "Impossible de créer le compte."}
-            await _claim_pending_entitlements(hx, auth_uid, email)
+# [déplacé avant check entitlement]
             return {"token": new_tok, "forfait": "kids", "source": "entitlement"}
     except Exception as _e_ctk:
         print(f"[client-token-kids] {_e_ctk}")
@@ -4892,23 +4916,23 @@ async def devis_industrial(body: dict):
 
 @app.post("/sauvegarder")
 async def sauvegarder_donnees(body: dict, request: Request):
-    """Sauvegarde données salarié Industrial. Requiert entitlement Industrial actif."""
+    """Sauvegarde données salarié Industrial via donnees_salaries (table canonique)."""
     token = body.get("token", "")
     if not token:
         return {"erreur": "Token requis."}
     autorise, msg_err, _ = await verifier_acces(token, "industrial")
     if not autorise:
         return {"erreur": msg_err}
-    nom_salarie = body.get("nom_salarie", "")
     donnees = body.get("donnees", {})
-    if not nom_salarie:
-        return {"erreur": "nom_salarie requis"}
+    salarie_id = body.get("salarie_id", "")
+    if not salarie_id:
+        return {"erreur": "salarie_id requis (identifiant UUID du salarié)."}
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
         return {"erreur": "service indisponible"}
     try:
         import httpx as _hx_sauv
-        # Résoudre l'entreprise depuis le token
         async with _hx_sauv.AsyncClient(timeout=10.0) as hx:
+            # Vérifier que le salarié appartient à l'entreprise du token
             r_cl = await hx.get(
                 f"{SUPABASE_URL}/rest/v1/clients",
                 params={"token": f"eq.{token}", "select": "email"},
@@ -4917,28 +4941,18 @@ async def sauvegarder_donnees(body: dict, request: Request):
             cl_rows = r_cl.json()
             if not cl_rows:
                 return {"erreur": "Compte introuvable."}
-            email_cl = cl_rows[0].get("email", "")
-            # Trouver le salarié correspondant (email_entreprise ou nom)
-            r_sal = await hx.get(
-                f"{SUPABASE_URL}/rest/v1/salaries",
-                params={"email_bureau": f"eq.{email_cl}", "select": "id,entreprise_id"},
-                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
-            )
-            sal_rows = r_sal.json()
-            if not sal_rows:
-                return {"erreur": "Salarié non trouvé pour ce compte."}
-            sal_id = sal_rows[0].get("id")
-            # Mettre à jour les données dans salaries.metadata (JSONB)
-            r_upd = await hx.patch(
-                f"{SUPABASE_URL}/rest/v1/salaries",
-                params={"id": f"eq.{sal_id}"},
+            # Upsert dans donnees_salaries (table canonique pour données métier salarié)
+            r_upd = await hx.post(
+                f"{SUPABASE_URL}/rest/v1/donnees_salaries",
                 headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                         "Content-Type": "application/json", "Prefer": "return=minimal"},
-                json={"metadata": donnees}
+                         "Content-Type": "application/json",
+                         "Prefer": "resolution=merge-duplicates,return=minimal"},
+                json={"salarie_id": salarie_id, "donnees": donnees,
+                      "updated_at": __import__("datetime").datetime.utcnow().isoformat()}
             )
-            if r_upd.status_code not in (200, 204):
-                return {"erreur": f"Erreur sauvegarde: {r_upd.status_code}"}
-            return {"ok": True, "salarie_id": sal_id}
+            if r_upd.status_code not in (200, 201, 204):
+                return {"erreur": f"Erreur sauvegarde: {r_upd.status_code}. Table donnees_salaries requise."}
+            return {"ok": True, "salarie_id": salarie_id}
     except Exception as _e_sauv:
         print(f"[sauvegarder] {_e_sauv}")
         return {"erreur": "Erreur serveur."}
@@ -5593,132 +5607,141 @@ async def checkout_kids(body: dict):
 
 @app.post("/inscription-facility")
 async def inscription_facility(body: dict, request: Request):
-    """
-    Inscription Facility : Auth JWT -> vérifier entitlement -> créer compte legacy.
-    Ne jamais écrire dans `comptes` (table inexistante).
-    Utilise product_entitlements via Stripe webhook ; cette route enregistre juste le compte legacy.
-    """
+    """Inscription Facility trial : JWT obligatoire. Crée entitlement trial canonical."""
     auth_header = request.headers.get("Authorization", "")
     jwt_tok = auth_header[7:].strip() if auth_header.startswith("Bearer ") else body.get("jwt", "")
-    email = (body.get("email") or "").strip().lower()
-    if not email or "@" not in email:
-        return {"ok": False, "erreur": "Email invalide."}
-    # Si JWT présent : vérifier entitlement
-    if jwt_tok:
-        auth_uid, jwt_email, err_jwt = await _jwt_vers_identite(jwt_tok, request)
-        if err_jwt:
-            return {"ok": False, "erreur": err_jwt}
-        email = jwt_email  # Email autoritaire depuis JWT
+    if not jwt_tok:
+        return {"ok": False, "erreur": "JWT Supabase requis."}
+    auth_uid, email, err_jwt = await _jwt_vers_identite(jwt_tok, request)
+    if err_jwt:
+        return {"ok": False, "erreur": err_jwt}
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
         return {"ok": False, "erreur": "Service indisponible."}
     try:
         async with httpx.AsyncClient(timeout=10.0) as hx:
-            # Créer le compte legacy (sans comptes inexistant)
+            import datetime as _dt_inscf, secrets as _sec_inscf
+            # Protection contre essais multiples
+            r_ex = await hx.get(
+                f"{SUPABASE_URL}/rest/v1/product_entitlements",
+                params={"user_id": f"eq.{auth_uid}", "product": "eq.facility", "select": "id,status,source"},
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+            )
+            existing_ents = r_ex.json()
+            if existing_ents:
+                existing = existing_ents[0]
+                if existing.get("source") != "trial" or existing.get("status") in ("trialing","active"):
+                    return {"ok": False, "erreur": "Un abonnement Facility existe déjà pour ce compte."}
+            # Créer entitlement trial canonical
+            starts_at = _dt_inscf.datetime.utcnow().isoformat()
+            ends_at = (_dt_inscf.datetime.utcnow() + _dt_inscf.timedelta(days=14)).isoformat()
+            r_ent = await hx.post(
+                f"{SUPABASE_URL}/rest/v1/product_entitlements",
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                         "Content-Type": "application/json", "Prefer": "return=representation"},
+                json={"user_id": auth_uid, "product": "facility", "plan": "facility",
+                      "status": "trialing", "source": "trial",
+                      "starts_at": starts_at, "ends_at": ends_at,
+                      "metadata": {"email": email, "trial_start": starts_at}}
+            )
+            if r_ent.status_code not in (200, 201):
+                return {"ok": False, "erreur": f"Erreur création entitlement: {r_ent.status_code}"}
+            # Créer ou récupérer le compte legacy
             r_cl = await hx.get(
                 f"{SUPABASE_URL}/rest/v1/clients",
-                params={"email": f"eq.{email}", "select": "token,forfait,actif"},
+                params={"email": f"eq.{email}", "select": "token,actif"},
                 headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
             )
             cl = r_cl.json()
             if cl and cl[0].get("actif"):
                 return {"ok": True, "token": cl[0]["token"], "action": "existing_account"}
-            import secrets as _sec_inscf
             new_tok = "aria_" + _sec_inscf.token_hex(32)
             r_ins = await hx.post(
                 f"{SUPABASE_URL}/rest/v1/clients",
                 headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
                          "Content-Type": "application/json", "Prefer": "return=representation"},
-                json={"email": email, "token": new_tok, "forfait": "facility_essai",
+                json={"email": email, "token": new_tok, "forfait": "facility",
                       "taches_ce_mois": 0, "actif": True}
             )
-            if r_ins.status_code not in (200, 201):
-                return {"ok": False, "erreur": f"Erreur création compte: {r_ins.status_code}"}
-            # Vérifier que la création a réussi avant de signaler le succès
-            ins_data = r_ins.json()
-            if not ins_data:
-                return {"ok": False, "erreur": "Compte non créé."}
-            return {"ok": True, "token": ins_data[0]["token"], "action": "new_account"}
+            if r_ins.status_code not in (200, 201) or not r_ins.json():
+                return {"ok": False, "erreur": "Erreur création compte."}
+            return {"ok": True, "token": r_ins.json()[0]["token"], "action": "new_account"}
     except Exception as _e_inscf:
         print(f"[inscription-facility] {_e_inscf}")
         return {"ok": False, "erreur": "Erreur serveur."}
 
 @app.post("/inscription-industrial")
-
-async def inscription_industrial(body: dict):
-
-    email   = (body.get("email") or "").strip().lower()
-
-    forfait = "industrial_essai"
-
-    if not email or "@" not in email:
-
-        return {"ok": False, "erreur": "Email invalide."}
-
+async def inscription_industrial(body: dict, request: Request):
+    """Inscription Industrial trial : JWT obligatoire. Crée entreprise + entitlement trial."""
+    auth_header = request.headers.get("Authorization", "")
+    jwt_tok = auth_header[7:].strip() if auth_header.startswith("Bearer ") else body.get("jwt", "")
+    if not jwt_tok:
+        return {"ok": False, "erreur": "JWT Supabase requis."}
+    auth_uid, email, err_jwt = await _jwt_vers_identite(jwt_tok, request)
+    if err_jwt:
+        return {"ok": False, "erreur": err_jwt}
+    nom_entreprise = (body.get("nom_entreprise") or email.split("@")[0]).strip()
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return {"ok": False, "erreur": "Service indisponible."}
     try:
-
-        expiration = (datetime.utcnow() + timedelta(days=14)).isoformat()
-
-        async with httpx.AsyncClient(timeout=5.0) as hx:
-
-            await hx.post(
-
+        async with httpx.AsyncClient(timeout=10.0) as hx:
+            import datetime as _dt_ii, secrets as _sec_ii
+            # Vérifier si dirigeant a déjà une entreprise
+            r_ex = await hx.get(
                 f"{SUPABASE_URL}/rest/v1/entreprises",
-
-                headers={
-
-                    "apikey": SUPABASE_SERVICE_KEY,
-
-                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-
-                    "Content-Type": "application/json",
-
-                    "Prefer": "resolution=merge-duplicates,return=minimal"
-
-                },
-
-                json={
-
-                    "email_admin": email,
-
-                    "forfait": forfait,
-
-                    "expires_at": expiration,
-
-                    "essai": True,
-
-                    "actif": True,
-
-                    "nom": f"Essai {email.split('@')[0]}",
-
-                }
-
+                params={"dirigeant_id": f"eq.{auth_uid}", "select": "id,statut_paiement"},
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
             )
-
-        # Declencher la sequence onboarding
-
-        try:
-
-            await hx.post(
-
-                "https://aria-forgelis.onrender.com/onboarding/declencher",
-
-                headers={"Content-Type": "application/json"},
-
-                json={"email": email, "forfait": forfait},
-
+            existing_ent = r_ex.json()
+            entreprise_id = None
+            if existing_ent:
+                entreprise_id = existing_ent[0]["id"]
+                if existing_ent[0].get("statut_paiement") in ("actif","trialing","essai"):
+                    return {"ok": False, "erreur": "Une entreprise Industrial existe déjà pour ce compte."}
+            else:
+                # Créer entreprise avec les vraies colonnes du schéma
+                code_ent = nom_entreprise[:20].upper().replace(" ", "_")
+                r_ent = await hx.post(
+                    f"{SUPABASE_URL}/rest/v1/entreprises",
+                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                             "Content-Type": "application/json", "Prefer": "return=representation"},
+                    json={"nom": nom_entreprise, "code": code_ent,
+                          "email_contact": email, "dirigeant_id": auth_uid,
+                          "statut_paiement": "essai",
+                          "nombre_employes": 0, "montant_mensuel": 0}
+                )
+                if r_ent.status_code not in (200, 201) or not r_ent.json():
+                    return {"ok": False, "erreur": f"Erreur création entreprise: {r_ent.status_code}"}
+                entreprise_id = r_ent.json()[0]["id"]
+            # Créer entitlement trial canonical porté par entreprise_id
+            starts_at = _dt_ii.datetime.utcnow().isoformat()
+            ends_at = (_dt_ii.datetime.utcnow() + _dt_ii.timedelta(days=14)).isoformat()
+            r_pe = await hx.post(
+                f"{SUPABASE_URL}/rest/v1/product_entitlements",
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                         "Content-Type": "application/json", "Prefer": "return=minimal"},
+                json={"entreprise_id": entreprise_id, "product": "industrial", "plan": "industrial",
+                      "status": "trialing", "source": "trial",
+                      "starts_at": starts_at, "ends_at": ends_at,
+                      "metadata": {"email": email, "dirigeant_id": auth_uid, "trial_start": starts_at}}
             )
-
-        except Exception:
-
-            pass
-
-        return {"ok": True, "forfait": forfait, "expires_at": expiration}
-
-    except Exception as e:
-
-        return {"ok": False, "erreur": str(e)}
-
-
+            if r_pe.status_code not in (200, 201):
+                return {"ok": False, "erreur": f"Erreur création entitlement: {r_pe.status_code}"}
+            # Créer le compte legacy
+            new_tok = "aria_" + _sec_ii.token_hex(32)
+            r_cl = await hx.post(
+                f"{SUPABASE_URL}/rest/v1/clients",
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                         "Content-Type": "application/json", "Prefer": "return=representation"},
+                json={"email": email, "token": new_tok, "forfait": "industrial",
+                      "taches_ce_mois": 0, "actif": True}
+            )
+            if r_cl.status_code not in (200, 201) or not r_cl.json():
+                return {"ok": False, "erreur": "Erreur création compte."}
+            return {"ok": True, "token": r_cl.json()[0]["token"],
+                    "entreprise_id": entreprise_id, "action": "new_industrial_trial"}
+    except Exception as _e_ii:
+        print(f"[inscription-industrial] {_e_ii}")
+        return {"ok": False, "erreur": "Erreur serveur."}
 
 @app.post("/inscription-kids")
 
