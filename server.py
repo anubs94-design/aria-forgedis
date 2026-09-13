@@ -587,12 +587,31 @@ async def stripe_webhook(request: Request):
                 _ri = await _ic.post(
                     f"{SUPABASE_URL}/rest/v1/stripe_events",
                     headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}", "Content-Type": "application/json", "Prefer": "return=minimal"},
-                    json={"event_id": event_id, "event_type": event_type, "processed_at": _dt_idem.datetime.utcnow().isoformat()}
+                    json={"event_id": event_id, "event_type": event_type, "status": "processing",
+                          "processed_at": _dt_idem.datetime.utcnow().isoformat(), "attempt_count": 1}
                 )
                 if _ri.status_code == 409:
-                    _stripe_events_traites.add(event_id)
-                    return {"status": "already_processed", "event_id": event_id}
-                if _ri.status_code not in (200, 201):
+                    # Event déjà connu — vérifier son état
+                    _rc = await _ic.get(
+                        f"{SUPABASE_URL}/rest/v1/stripe_events",
+                        params={"event_id": f"eq.{event_id}", "select": "status,attempt_count"},
+                        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+                    )
+                    _ex = _rc.json()
+                    _ex_status = _ex[0].get("status", "completed") if _ex else "completed"
+                    if _ex_status == "completed":
+                        _stripe_events_traites.add(event_id)
+                        return {"status": "already_processed", "event_id": event_id}
+                    # failed ou processing : retry autorisé
+                    _attempt = (_ex[0].get("attempt_count") or 1) + 1 if _ex else 2
+                    await _ic.patch(
+                        f"{SUPABASE_URL}/rest/v1/stripe_events",
+                        params={"event_id": f"eq.{event_id}"},
+                        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}", "Content-Type": "application/json", "Prefer": "return=minimal"},
+                        json={"status": "processing", "attempt_count": _attempt, "last_error": None}
+                    )
+                    print(f"[webhook] Retry event {event_id} (tentative {_attempt})")
+                elif _ri.status_code not in (200, 201):
                     print(f"[webhook] ERREUR idempotence DB {_ri.status_code}: {_ri.text[:200]}")
                     return {"erreur": "idempotence_db_failed", "code": _ri.status_code}
         except Exception as _ei:
@@ -661,8 +680,31 @@ async def stripe_webhook(request: Request):
         montant = data_obj.get("amount_total", 0)
         stripe_customer_id = data_obj.get("customer", "")
         stripe_subscription_id = data_obj.get("subscription", "")
-        line_items_data = (data_obj.get("line_items", {}) or {}).get("data", []) or []
-        price_ids = [(li.get("price") or {}).get("id", "") for li in line_items_data if (li.get("price") or {}).get("id", "")]
+        # Stripe n'inclut PAS line_items dans checkout.session.completed
+        # Il faut les récupérer via l'API Stripe avec le session_id
+        session_id = data_obj.get("id", "")
+        price_ids = []
+        if session_id and STRIPE_SECRET_KEY:
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as _stripe_api:
+                    _lr = await _stripe_api.get(
+                        f"https://api.stripe.com/v1/checkout/sessions/{session_id}/line_items",
+                        headers={"Authorization": f"Bearer {STRIPE_SECRET_KEY}"},
+                        params={"limit": 20}
+                    )
+                    if _lr.status_code == 200:
+                        for _li in (_lr.json().get("data") or []):
+                            _pid = (_li.get("price") or {}).get("id", "")
+                            if _pid:
+                                price_ids.append(_pid)
+                    else:
+                        print(f"[webhook] ERREUR récupération line_items Stripe {_lr.status_code}")
+            except Exception as _le:
+                print(f"[webhook] EXCEPTION line_items Stripe: {_le}")
+        if not price_ids:
+            # Fallback: lire depuis l'objet si disponible (expand=['line_items'])
+            _li_data = (data_obj.get("line_items", {}) or {}).get("data", []) or []
+            price_ids = [(_li.get("price") or {}).get("id", "") for _li in _li_data if (_li.get("price") or {}).get("id", "")]
         forfait = resolve_forfait(price_ids)
         if not forfait:
             print(f"[stripe-webhook] REFUS checkout price_ids={price_ids} event={event_id}")
@@ -703,8 +745,29 @@ async def stripe_webhook(request: Request):
                 else:
                     ent_ok = await upsert_ent(client, {"user_id": user_id, "product": product_val, "plan": forfait, "status": "trialing", "source": "stripe", "starts_at": _dt_m.datetime.now().isoformat(), "ends_at": date_fin_essai, "stripe_customer_id": stripe_customer_id or None, "stripe_subscription_id": stripe_subscription_id or None, "metadata": {"event_id": event_id, "email": email, "price_ids": price_ids}})
             if not ent_ok:
+                if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+                    try:
+                        async with httpx.AsyncClient(timeout=5.0) as _mc:
+                            await _mc.patch(
+                                f"{SUPABASE_URL}/rest/v1/stripe_events",
+                                params={"event_id": f"eq.{event_id}"},
+                                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}", "Content-Type": "application/json", "Prefer": "return=minimal"},
+                                json={"status": "failed", "last_error": "entitlement_creation_failed"}
+                            )
+                    except Exception: pass
                 return {"status": "erreur", "raison": "entitlement_creation_failed"}
             print(f"[stripe-webhook] checkout ok: {email} forfait={forfait} action={action}")
+            # Marquer event completed dans stripe_events
+            if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+                try:
+                    async with httpx.AsyncClient(timeout=5.0) as _mc:
+                        await _mc.patch(
+                            f"{SUPABASE_URL}/rest/v1/stripe_events",
+                            params={"event_id": f"eq.{event_id}"},
+                            headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}", "Content-Type": "application/json", "Prefer": "return=minimal"},
+                            json={"status": "completed"}
+                        )
+                except Exception: pass
             return {"status": "ok", "action": action, "email": email, "forfait": forfait}
     elif event_type == "customer.subscription.created":
         sub_id = data_obj.get("id", "")
