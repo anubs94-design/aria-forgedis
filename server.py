@@ -1026,23 +1026,9 @@ async def verifier_acces(token: str, product: str, capability: str = "") -> tupl
 
                 return False, f"Statut entitlement inconnu: {ent_status}", forfait_legacy
 
-            # 4. Fallback legacy migration (aucun entitlement canonique)
-
-            if not client_data.get("actif", False):
-
-                return False, "Votre abonnement est inactif. Contactez le support.", "inactif"
-
-            allowed_forfaits = PRODUCT_MAP.get(product, [])
-
-            if forfait_legacy in allowed_forfaits:
-
-                return True, "", forfait_legacy
-
-            if forfait_legacy in ("gratuit",""):
-
-                return False, "Abonnement requis pour ce produit.", "gratuit"
-
-            return False, "Forfait non compatible avec ce produit.", forfait_legacy
+            # 4. Aucun entitlement canonique -> accès refusé
+            #    Le compte legacy sans entitlement est bloqué.
+            return False, "Abonnement introuvable. Souscrivez sur forgedis.fr", "no_entitlement"
 
     except Exception as e:
 
@@ -2655,6 +2641,7 @@ async def stripe_webhook(request: Request):
                 await _fail(client, f"upsert_failed:{reason}")
                 return JSONResponse(status_code=503, content={"erreur": f"upsert_failed:{reason}"})
 
+        await _sync_entreprise_statut(client, resolved_email or email, status_mapped_sc or "trialing")
         return JSONResponse({"status": "ok", "action": "subscription_created"})
 
 
@@ -2702,6 +2689,7 @@ async def stripe_webhook(request: Request):
             ok_c = await _complete(client)
             if not ok_c:
                 return JSONResponse(status_code=503, content={"erreur": "complete_failed_sub_updated"})
+        await _sync_entreprise_statut(client, email, status_mapped or "trialing")
         return JSONResponse({"status": "ok", "action": f"subscription_updated_{status_mapped}"})
     elif event_type == "customer.subscription.deleted":
 
@@ -2808,6 +2796,7 @@ async def stripe_webhook(request: Request):
             ok_c = await _complete(client)
             if not ok_c:
                 return JSONResponse(status_code=503, content={"erreur": "complete_failed_invoice_paid"})
+        await _sync_entreprise_statut(client, email, _status_ip or "active")
         return JSONResponse({"status": "ok", "action": f"invoice_paid_{_status_ip}"})
 
     elif event_type in ("invoice.payment_failed", "invoice.payment_action_required"):
@@ -2858,6 +2847,7 @@ async def stripe_webhook(request: Request):
             ok_c = await _complete(client)
             if not ok_c:
                 return JSONResponse(status_code=503, content={"erreur": "complete_failed_invoice_failed"})
+        await _sync_entreprise_statut(client, email, _status_if or "past_due")
         return JSONResponse({"status": "ok", "action": f"invoice_failed_{_status_if}"})
 
     async with httpx.AsyncClient(timeout=5.0) as hc:
@@ -5719,15 +5709,16 @@ async def ensure_legacy_client(hx, email: str, forfait: str) -> dict:
     new_tok = "aria_" + _sec_elc.token_hex(32)
     r_ins = await hx.post(
         f"{SUPABASE_URL}/rest/v1/clients",
+        params={"on_conflict": "email"},
         headers={"apikey": SUPABASE_SERVICE_KEY,
                  "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
                  "Content-Type": "application/json",
-                 "Prefer": "return=representation"},
+                 "Prefer": "resolution=merge-duplicates,return=representation"},
         json={"email": email, "token": new_tok, "forfait": forfait,
               "taches_ce_mois": 0, "actif": True}
     )
     if r_ins.status_code not in (200, 201) or not r_ins.json():
-        raise RuntimeError(f"ensure_legacy_client INSERT failed {r_ins.status_code}")
+        raise RuntimeError(f"ensure_legacy_client upsert failed {r_ins.status_code}")
     return {"token": r_ins.json()[0]["token"], "action": "created"}
 
 
