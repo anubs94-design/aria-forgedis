@@ -1,4 +1,4 @@
-import os
+﻿import os
 import httpx
 import asyncio
 import base64 as _b64
@@ -619,15 +619,35 @@ async def stripe_webhook(request: Request):
         nb_employes = metadata.get("nb_employes", "0")
         montant = data_obj.get("amount_total", 0)
 
-        # Determiner le forfait selon le produit
-        if produit == "industrial" or "industrial" in str(data_obj.get("description", "")).lower():
-            forfait = "industrial"
-        elif produit == "kids_famille":
-            forfait = "kids_famille"
-        elif produit == "kids_solo":
-            forfait = "kids_solo"
+        # Determiner le forfait via allowlist explicite -- AUCUN fallback Facility
+        # Catalogue Price IDs verifie contre Stripe live (source: stripe_price_catalog Supabase)
+        PRICE_TO_FORFAIT = {
+            "price_1Tht8LI54RQfwJiYNUvxbLzd": "facility",
+            "price_1Tomp0I54RQfwJiYr3qI18Ua": "facility",
+            "price_1TrudbI54RQfwJiY4k26O7dG": "kids_solo",
+            "price_1TrufbI54RQfwJiYeD5fbW7b": "kids_famille",
+            "price_1Txb8dI54RQfwJiYhVgtBFWP": "industrial",
+            "price_1Txb8kI54RQfwJiYZrHbuF4p": "industrial",
+            "price_1Txb8tI54RQfwJiYoPExEr7M": "industrial",
+            "price_1Txb91I54RQfwJiYkdgk1zZg": "industrial",
+            "price_1Txb9AI54RQfwJiYZwFEzbnU": "industrial",
+            "price_1Txb9II54RQfwJiY87wN2go3": "industrial",
+            "price_1Txb9QI54RQfwJiYjTzdob0k": "industrial",
+            "price_1Txb9YI54RQfwJiYyv4JmYJL": "industrial",
+        }
+        if produit in ("industrial", "kids_famille", "kids_solo", "facility"):
+            forfait = produit
         else:
-            forfait = "facility"
+            forfait = None
+            line_items_data = data_obj.get("line_items", {}).get("data", [])
+            for li in line_items_data:
+                pid = (li.get("price") or {}).get("id", "")
+                if pid in PRICE_TO_FORFAIT:
+                    forfait = PRICE_TO_FORFAIT[pid]
+                    break
+        if not forfait:
+            print(f"[stripe-webhook] REFUS -- produit/price_id non reconnu. event_id={event.get('id')}")
+            return {"status": "refus", "raison": "produit_inconnu"}
 
         token = "aria_" + secrets_mod.token_hex(32)
         import datetime
@@ -721,6 +741,51 @@ async def stripe_webhook(request: Request):
                     </div>"""
                     await envoyer_email(email, f"Bienvenue sur {produit_label} — votre acces est actif", html_client)
                     await envoyer_email(EMAIL_ADMIN, f"Nouveau client {forfait}: {email}", f"<p>Nouveau client: {email} — forfait: {forfait}</p>")
+
+                # Mettre a jour product_entitlements (source canonique droits)
+                # Idempotence : upsert sur (user_id, product) ou (email_contact, product)
+                # On tente de résoudre user_id via auth.users.email
+                try:
+                    import re as _re
+                    product_map = {
+                        "facility": "facility",
+                        "kids_solo": "kids",
+                        "kids_famille": "kids",
+                        "industrial": "industrial",
+                    }
+                    plan_map = {
+                        "facility": "facility",
+                        "kids_solo": "kids_solo",
+                        "kids_famille": "kids_famille",
+                        "industrial": "industrial",
+                    }
+                    product_val = product_map.get(forfait)
+                    plan_val = plan_map.get(forfait, forfait)
+                    if product_val:
+                        ent_payload = {
+                            "product": product_val,
+                            "plan": plan_val,
+                            "status": "trialing",
+                            "source": "stripe",
+                            "starts_at": datetime.datetime.now().isoformat(),
+                            "ends_at": date_fin_essai,
+                            "stripe_customer_id": stripe_customer_id or None,
+                            "stripe_subscription_id": stripe_subscription_id or None,
+                            "metadata": {"checkout_event": event.get("id"), "email": email, "forfait_legacy": forfait}
+                        }
+                        await client.post(
+                            f"{SUPABASE_URL}/rest/v1/product_entitlements",
+                            headers={
+                                "apikey": SUPABASE_SERVICE_KEY,
+                                "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                                "Content-Type": "application/json",
+                                "Prefer": "return=minimal"
+                            },
+                            json=ent_payload,
+                        )
+                        print(f"[stripe-webhook] product_entitlements cree: {email} -> {product_val}/{plan_val}")
+                except Exception as e_ent:
+                    print(f"[stripe-webhook] WARN product_entitlements: {e_ent}")
 
                 return {"status": "ok", "action": action, "email": email, "forfait": forfait}
 

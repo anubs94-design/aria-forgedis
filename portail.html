@@ -464,29 +464,117 @@ function envoyerResetMdp(email) {
 // ── FINALISER après auth Supabase ──
 function finaliserConnexion(email, accessToken) {
   showLoading('Chargement de votre espace...');
-  // Récupérer le forfait via le relay
-  fetch(RELAY_URL, {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({email:email})
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(data) {
+  // Stocker le JWT Supabase Auth proprement
+  localStorage.setItem('aria_supabase_jwt', accessToken);
+  sessionStorage.setItem('aria_supabase_jwt', accessToken);
+  localStorage.setItem('aria_email', email);
+  sessionStorage.setItem('aria_email', email);
+
+  // Admin FORGEDIS : vérification email avant relay
+  if (ADMIN_EMAILS.indexOf(email.toLowerCase()) !== -1) {
     stopLoading();
+    window.location.href = '/admin.html';
+    return;
+  }
+
+  // Appel relay avec JWT Supabase Auth (Authorization: Bearer)
+  fetch(RELAY_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + accessToken
+    },
+    body: JSON.stringify({ email: email })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
     if (data.token) {
       localStorage.setItem('aria_token', data.token);
       sessionStorage.setItem('aria_token', data.token);
     }
-    if (data.forfait) {
-      sessionStorage.setItem('aria_forfait', data.forfait);
-    }
-    redirecter(email, data.forfait || '');
+    if (data.forfait) { sessionStorage.setItem('aria_forfait', data.forfait); }
+    // Routing via RPC get_portal_context avec le JWT Supabase
+    routerPortail(accessToken, data.forfait || '');
   })
   .catch(function() {
-    // Relay injoignable — rediriger quand même selon email admin
-    stopLoading();
-    redirecter(email, '');
+    // Relay injoignable — routing via RPC uniquement
+    routerPortail(accessToken, '');
   });
+}
+
+function routerPortail(jwt, forfaitRelay) {
+  stopLoading();
+  // Appel RPC avec le JWT Supabase Auth
+  fetch('https://dvlrilklbspuckbplglz.supabase.co/rest/v1/rpc/get_portal_context', {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + jwt,
+      'Content-Type': 'application/json'
+    },
+    body: '{}'
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(ctx) {
+    var products = (ctx && Array.isArray(ctx.products) && ctx.products.length > 0)
+      ? ctx.products.filter(function(p) { return p && p.product; })
+      : [];
+    afficherPortail(products, forfaitRelay);
+  })
+  .catch(function() {
+    // RPC échoue : fail closed — pas de fallback Facility
+    afficherPortail([], forfaitRelay);
+  });
+}
+
+function afficherPortail(products, forfaitRelay) {
+  var email = localStorage.getItem('aria_email') || '';
+  // Admin via forfait relay
+  if (forfaitRelay === 'admin') { window.location.href = '/admin.html'; return; }
+
+  // Construire la liste des produits accessibles
+  var ROUTES = { facility: '/senior', kids: '/kids', industrial: '/industrial' };
+  var actifs = products.filter(function(p) {
+    return ROUTES[p.product] && p.status && ['trialing','active'].indexOf(p.status) !== -1;
+  });
+
+  if (actifs.length === 0 && forfaitRelay && forfaitRelay !== '' && forfaitRelay !== 'gratuit') {
+    // Fallback migration legacy depuis le relay
+    var produitLegacy = null;
+    if (forfaitRelay === 'facility') produitLegacy = 'facility';
+    else if (forfaitRelay === 'kids_solo' || forfaitRelay === 'kids_famille') produitLegacy = 'kids';
+    else if (forfaitRelay === 'industrial') produitLegacy = 'industrial';
+    if (produitLegacy) { window.location.href = ROUTES[produitLegacy]; return; }
+  }
+
+  if (actifs.length === 0) {
+    // Aucun produit actif : portail découverte — fail closed, pas de Facility par défaut
+    window.location.href = '/';
+    return;
+  }
+
+  if (actifs.length === 1) {
+    // Un seul produit : redirection directe
+    window.location.href = ROUTES[actifs[0].product];
+    return;
+  }
+
+  // Plusieurs produits : afficher le sélecteur de portail
+  afficherSelecteurProduits(actifs, ROUTES);
+}
+
+function afficherSelecteurProduits(actifs, ROUTES) {
+  // Remplacer le contenu de la carte par le sélecteur multi-produit
+  var card = document.getElementById('card-form') || document.querySelector('.card');
+  if (!card) { window.location.href = ROUTES[actifs[0].product]; return; }
+  var LABELS = { facility: 'Aria Facility', kids: 'Aria Kids', industrial: 'Aria Industrial' };
+  var btns = actifs.map(function(p) {
+    return '<button onclick="window.location.href=\'' + ROUTES[p.product] + '\'" ' +
+      'style="width:100%;margin-bottom:12px;padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,.15);' +
+      'background:rgba(255,122,89,.1);color:#F0F3FB;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit">' +
+      LABELS[p.product] + ' →</button>';
+  }).join('');
+  card.innerHTML = '<div style="padding:8px 0"><div style="font-size:1.3rem;font-weight:800;margin-bottom:20px">Vos produits actifs</div>' + btns + '</div>';
 }
 
 // ── GOOGLE OAuth ──
