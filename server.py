@@ -1018,13 +1018,13 @@ async def verifier_acces(token: str, product: str, capability: str = "") -> tupl
 
                             "past_due": "Paiement en attente — verifiez votre moyen de paiement sur forgedis.fr"}
 
-                    return False, msgs.get(ent_status, "Acces refuse."), forfait_legacy
+                    return False, msgs.get(ent_status, "Acces refuse."), "blocked"
 
                 if ent_status in ALLOW_STATUSES:
 
                     return True, "", product
 
-                return False, f"Statut entitlement inconnu: {ent_status}", forfait_legacy
+                return False, f"Statut entitlement inconnu: {ent_status}", "unknown_status"
 
             # 4. Aucun entitlement canonique -> accès refusé
             #    Le compte legacy sans entitlement est bloqué.
@@ -1411,36 +1411,8 @@ async def _claim_pending_entitlements(hc, auth_uid: str, email: str):
 
         print(f"[client-token] WARN _claim_pending_entitlements: {_ce}")
 
-    # Réclamer les pending_industrial_ownership (paiement avant Auth)
-    try:
-        r_pio = await hc.get(
-            f"{SUPABASE_URL}/rest/v1/pending_industrial_ownership",
-            params={"email": f"eq.{email.lower().strip()}", "status": "eq.pending", "select": "*"},
-            headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
-        )
-        for pio in (r_pio.json() or []):
-            ent_id = pio.get("entreprise_id")
-            if not ent_id:
-                continue
-            r_pe = await hc.patch(
-                f"{SUPABASE_URL}/rest/v1/entreprises",
-                params={"id": f"eq.{ent_id}"},
-                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                         "Content-Type": "application/json", "Prefer": "return=minimal"},
-                json={"dirigeant_id": auth_uid}
-            )
-            if r_pe.status_code in (200, 204):
-                import datetime as _dt_pio
-                await hc.patch(
-                    f"{SUPABASE_URL}/rest/v1/pending_industrial_ownership",
-                    params={"id": f"eq.{pio['id']}"},
-                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                             "Content-Type": "application/json", "Prefer": "return=minimal"},
-                    json={"status": "claimed", "claimed_at": _dt_pio.datetime.utcnow().isoformat()}
-                )
-                print(f"[claim_pending] Industrial ownership réclamé: {ent_id} -> {auth_uid}")
-    except Exception as _e_pio:
-        print(f"[claim_pending] Industrial ownership err: {_e_pio}")
+    # Industrial ownership claim: utiliser uniquement /industrial/claim-ownership
+    # Le claim automatique non sécurisé a été supprimé.
 
 
 
@@ -1636,53 +1608,63 @@ def _project_stripe_sub_data(sub_obj, price_to_forfait, industrial_base_price):
 
 
 # ── Mapping Stripe subscription.status → entreprises.statut_paiement ──
-def map_stripe_to_statut_paiement(stripe_status: str) -> str:
-    """Mapping canonique Stripe -> schéma live entreprises.statut_paiement."""
+def map_stripe_to_statut_paiement(stripe_status: str) -> str | None:
+    """
+    Mapping canonique Stripe -> schéma live entreprises.statut_paiement.
+    Retourne None pour tout statut inconnu (fail-closed).
+    NE JAMAIS passer un statut déjà transformé (ex: "suspended" -> None ici).
+    Toujours passer le statut Stripe brut.
+    """
     _MAP = {
         "trialing":           "trialing",
         "active":             "actif",
         "past_due":           "impaye",
         "unpaid":             "impaye",
+        "incomplete":         "impaye",   # paiement initial échoué
         "paused":             "suspendu",
         "canceled":           "resilie",
         "incomplete_expired": "resilie",
-        "incomplete":         "essai",   # paiement en cours
     }
-    return _MAP.get(stripe_status, "essai")
+    return _MAP.get(stripe_status, None)   # None = statut inconnu = fail-closed
 
-async def _sync_entreprise_statut(client, email: str, stripe_status: str):
-    """Synchronise entreprises.statut_paiement avec le statut Stripe réel."""
+async def _sync_entreprise_statut(client, sub_id: str, stripe_status: str):
+    """
+    Synchronise entreprises.statut_paiement via stripe_subscription_id.
+    Résolution : sub_id -> product_entitlements.entreprise_id -> entreprises.
+    Fonctionne même avant création du compte Auth du dirigeant.
+    Statut inconnu (None) -> log + abort, jamais de mutation silencieuse.
+    """
     statut = map_stripe_to_statut_paiement(stripe_status)
+    if statut is None:
+        print(f"[sync_entreprise] WARN statut Stripe inconnu: {stripe_status!r} -> abort")
+        return
+    if not sub_id:
+        return
     try:
-        r_prof = await client.get(
-            f"{SUPABASE_URL}/rest/v1/profiles",
-            params={"email": f"eq.{email.lower().strip()}", "select": "id"},
+        r_pe = await client.get(
+            f"{SUPABASE_URL}/rest/v1/product_entitlements",
+            params={"stripe_subscription_id": f"eq.{sub_id}",
+                    "product": "eq.industrial",
+                    "select": "entreprise_id"},
             headers={"apikey": SUPABASE_SERVICE_KEY,
                      "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
         )
-        prof = r_prof.json()
-        if not prof:
+        pe_rows = r_pe.json()
+        if not pe_rows:
             return
-        uid = prof[0]["id"]
-        r_ent = await client.get(
-            f"{SUPABASE_URL}/rest/v1/entreprises",
-            params={"dirigeant_id": f"eq.{uid}", "select": "id"},
-            headers={"apikey": SUPABASE_SERVICE_KEY,
-                     "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
-        )
-        ent = r_ent.json()
-        if not ent:
+        ent_id = pe_rows[0].get("entreprise_id")
+        if not ent_id:
             return
         await client.patch(
             f"{SUPABASE_URL}/rest/v1/entreprises",
-            params={"id": f"eq.{ent[0]['id']}"},
+            params={"id": f"eq.{ent_id}"},
             headers={"apikey": SUPABASE_SERVICE_KEY,
                      "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
                      "Content-Type": "application/json", "Prefer": "return=minimal"},
             json={"statut_paiement": statut}
         )
     except Exception as _e_sync:
-        print(f"[sync_entreprise] err: {_e_sync}")
+        print(f"[sync_entreprise] err sub={sub_id}: {_e_sync}")
 
 
 
@@ -2641,7 +2623,7 @@ async def stripe_webhook(request: Request):
                 await _fail(client, f"upsert_failed:{reason}")
                 return JSONResponse(status_code=503, content={"erreur": f"upsert_failed:{reason}"})
 
-        await _sync_entreprise_statut(client, resolved_email or email, status_mapped_sc or "trialing")
+        await _sync_entreprise_statut(client, sub_id or "", status_mapped_sc or "trialing")
         return JSONResponse({"status": "ok", "action": "subscription_created"})
 
 
@@ -2689,7 +2671,7 @@ async def stripe_webhook(request: Request):
             ok_c = await _complete(client)
             if not ok_c:
                 return JSONResponse(status_code=503, content={"erreur": "complete_failed_sub_updated"})
-        await _sync_entreprise_statut(client, email, status_mapped or "trialing")
+        await _sync_entreprise_statut(client, sub_id or "", status_mapped or "trialing")
         return JSONResponse({"status": "ok", "action": f"subscription_updated_{status_mapped}"})
     elif event_type == "customer.subscription.deleted":
 
@@ -2796,7 +2778,7 @@ async def stripe_webhook(request: Request):
             ok_c = await _complete(client)
             if not ok_c:
                 return JSONResponse(status_code=503, content={"erreur": "complete_failed_invoice_paid"})
-        await _sync_entreprise_statut(client, email, _status_ip or "active")
+        await _sync_entreprise_statut(client, sub_id or "", _status_ip or "active")
         return JSONResponse({"status": "ok", "action": f"invoice_paid_{_status_ip}"})
 
     elif event_type in ("invoice.payment_failed", "invoice.payment_action_required"):
@@ -2847,7 +2829,7 @@ async def stripe_webhook(request: Request):
             ok_c = await _complete(client)
             if not ok_c:
                 return JSONResponse(status_code=503, content={"erreur": "complete_failed_invoice_failed"})
-        await _sync_entreprise_statut(client, email, _status_if or "past_due")
+        await _sync_entreprise_statut(client, sub_id or "", _status_if or "past_due")
         return JSONResponse({"status": "ok", "action": f"invoice_failed_{_status_if}"})
 
     async with httpx.AsyncClient(timeout=5.0) as hc:
@@ -5702,7 +5684,7 @@ async def ensure_legacy_client(hx, email: str, forfait: str) -> dict:
                          "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
                          "Content-Type": "application/json",
                          "Prefer": "return=minimal"},
-                json={"actif": True, "forfait": forfait}
+                json={"actif": True}  # Ne pas changer forfait: clients.forfait ne représente plus les droits
             )
         return {"token": existing[0]["token"], "action": "existing"}
     import secrets as _sec_elc
@@ -5961,6 +5943,9 @@ async def inscription_industrial(body: dict, request: Request):
                         _start_dt = _dt_rp.datetime.fromisoformat(_original_start.replace("Z",""))
                         starts_at_r = _original_start
                         ends_at_r = (_start_dt + _dt_rp.timedelta(days=14)).isoformat()
+                        # Vérifier que le trial n'est pas déjà expiré
+                        if (_start_dt + _dt_rp.timedelta(days=14)) <= _dt_rp.datetime.utcnow():
+                            return {"ok": False, "erreur": "L'essai Industrial a déjà expiré. Souscrivez sur forgedis.fr."}
                         await hx.post(
                             f"{SUPABASE_URL}/rest/v1/product_entitlements",
                             headers={"apikey": SUPABASE_SERVICE_KEY,

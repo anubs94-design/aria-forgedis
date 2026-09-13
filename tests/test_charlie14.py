@@ -69,8 +69,13 @@ class TestMapStripeToStatut:
     def test_incomplete_expired_maps_to_resilie(self):
         assert srv.map_stripe_to_statut_paiement("incomplete_expired") == "resilie"
 
-    def test_unknown_defaults_to_essai(self):
-        assert srv.map_stripe_to_statut_paiement("UNKNOWN_STATUS") == "essai"
+    def test_unknown_returns_none_fail_closed(self):
+        """Statut inconnu -> None (fail-closed), jamais essai."""
+        assert srv.map_stripe_to_statut_paiement("UNKNOWN_STATUS") is None
+
+    def test_suspended_returns_none(self):
+        """'suspended' est un statut transformé, pas Stripe brut -> None."""
+        assert srv.map_stripe_to_statut_paiement("suspended") is None
 
     def test_no_payant_in_mapping(self):
         """'payant' ne doit pas être dans le mapping."""
