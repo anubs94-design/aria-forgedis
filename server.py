@@ -1518,6 +1518,37 @@ async def _claim_pending_entitlements(hc, auth_uid: str, email: str):
 
         print(f"[client-token] WARN _claim_pending_entitlements: {_ce}")
 
+    # Réclamer les pending_industrial_ownership (paiement avant Auth)
+    try:
+        r_pio = await hc.get(
+            f"{SUPABASE_URL}/rest/v1/pending_industrial_ownership",
+            params={"email": f"eq.{email.lower().strip()}", "status": "eq.pending", "select": "*"},
+            headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+        )
+        for pio in (r_pio.json() or []):
+            ent_id = pio.get("entreprise_id")
+            if not ent_id:
+                continue
+            r_pe = await hc.patch(
+                f"{SUPABASE_URL}/rest/v1/entreprises",
+                params={"id": f"eq.{ent_id}"},
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                         "Content-Type": "application/json", "Prefer": "return=minimal"},
+                json={"dirigeant_id": auth_uid}
+            )
+            if r_pe.status_code in (200, 204):
+                import datetime as _dt_pio
+                await hc.patch(
+                    f"{SUPABASE_URL}/rest/v1/pending_industrial_ownership",
+                    params={"id": f"eq.{pio['id']}"},
+                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                             "Content-Type": "application/json", "Prefer": "return=minimal"},
+                    json={"status": "claimed", "claimed_at": _dt_pio.datetime.utcnow().isoformat()}
+                )
+                print(f"[claim_pending] Industrial ownership réclamé: {ent_id} -> {auth_uid}")
+    except Exception as _e_pio:
+        print(f"[claim_pending] Industrial ownership err: {_e_pio}")
+
 
 
 @app.post("/client-token")
@@ -2140,6 +2171,9 @@ async def stripe_webhook(request: Request):
                                      "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
                         )
                         ent_ck = r_ck.json()
+                        # Vérifier que l'entitlement correspond au bon produit
+                        ent_ck = [e for e in ent_ck if e.get("product") == product_val
+                                  and e.get("status") not in ("canceled", "expired")]
                         if not ent_ck:
                             print(f"[pending_claim] claimed mais entitlement absent -> reset pending")
                             await hc.patch(
@@ -2495,39 +2529,52 @@ async def stripe_webhook(request: Request):
                 entreprise_id = await get_entreprise_id(client, email)
 
                 if not entreprise_id:
-
                     _nom = nom_entreprise or email.split("@")[0]
-
-                    r_ent = await client.post(
-
-                        f"{SUPABASE_URL}/rest/v1/entreprises",
-
-                        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-
-                                 "Content-Type": "application/json", "Prefer": "return=representation"},
-
-                        json={"email_contact": email, "nom": _nom,
-
-                              "code": _nom[:20].upper().replace(" ","_"),
-
-                              "nombre_employes": int(nb_employes) if str(nb_employes).isdigit() else 0,
-
-                              "montant_mensuel": montant / 100 if montant else 0,
-
-                              "statut_paiement": "essai",
-
-                              "stripe_customer_id": cust_id or None,
-
-                              "stripe_sub_id": sub_id or None}
-
+                    # Chercher le profile pour lier dirigeant_id
+                    _r_prof_co = await client.get(
+                            f"{SUPABASE_URL}/rest/v1/profiles",
+                            params={"email": f"eq.{email.lower().strip()}", "select": "id"},
+                            headers={"apikey": SUPABASE_SERVICE_KEY,
+                                     "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
                     )
-
+                    _prof_co = _r_prof_co.json()
+                    _dirigeant_id = _prof_co[0]["id"] if len(_prof_co) == 1 else None
+                    _ent_payload = {"email_contact": email, "nom": _nom,
+                                       "code": _nom[:20].upper().replace(" ", "_"),
+                                       "nombre_employes": int(nb_employes) if str(nb_employes).isdigit() else 0,
+                                       "montant_mensuel": montant / 100 if montant else 0,
+                                       "statut_paiement": "essai",
+                                       "stripe_customer_id": cust_id or None,
+                                       "stripe_sub_id": sub_id or None}
+                    if _dirigeant_id:
+                            _ent_payload["dirigeant_id"] = _dirigeant_id
+                    r_ent = await client.post(
+                            f"{SUPABASE_URL}/rest/v1/entreprises",
+                            headers={"apikey": SUPABASE_SERVICE_KEY,
+                                     "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                                     "Content-Type": "application/json",
+                                     "Prefer": "return=representation"},
+                            json=_ent_payload
+                    )
                     if r_ent.status_code in (200, 201):
-
-                        _created = r_ent.json()
-
-                        entreprise_id = _created[0].get("id") if _created else None
-
+                            _created = r_ent.json()
+                            entreprise_id = _created[0].get("id") if _created else None
+                    if entreprise_id and not _dirigeant_id:
+                            # Pas de profile : créer pending_industrial_ownership
+                            await client.post(
+                                    f"{SUPABASE_URL}/rest/v1/pending_industrial_ownership",
+                                    params={"on_conflict": "email,entreprise_id"},
+                                    headers={"apikey": SUPABASE_SERVICE_KEY,
+                                             "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                                             "Content-Type": "application/json",
+                                             "Prefer": "resolution=merge-duplicates,return=minimal"},
+                                    json={"email": email, "entreprise_id": entreprise_id,
+                                          "stripe_subscription_id": sub_id or None,
+                                          "stripe_customer_id": cust_id or None,
+                                          "status": "pending",
+                                          "metadata": {"nom": _nom, "forfait": "industrial"}}
+                            )
+                            print(f"[checkout] pending_industrial_ownership créé pour {email}")
                 if not entreprise_id:
 
                     await _fail(client, "entreprise_id_indeterminable")
@@ -4944,7 +4991,7 @@ async def devis_industrial(body: dict):
 
 @app.post("/sauvegarder")
 async def sauvegarder_donnees(body: dict, request: Request):
-    """Sauvegarde données salarié Industrial. Vérification tenant obligatoire."""
+    """Sauvegarde données salarié Industrial. Tenant check + upsert déterministe."""
     token = body.get("token", "")
     if not token:
         return {"erreur": "Token requis."}
@@ -4960,7 +5007,7 @@ async def sauvegarder_donnees(body: dict, request: Request):
     try:
         import httpx as _hx_sauv
         async with _hx_sauv.AsyncClient(timeout=10.0) as hx:
-            # 1. Résoudre l'email depuis le token
+            # 1. Résoudre email depuis token
             r_cl = await hx.get(
                 f"{SUPABASE_URL}/rest/v1/clients",
                 params={"token": f"eq.{token}", "select": "email"},
@@ -4971,8 +5018,7 @@ async def sauvegarder_donnees(body: dict, request: Request):
             if not cl_rows:
                 return {"erreur": "Compte introuvable."}
             email_cl = cl_rows[0].get("email", "").lower().strip()
-
-            # 2. Résoudre profile -> entreprise autorisée
+            # 2. Résoudre entreprise autorisée
             r_prof = await hx.get(
                 f"{SUPABASE_URL}/rest/v1/profiles",
                 params={"email": f"eq.{email_cl}", "select": "id"},
@@ -4983,8 +5029,6 @@ async def sauvegarder_donnees(body: dict, request: Request):
             if not prof:
                 return {"erreur": "Profil introuvable."}
             uid = prof[0]["id"]
-
-            # Dirigeant ?
             r_dir = await hx.get(
                 f"{SUPABASE_URL}/rest/v1/entreprises",
                 params={"dirigeant_id": f"eq.{uid}", "select": "id"},
@@ -4993,7 +5037,6 @@ async def sauvegarder_donnees(body: dict, request: Request):
             )
             ent_rows = r_dir.json()
             if not ent_rows:
-                # Salarié ?
                 r_sal_ent = await hx.get(
                     f"{SUPABASE_URL}/rest/v1/salaries",
                     params={"user_id": f"eq.{uid}", "actif": "eq.true",
@@ -5003,28 +5046,27 @@ async def sauvegarder_donnees(body: dict, request: Request):
                 )
                 sal_ent = r_sal_ent.json()
                 if not sal_ent:
-                    return {"erreur": "Aucune entreprise autorisée pour ce compte."}
+                    return JSONResponse(status_code=403,
+                                       content={"erreur": "Aucune entreprise autorisée."})
                 entreprise_autorisee = sal_ent[0]["entreprise_id"]
             else:
                 entreprise_autorisee = ent_rows[0]["id"]
-
-            # 3. Vérifier que salarie_id appartient à cette entreprise
+            # 3. Vérifier appartenance salarié au tenant
             r_sal_check = await hx.get(
                 f"{SUPABASE_URL}/rest/v1/salaries",
                 params={"id": f"eq.{salarie_id}",
                         "entreprise_id": f"eq.{entreprise_autorisee}",
-                        "actif": "eq.true",
-                        "select": "id"},
+                        "actif": "eq.true", "select": "id"},
                 headers={"apikey": SUPABASE_SERVICE_KEY,
                          "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
             )
-            sal_check = r_sal_check.json()
-            if not sal_check:
-                return {"erreur": "Salarié non trouvé ou hors périmètre autorisé.", "status": 403}
-
-            # 4. Upsert dans donnees_salaries (conflit sur salarie_id)
+            if not r_sal_check.json():
+                return JSONResponse(status_code=403,
+                                   content={"erreur": "Salarié hors périmètre autorisé."})
+            # 4. Upsert déterministe sur salarie_id (clé unique)
             r_upd = await hx.post(
                 f"{SUPABASE_URL}/rest/v1/donnees_salaries",
+                params={"on_conflict": "salarie_id"},
                 headers={"apikey": SUPABASE_SERVICE_KEY,
                          "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
                          "Content-Type": "application/json",
@@ -5708,7 +5750,7 @@ async def ensure_legacy_client(hx, email: str, forfait: str) -> dict:
                          "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
                          "Content-Type": "application/json",
                          "Prefer": "return=minimal"},
-                json={"actif": True}
+                json={"actif": True, "forfait": forfait}
             )
         return {"token": existing[0]["token"], "action": "existing"}
     import secrets as _sec_elc
@@ -5785,7 +5827,7 @@ async def inscription_facility(body: dict, request: Request):
 
 @app.post("/inscription-industrial")
 async def inscription_industrial(body: dict, request: Request):
-    """Inscription Industrial trial. JWT obligatoire. Idempotente."""
+    """Inscription Industrial trial. JWT obligatoire. State machine réelle."""
     auth_header = request.headers.get("Authorization", "")
     jwt_tok = auth_header[7:].strip() if auth_header.startswith("Bearer ") else body.get("jwt", "")
     if not jwt_tok:
@@ -5799,7 +5841,11 @@ async def inscription_industrial(body: dict, request: Request):
     try:
         async with httpx.AsyncClient(timeout=10.0) as hx:
             import datetime as _dt_ii2
-            # Vérifier entreprise existante (idempotence)
+            # Valeurs possibles de statut_paiement (schéma live) :
+            # essai, trialing, actif, impaye, suspendu, resilie
+            BLOCK_SP = {"impaye", "suspendu", "resilie"}
+            PAID_SP  = {"actif"}
+            TRIAL_SP = {"essai", "trialing"}
             r_ex_ent = await hx.get(
                 f"{SUPABASE_URL}/rest/v1/entreprises",
                 params={"dirigeant_id": f"eq.{auth_uid}", "select": "id,statut_paiement"},
@@ -5810,51 +5856,63 @@ async def inscription_industrial(body: dict, request: Request):
             entreprise_id = None
             if ex_ents:
                 entreprise_id = ex_ents[0]["id"]
-                sp = ex_ents[0].get("statut_paiement", "")
-                if sp in ("actif", "trialing", "essai"):
-                    # Réparer état partiel : ensure_legacy_client
-                    cl = await ensure_legacy_client(hx, email, "industrial")
-                    # Vérifier entitlement
+                sp = (ex_ents[0].get("statut_paiement") or "").lower()
+                if sp in BLOCK_SP:
+                    return {"ok": False, "erreur": f"Accès Industrial bloqué (statut: {sp}). Contactez le support."}
+                if sp in PAID_SP:
+                    return {"ok": False, "erreur": "Abonnement Industrial payant déjà actif."}
+                if sp in TRIAL_SP:
+                    # Réparer état partiel : s'assurer que l'entitlement existe
                     r_ex_pe = await hx.get(
                         f"{SUPABASE_URL}/rest/v1/product_entitlements",
                         params={"entreprise_id": f"eq.{entreprise_id}",
-                                "product": "eq.industrial",
-                                "select": "id,status"},
+                                "product": "eq.industrial", "select": "id,status"},
                         headers={"apikey": SUPABASE_SERVICE_KEY,
                                  "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
                     )
-                    if not r_ex_pe.json():
-                        return {"ok": False, "erreur": "Entreprise existe mais entitlement manquant. Contactez le support."}
+                    pe_rows = r_ex_pe.json()
+                    if not pe_rows:
+                        # Entitlement manquant -> recréer (état partiel)
+                        starts_at_r = _dt_ii2.datetime.utcnow().isoformat()
+                        ends_at_r = (_dt_ii2.datetime.utcnow() + _dt_ii2.timedelta(days=14)).isoformat()
+                        await hx.post(
+                            f"{SUPABASE_URL}/rest/v1/product_entitlements",
+                            headers={"apikey": SUPABASE_SERVICE_KEY,
+                                     "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                                     "Content-Type": "application/json", "Prefer": "return=minimal"},
+                            json={"entreprise_id": entreprise_id, "product": "industrial",
+                                  "plan": "industrial", "status": "trialing", "source": "trial",
+                                  "starts_at": starts_at_r, "ends_at": ends_at_r,
+                                  "metadata": {"repaired": True, "email": email}}
+                        )
+                    cl = await ensure_legacy_client(hx, email, "industrial")
                     return {"ok": True, "token": cl["token"],
                             "entreprise_id": entreprise_id, "action": "trial_exists"}
-                elif sp == "payant":
-                    return {"ok": False, "erreur": "Abonnement payant Industrial déjà actif."}
-            else:
-                # Créer l'entreprise avec les vraies colonnes
-                code_ent = nom_entreprise[:20].upper().replace(" ", "_")
-                r_ce = await hx.post(
-                    f"{SUPABASE_URL}/rest/v1/entreprises",
-                    headers={"apikey": SUPABASE_SERVICE_KEY,
-                             "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                             "Content-Type": "application/json",
-                             "Prefer": "return=representation"},
-                    json={"nom": nom_entreprise, "code": code_ent,
-                          "email_contact": email, "dirigeant_id": auth_uid,
-                          "statut_paiement": "essai",
-                          "nombre_employes": 0, "montant_mensuel": 0}
-                )
-                if r_ce.status_code not in (200, 201) or not r_ce.json():
-                    return {"ok": False, "erreur": f"Erreur création entreprise: {r_ce.status_code}"}
-                entreprise_id = r_ce.json()[0]["id"]
-            # Créer entitlement trial porté par entreprise_id
+                # Statut inconnu -> bloquer
+                return {"ok": False, "erreur": f"Statut entreprise inconnu: {sp}."}
+            # Créer l'entreprise avec les vraies colonnes
+            code_ent = nom_entreprise[:20].upper().replace(" ", "_")
+            r_ce = await hx.post(
+                f"{SUPABASE_URL}/rest/v1/entreprises",
+                headers={"apikey": SUPABASE_SERVICE_KEY,
+                         "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                         "Content-Type": "application/json", "Prefer": "return=representation"},
+                json={"nom": nom_entreprise, "code": code_ent,
+                      "email_contact": email, "dirigeant_id": auth_uid,
+                      "statut_paiement": "essai",
+                      "nombre_employes": 0, "montant_mensuel": 0}
+            )
+            if r_ce.status_code not in (200, 201) or not r_ce.json():
+                return {"ok": False, "erreur": f"Erreur création entreprise: {r_ce.status_code}"}
+            entreprise_id = r_ce.json()[0]["id"]
+            # Créer entitlement trial
             starts_at = _dt_ii2.datetime.utcnow().isoformat()
             ends_at = (_dt_ii2.datetime.utcnow() + _dt_ii2.timedelta(days=14)).isoformat()
             r_pe = await hx.post(
                 f"{SUPABASE_URL}/rest/v1/product_entitlements",
                 headers={"apikey": SUPABASE_SERVICE_KEY,
                          "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                         "Content-Type": "application/json",
-                         "Prefer": "return=minimal"},
+                         "Content-Type": "application/json", "Prefer": "return=minimal"},
                 json={"entreprise_id": entreprise_id, "product": "industrial",
                       "plan": "industrial", "status": "trialing", "source": "trial",
                       "starts_at": starts_at, "ends_at": ends_at,

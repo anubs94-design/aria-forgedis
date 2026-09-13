@@ -183,7 +183,7 @@ function activerEssai(email, token){
       var errMsg=res.d.erreur||'Erreur activation Facility.';
       document.getElementById('msg-error').textContent=errMsg;
       document.getElementById('msg-error').style.display='block';
-      document.getElementById('btn-submit').disabled=false;
+      showError(errMsg);
       return;
     }
     localStorage.setItem('aria_email',email);
@@ -193,9 +193,7 @@ function activerEssai(email, token){
   })
   .catch(function(err){
     console.error('Relay error:',err);
-    document.getElementById('msg-error').textContent='Erreur réseau. Votre compte est créé mais l\'activation Facility a échoué. Réessayez.';
-    document.getElementById('msg-error').style.display='block';
-    document.getElementById('btn-submit').disabled=false;
+    showError('Erreur réseau. Activation échouée. Réessayez.');
   });
 }
 
