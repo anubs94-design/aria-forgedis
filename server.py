@@ -2819,7 +2819,10 @@ async def stripe_webhook(request: Request):
                 )
             # Sync entreprise Industrial (intérieur async with, statut Stripe brut)
             # Statut Stripe brut pour la synchro entreprise
-            _stripe_status_ip = (_rs_ip.json().get("status") or "active") if "json" in dir(_rs_ip) else "active"
+            _stripe_status_ip = _rs_ip.json().get("status") if hasattr(_rs_ip, "json") else None
+            if not _stripe_status_ip:
+                await _fail(client, "invoice_paid_stripe_status_absent")
+                return JSONResponse(status_code=503, content={"erreur": "stripe_status_absent"})
             _sync_ok_ip = await _sync_entreprise_statut(client, sub_id or "", _stripe_status_ip)
             if not _sync_ok_ip:
                 await _fail(client, "sync_entreprise_failed_invoice_paid")
@@ -2876,7 +2879,10 @@ async def stripe_webhook(request: Request):
                 return JSONResponse(status_code=503, content={"erreur": "patch_failed_invoice_failed"})
             # Sync entreprise Industrial (intérieur async with, statut Stripe brut)
             # Statut Stripe brut pour la synchro entreprise
-            _stripe_status_if_raw = (_rs_if.json().get("status") or "past_due") if "json" in dir(_rs_if) else "past_due"
+            _stripe_status_if_raw = _rs_if.json().get("status") if hasattr(_rs_if, "json") else None
+            if not _stripe_status_if_raw:
+                await _fail(client, "invoice_failed_stripe_status_absent")
+                return JSONResponse(status_code=503, content={"erreur": "stripe_status_absent"})
             _sync_ok_if = await _sync_entreprise_statut(client, sub_id or "", _stripe_status_if_raw)
             if not _sync_ok_if:
                 await _fail(client, "sync_entreprise_failed_invoice_failed")
@@ -5918,7 +5924,7 @@ async def inscription_facility(body: dict, request: Request):
             r_ex = await hx.get(
                 f"{SUPABASE_URL}/rest/v1/product_entitlements",
                 params={"user_id": f"eq.{auth_uid}", "product": "eq.facility",
-                        "select": "id,status,source"},
+                        "select": "id,status,source,ends_at"},
                 headers={"apikey": SUPABASE_SERVICE_KEY,
                          "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
             )
@@ -5926,7 +5932,9 @@ async def inscription_facility(body: dict, request: Request):
             if existing_ents:
                 ex = existing_ents[0]
                 if ex.get("source") == "trial" and ex.get("status") in ("trialing","active"):
-                    # Trial en cours : réparer état partiel si client manquant
+                    # Vérifier que le trial n'est pas expiré
+                    if is_expired(ex.get("ends_at")):
+                        return {"ok": False, "erreur": "Essai Facility déjà expiré."}
                     cl = await ensure_legacy_client(hx, email, "facility")
                     return {"ok": True, "token": cl["token"], "action": "trial_exists"}
                 if ex.get("source") != "trial":
@@ -5997,11 +6005,14 @@ async def inscription_industrial(body: dict, request: Request):
                     r_ex_pe = await hx.get(
                         f"{SUPABASE_URL}/rest/v1/product_entitlements",
                         params={"entreprise_id": f"eq.{entreprise_id}",
-                                "product": "eq.industrial", "select": "id,status"},
+                                "product": "eq.industrial", "select": "id,status,ends_at"},
                         headers={"apikey": SUPABASE_SERVICE_KEY,
                                  "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
                     )
                     pe_rows = r_ex_pe.json()
+                    # Vérifier si entitlement existant est expiré
+                    if pe_rows and is_expired(pe_rows[0].get("ends_at")):
+                        return {"ok": False, "erreur": "L'essai Industrial a expiré. Souscrivez sur forgedis.fr."}
                     if not pe_rows:
                         # Entitlement manquant -> recréer SANS redémarrer le trial
                         # Utiliser la date de création de l'entreprise comme début original
@@ -6017,15 +6028,18 @@ async def inscription_industrial(body: dict, request: Request):
                         if not _original_start:
                             # Aucune preuve de date originale -> impossible de réparer sans créer un nouveau trial
                             return {"ok": False, "erreur": "Impossible de réparer le trial: date originale introuvable. Contactez le support."}
-                        # ends_at = starts_at + 14 jours (date originale)
-                        import datetime as _dt_rp
-                        _start_dt = _dt_rp.datetime.fromisoformat(_original_start.replace("Z",""))
-                        starts_at_r = _original_start
-                        ends_at_r = (_start_dt + _dt_rp.timedelta(days=14)).isoformat()
-                        # Vérifier que le trial n'est pas déjà expiré
-                        if (_start_dt + _dt_rp.timedelta(days=14)) <= _dt_rp.datetime.utcnow():
+                        # ends_at = starts_at + 14 jours (date originale) — UTC-safe
+                        from datetime import timezone as _tz_rp, timedelta as _td_rp
+                        _start_dt = parse_utc_timestamp(_original_start)
+                        if _start_dt is None:
+                            return {"ok": False, "erreur": "Date de début trial invalide. Contactez le support."}
+                        _end_dt = _start_dt + _td_rp(days=14)
+                        from datetime import datetime as _dt_now_rp
+                        if _end_dt <= _dt_now_rp.now(_tz_rp.utc):
                             return {"ok": False, "erreur": "L'essai Industrial a déjà expiré. Souscrivez sur forgedis.fr."}
-                        await hx.post(
+                        starts_at_r = _original_start
+                        ends_at_r = _end_dt.isoformat()
+                        r_repair = await hx.post(
                             f"{SUPABASE_URL}/rest/v1/product_entitlements",
                             headers={"apikey": SUPABASE_SERVICE_KEY,
                                      "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
@@ -6035,6 +6049,8 @@ async def inscription_industrial(body: dict, request: Request):
                                   "starts_at": starts_at_r, "ends_at": ends_at_r,
                                   "metadata": {"repaired": True, "email": email}}
                         )
+                        if r_repair.status_code not in (200, 201):
+                            return {"ok": False, "erreur": f"Erreur réparation entitlement: {r_repair.status_code}"}
                     cl = await ensure_legacy_client(hx, email, "industrial")
                     return {"ok": True, "token": cl["token"],
                             "entreprise_id": entreprise_id, "action": "trial_exists"}

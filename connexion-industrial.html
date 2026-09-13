@@ -125,6 +125,30 @@ body{
   <div class="divider-link">
     <a href="/connexion.html">← Connexion Aria Facility / Kids</a>
   </div>
+  <div class="divider-link" style="margin-top:8px;">
+    <a href="#" onclick="modeProprietaire(); return false;">🔑 Accès propriétaire (après paiement Stripe)</a>
+  </div>
+</div>
+
+<div id="overlay-prop" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:100;align-items:center;justify-content:center;">
+  <div style="background:#1a1f2e;border-radius:16px;padding:32px;max-width:420px;width:90%;border:1px solid rgba(255,255,255,.1);">
+    <div style="font-size:1.2rem;font-weight:700;color:#e2e8f0;margin-bottom:8px;">Accès propriétaire Industrial</div>
+    <div style="font-size:13px;color:#94a3b8;margin-bottom:20px;">Connectez-vous avec votre compte Supabase pour réclamer la propriété après paiement Stripe.</div>
+    <div class="field" style="margin-bottom:12px;">
+      <label style="font-size:12px;color:#94a3b8;">Email Supabase</label>
+      <input type="email" id="prop-email" placeholder="votre@email.com" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0d1117;color:#e2e8f0;font-size:14px;">
+    </div>
+    <div class="field" style="margin-bottom:16px;">
+      <label style="font-size:12px;color:#94a3b8;">Mot de passe Supabase</label>
+      <input type="password" id="prop-mdp" placeholder="••••••••" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0d1117;color:#e2e8f0;font-size:14px;">
+    </div>
+    <div id="prop-error" style="display:none;color:#f87171;font-size:13px;margin-bottom:12px;"></div>
+    <div id="prop-success" style="display:none;color:#34d399;font-size:13px;margin-bottom:12px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="claimerProprietaire()" style="flex:1;padding:12px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;font-size:14px;font-weight:600;cursor:pointer;">Réclamer la propriété →</button>
+      <button onclick="fermerProp()" style="padding:12px 16px;border-radius:8px;background:rgba(255,255,255,.1);color:#e2e8f0;border:none;font-size:14px;cursor:pointer;">Annuler</button>
+    </div>
+  </div>
 </div>
 
 <div class="slogan">L'IA française qui n'oublie personne.</div>
@@ -327,6 +351,73 @@ document.addEventListener('DOMContentLoaded', function(){
   }catch(e){}
 });
 </script>
-<script src="/aria-i18n.js"></script>
+<script src="/aria-i18n.js">
+// ── Bootstrap propriétaire Industrial ─────────────────────────────────
+function modeProprietaire(){
+  var ol = document.getElementById("overlay-prop");
+  if(ol){ ol.style.display="flex"; }
+}
+
+function fermerProp(){
+  var ol = document.getElementById("overlay-prop");
+  if(ol){ ol.style.display="none"; }
+  document.getElementById("prop-error").style.display = "none";
+  document.getElementById("prop-success").style.display = "none";
+}
+
+async function claimerProprietaire(){
+  var email = (document.getElementById("prop-email").value||"").trim();
+  var mdp   = (document.getElementById("prop-mdp").value||"");
+  var errEl = document.getElementById("prop-error");
+  var okEl  = document.getElementById("prop-success");
+  errEl.style.display = "none"; okEl.style.display = "none";
+  if(!email || !email.includes("@")){ errEl.textContent="Email requis."; errEl.style.display="block"; return; }
+  if(!mdp || mdp.length < 6){ errEl.textContent="Mot de passe requis."; errEl.style.display="block"; return; }
+  try{
+    var authResp = await fetch(SUPABASE_URL + "/auth/v1/token?grant_type=password", {
+      method:"POST",
+      headers:{"apikey": SUPABASE_KEY, "Content-Type":"application/json"},
+      body: JSON.stringify({email: email, password: mdp})
+    });
+    var authData = await authResp.json();
+    if(!authData.access_token){
+      errEl.textContent = authData.error_description || authData.msg || "Email ou mot de passe incorrect.";
+      errEl.style.display = "block"; return;
+    }
+    var jwt = authData.access_token;
+    var claimResp = await fetch("https://aria-forgelis.onrender.com/industrial/claim-ownership", {
+      method:"POST",
+      headers:{"Content-Type":"application/json", "Authorization":"Bearer " + jwt},
+      body: JSON.stringify({jwt: jwt})
+    });
+    var claimData = await claimResp.json();
+    if(!claimData.ok){
+      var raison = "";
+      if(claimData.results && claimData.results.length){
+        raison = claimData.results.map(function(r){ return r.raison||""; }).join(", ");
+      }
+      errEl.textContent = raison || claimData.erreur || "Claim échoué.";
+      errEl.style.display = "block"; return;
+    }
+    var claimed = (claimData.results || []).filter(function(r){ return r.ok; });
+    var ent_id  = claimed.length ? claimed[0].entreprise_id : "";
+    try{
+      localStorage.setItem("aria_industrial_owner_jwt", jwt);
+      localStorage.setItem("aria_industrial_entreprise_id", ent_id);
+      localStorage.setItem("aria_industrial_role", "dirigeant");
+      localStorage.setItem("aria_industrial_session", JSON.stringify({
+        role:"dirigeant", entreprise_id: ent_id, email: email, owner: true
+      }));
+    }catch(e){}
+    okEl.textContent = "✅ Propriété réclamée ! Redirection...";
+    okEl.style.display = "block";
+    setTimeout(function(){ window.location = "/industrial.html?owner=1"; }, 1800);
+  }catch(e){
+    errEl.textContent = "Erreur réseau : " + (e.message||e);
+    errEl.style.display = "block";
+  }
+}
+
+</script>
 </body>
 </html>
