@@ -162,7 +162,7 @@ def test_claim_ownership_idempotent():
                   src, re.DOTALL)
     code = m.group(0)
     # Si dirigeant_id == auth_uid -> action=already_claimed (idempotent)
-    assert 'already_claimed' in code
+    assert 'already_owned' in code
 
 def test_claim_ownership_marks_claimed():
     with open(os.path.join(ROOT,'server.py'), encoding='utf-8') as f:

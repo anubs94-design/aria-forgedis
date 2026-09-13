@@ -852,16 +852,6 @@ async def verifier_acces(token: str, product: str, capability: str = "") -> tupl
 
         return False, "Token requis.", "inconnu"
 
-    PRODUCT_MAP = {
-
-        "facility": ["facility","facility_historique","tous"],
-
-        "kids": ["kids_solo","kids_famille","tous"],
-
-        "industrial": ["industrial","tous"],
-
-    }
-
     BLOCK_STATUSES = {"canceled","expired","suspended","past_due"}
 
     ALLOW_STATUSES = {"trialing","active"}
@@ -1627,19 +1617,20 @@ def map_stripe_to_statut_paiement(stripe_status: str) -> str | None:
     }
     return _MAP.get(stripe_status, None)   # None = statut inconnu = fail-closed
 
-async def _sync_entreprise_statut(client, sub_id: str, stripe_status: str):
+async def _sync_entreprise_statut(client, sub_id: str, stripe_status_raw: str) -> bool:
     """
     Synchronise entreprises.statut_paiement via stripe_subscription_id.
     Résolution : sub_id -> product_entitlements.entreprise_id -> entreprises.
-    Fonctionne même avant création du compte Auth du dirigeant.
-    Statut inconnu (None) -> log + abort, jamais de mutation silencieuse.
+    Exige le statut Stripe BRUT (ex: "paused", "canceled"), pas un statut projeté.
+    Retourne True si sync réussie, False sinon.
+    Ne doit être appelé QUE depuis l'intérieur du async with actif.
     """
-    statut = map_stripe_to_statut_paiement(stripe_status)
-    if statut is None:
-        print(f"[sync_entreprise] WARN statut Stripe inconnu: {stripe_status!r} -> abort")
-        return
     if not sub_id:
-        return
+        return False
+    statut = map_stripe_to_statut_paiement(stripe_status_raw)
+    if statut is None:
+        print(f"[sync_entreprise] WARN statut Stripe inconnu: {stripe_status_raw!r} -> abort")
+        return False
     try:
         r_pe = await client.get(
             f"{SUPABASE_URL}/rest/v1/product_entitlements",
@@ -1649,22 +1640,35 @@ async def _sync_entreprise_statut(client, sub_id: str, stripe_status: str):
             headers={"apikey": SUPABASE_SERVICE_KEY,
                      "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
         )
+        if r_pe.status_code != 200:
+            print(f"[sync_entreprise] GET entitlement HTTP {r_pe.status_code}")
+            return False
         pe_rows = r_pe.json()
         if not pe_rows:
-            return
+            return True   # Pas d'entitlement Industrial = non concerné, pas une erreur
         ent_id = pe_rows[0].get("entreprise_id")
         if not ent_id:
-            return
-        await client.patch(
+            return False
+        r_patch = await client.patch(
             f"{SUPABASE_URL}/rest/v1/entreprises",
             params={"id": f"eq.{ent_id}"},
             headers={"apikey": SUPABASE_SERVICE_KEY,
                      "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                     "Content-Type": "application/json", "Prefer": "return=minimal"},
+                     "Content-Type": "application/json",
+                     "Prefer": "return=representation"},
             json={"statut_paiement": statut}
         )
+        if r_patch.status_code not in (200, 201):
+            print(f"[sync_entreprise] PATCH entreprise HTTP {r_patch.status_code}")
+            return False
+        patched = r_patch.json()
+        if not patched:
+            print(f"[sync_entreprise] PATCH entreprise 0 ligne")
+            return False
+        return True
     except Exception as _e_sync:
         print(f"[sync_entreprise] err sub={sub_id}: {_e_sync}")
+        return False
 
 
 
@@ -2616,6 +2620,10 @@ async def stripe_webhook(request: Request):
             )
 
             if ent_ok:
+                # Sync entreprise Industrial (intérieur async with, statut Stripe brut)
+                _sync_ok_sc = await _sync_entreprise_statut(client, sub_id or "", status_str)
+                if not _sync_ok_sc:
+                    print("[webhook] WARN sync entreprise failed for sub.created")
                 ok_c = await _complete(client)
                 if not ok_c:
                     return JSONResponse(status_code=503, content={"erreur": "complete_failed_sub_created"})
@@ -2623,7 +2631,6 @@ async def stripe_webhook(request: Request):
                 await _fail(client, f"upsert_failed:{reason}")
                 return JSONResponse(status_code=503, content={"erreur": f"upsert_failed:{reason}"})
 
-        await _sync_entreprise_statut(client, sub_id or "", status_mapped_sc or "trialing")
         return JSONResponse({"status": "ok", "action": "subscription_created"})
 
 
@@ -2668,10 +2675,13 @@ async def stripe_webhook(request: Request):
             if r_patch_su.status_code not in (200, 201, 204) or not r_patch_su.json():
                 await _fail(client, f"sub_updated_patch_failed:{r_patch_su.status_code}")
                 return JSONResponse(status_code=503, content={"erreur": "patch_failed"})
+            # Sync entreprise Industrial (intérieur async with, statut Stripe brut)
+            _sync_ok_su = await _sync_entreprise_statut(client, sub_id or "", status_str)
+            if not _sync_ok_su:
+                print("[webhook] WARN sync entreprise failed for sub.updated")
             ok_c = await _complete(client)
             if not ok_c:
                 return JSONResponse(status_code=503, content={"erreur": "complete_failed_sub_updated"})
-        await _sync_entreprise_statut(client, sub_id or "", status_mapped or "trialing")
         return JSONResponse({"status": "ok", "action": f"subscription_updated_{status_mapped}"})
     elif event_type == "customer.subscription.deleted":
 
@@ -2714,6 +2724,10 @@ async def stripe_webhook(request: Request):
                 if r_patch_sd.status_code not in (200, 201, 204) or not r_patch_sd.json():
                     await _fail(client, f"sub_deleted_patch_failed:{row['id']}:{r_patch_sd.status_code}")
                     return JSONResponse(status_code=503, content={"erreur": "patch_failed_sub_deleted"})
+            # Sync entreprise Industrial (intérieur async with, statut Stripe brut)
+            _sync_ok_sd = await _sync_entreprise_statut(client, sub_id or "", "canceled")
+            if not _sync_ok_sd:
+                print("[webhook] WARN sync entreprise failed for sub.deleted")
             ok_c = await _complete(client)
             if not ok_c:
                 return JSONResponse(status_code=503, content={"erreur": "complete_failed_sub_deleted"})
@@ -2775,10 +2789,13 @@ async def stripe_webhook(request: Request):
                              "Content-Type": "application/json", "Prefer": "return=minimal"},
                     json={"actif": True}
                 )
+            # Sync entreprise Industrial (intérieur async with, statut Stripe brut)
+            _sync_ok_ip = await _sync_entreprise_statut(client, sub_id or "", "active")
+            if not _sync_ok_ip:
+                print("[webhook] WARN sync entreprise failed for invoice.paid")
             ok_c = await _complete(client)
             if not ok_c:
                 return JSONResponse(status_code=503, content={"erreur": "complete_failed_invoice_paid"})
-        await _sync_entreprise_statut(client, sub_id or "", _status_ip or "active")
         return JSONResponse({"status": "ok", "action": f"invoice_paid_{_status_ip}"})
 
     elif event_type in ("invoice.payment_failed", "invoice.payment_action_required"):
@@ -2826,10 +2843,13 @@ async def stripe_webhook(request: Request):
             if r_if.status_code not in (200, 201, 204) or not r_if.json():
                 await _fail(client, f"invoice_failed_patch_failed:{r_if.status_code}")
                 return JSONResponse(status_code=503, content={"erreur": "patch_failed_invoice_failed"})
+            # Sync entreprise Industrial (intérieur async with, statut Stripe brut)
+            _sync_ok_if = await _sync_entreprise_statut(client, sub_id or "", "past_due")
+            if not _sync_ok_if:
+                print("[webhook] WARN sync entreprise failed for invoice.failed")
             ok_c = await _complete(client)
             if not ok_c:
                 return JSONResponse(status_code=503, content={"erreur": "complete_failed_invoice_failed"})
-        await _sync_entreprise_statut(client, sub_id or "", _status_if or "past_due")
         return JSONResponse({"status": "ok", "action": f"invoice_failed_{_status_if}"})
 
     async with httpx.AsyncClient(timeout=5.0) as hc:
@@ -2862,9 +2882,7 @@ async def _check_president(token):
             if not rows or not rows[0].get("actif"):
                 return False, None, "Compte inactif ou introuvable."
             row = rows[0]
-            forfait = row.get("forfait", "")
-            # [déprécié] verifier_acces("industrial") a déjà validé l'entitlement en amont
-            # Ne plus contrôler clients.forfait ici
+            # clients sert uniquement à résoudre email/token. verifier_acces("industrial") garantit l'accès.
 
             email_p = row.get("email", "")
             eid = None
@@ -5707,9 +5725,10 @@ async def ensure_legacy_client(hx, email: str, forfait: str) -> dict:
 @app.post("/industrial/claim-ownership")
 async def industrial_claim_ownership(body: dict, request: Request):
     """
-    Réclame la propriété d'une entreprise Industrial après paiement Stripe.
-    Appelé par le dirigeant après avoir créé son compte Auth Supabase.
-    JWT obligatoire. Sécurisé : vérification entitlement + dirigeant_id NULL.
+    Réclame la propriété d'une entreprise Industrial.
+    JWT obligatoire. stripe_subscription_id OBLIGATOIRE.
+    Vérifications : entitlement actif + non expiré + dirigeant_id NULL ou même uid.
+    PATCH conditionnel atomique (dirigeant_id IS NULL) via Prefer=return=representation.
     """
     auth_header = request.headers.get("Authorization", "")
     jwt_tok = auth_header[7:].strip() if auth_header.startswith("Bearer ") else body.get("jwt", "")
@@ -5722,7 +5741,8 @@ async def industrial_claim_ownership(body: dict, request: Request):
         return {"ok": False, "erreur": "Service indisponible."}
     try:
         async with httpx.AsyncClient(timeout=10.0) as hx:
-            # Chercher le pending ownership pour cet email
+            import datetime as _dt_co2
+            now_utc = _dt_co2.datetime.utcnow()
             r_pio = await hx.get(
                 f"{SUPABASE_URL}/rest/v1/pending_industrial_ownership",
                 params={"email": f"eq.{email.lower().strip()}",
@@ -5730,40 +5750,60 @@ async def industrial_claim_ownership(body: dict, request: Request):
                 headers={"apikey": SUPABASE_SERVICE_KEY,
                          "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
             )
-            claims = r_pio.json()
+            if r_pio.status_code != 200:
+                return {"ok": False, "erreur": "Erreur lecture pending ownership."}
+            claims = r_pio.json() or []
             if not claims:
                 return {"ok": False, "erreur": "Aucun ownership Industrial en attente pour cet email."}
             results = []
             for claim in claims:
                 ent_id = claim.get("entreprise_id")
                 stripe_sub_id = claim.get("stripe_subscription_id")
-                if not ent_id:
+                # stripe_subscription_id OBLIGATOIRE
+                if not stripe_sub_id:
+                    results.append({"entreprise_id": ent_id, "ok": False,
+                                    "raison": "stripe_subscription_id absent dans le pending."})
                     continue
-                # Vérifier que l'entitlement Industrial de cette entreprise est actif
-                ent_params = {"entreprise_id": f"eq.{ent_id}", "product": "eq.industrial",
-                              "select": "id,status,stripe_subscription_id"}
-                if stripe_sub_id:
-                    ent_params["stripe_subscription_id"] = f"eq.{stripe_sub_id}"
+                if not ent_id:
+                    results.append({"ok": False, "raison": "entreprise_id absent dans le pending."})
+                    continue
+                # Vérifier entitlement Industrial : même sub_id, actif, non expiré
                 r_ent = await hx.get(
                     f"{SUPABASE_URL}/rest/v1/product_entitlements",
-                    params=ent_params,
+                    params={"entreprise_id": f"eq.{ent_id}",
+                            "product": "eq.industrial",
+                            "stripe_subscription_id": f"eq.{stripe_sub_id}",
+                            "select": "id,status,ends_at"},
                     headers={"apikey": SUPABASE_SERVICE_KEY,
                              "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
                 )
-                ents = [e for e in r_ent.json()
-                        if e.get("status") in ("trialing", "active")]
-                if not ents:
+                ents = r_ent.json() if r_ent.status_code == 200 else []
+                # Filtrer : statut actif + ends_at non expiré
+                valid_ents = []
+                for e in ents:
+                    if e.get("status") not in ("trialing", "active"):
+                        continue
+                    ends_at = e.get("ends_at")
+                    if ends_at:
+                        try:
+                            ends_dt = _dt_co2.datetime.fromisoformat(ends_at.replace("Z",""))
+                            if ends_dt < now_utc:
+                                continue  # Expiré
+                        except Exception:
+                            pass
+                    valid_ents.append(e)
+                if not valid_ents:
                     results.append({"entreprise_id": ent_id, "ok": False,
-                                    "raison": "Entitlement Industrial non trouvé ou inactif."})
+                                    "raison": "Entitlement Industrial non trouvé, inactif ou expiré."})
                     continue
-                # Vérifier que dirigeant_id est NULL ou déjà auth_uid
+                # Vérifier l'état du dirigeant actuel
                 r_ent_check = await hx.get(
                     f"{SUPABASE_URL}/rest/v1/entreprises",
                     params={"id": f"eq.{ent_id}", "select": "id,dirigeant_id"},
                     headers={"apikey": SUPABASE_SERVICE_KEY,
                              "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
                 )
-                ent_rows = r_ent_check.json()
+                ent_rows = r_ent_check.json() if r_ent_check.status_code == 200 else []
                 if not ent_rows:
                     results.append({"entreprise_id": ent_id, "ok": False,
                                     "raison": "Entreprise introuvable."})
@@ -5774,7 +5814,7 @@ async def industrial_claim_ownership(body: dict, request: Request):
                                     "raison": "Cette entreprise a déjà un dirigeant différent."})
                     continue
                 if existing_dir == auth_uid:
-                    # Idempotent : marquer claimed
+                    # Idempotent : déjà propriétaire, marquer claimed quand même
                     await hx.patch(
                         f"{SUPABASE_URL}/rest/v1/pending_industrial_ownership",
                         params={"id": f"eq.{claim['id']}"},
@@ -5782,45 +5822,55 @@ async def industrial_claim_ownership(body: dict, request: Request):
                                  "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
                                  "Content-Type": "application/json",
                                  "Prefer": "return=minimal"},
-                        json={"status": "claimed", "claimed_at": __import__("datetime").datetime.utcnow().isoformat()}
+                        json={"status": "claimed",
+                              "claimed_at": now_utc.isoformat()}
                     )
-                    results.append({"entreprise_id": ent_id, "ok": True, "action": "already_claimed"})
+                    results.append({"entreprise_id": ent_id, "ok": True, "action": "already_owned"})
                     continue
-                # PATCH entreprises.dirigeant_id
+                # PATCH conditionnel atomique : id=ent_id AND dirigeant_id IS NULL
                 r_patch = await hx.patch(
                     f"{SUPABASE_URL}/rest/v1/entreprises",
-                    params={"id": f"eq.{ent_id}"},
+                    params={"id": f"eq.{ent_id}", "dirigeant_id": "is.null"},
                     headers={"apikey": SUPABASE_SERVICE_KEY,
                              "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
                              "Content-Type": "application/json",
                              "Prefer": "return=representation"},
                     json={"dirigeant_id": auth_uid}
                 )
-                if r_patch.status_code not in (200, 201, 204):
+                if r_patch.status_code not in (200, 201):
                     results.append({"entreprise_id": ent_id, "ok": False,
-                                    "raison": f"Erreur PATCH entreprise: {r_patch.status_code}"})
+                                    "raison": f"PATCH entreprise échoué: {r_patch.status_code}"})
                     continue
-                # Marquer claimed
-                import datetime as _dt_co
-                await hx.patch(
+                patched = r_patch.json()
+                if not patched:
+                    # 0 ligne = entreprise réclamée entre temps par quelqu'un d'autre
+                    results.append({"entreprise_id": ent_id, "ok": False,
+                                    "raison": "Conflit concurrent : dirigeant assigné avant votre requête."})
+                    continue
+                # Marquer pending ownership claimed
+                r_claim = await hx.patch(
                     f"{SUPABASE_URL}/rest/v1/pending_industrial_ownership",
                     params={"id": f"eq.{claim['id']}"},
                     headers={"apikey": SUPABASE_SERVICE_KEY,
                              "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
                              "Content-Type": "application/json",
-                             "Prefer": "return=minimal"},
-                    json={"status": "claimed", "claimed_at": _dt_co.datetime.utcnow().isoformat()}
+                             "Prefer": "return=representation"},
+                    json={"status": "claimed", "claimed_at": now_utc.isoformat()}
                 )
+                if r_claim.status_code not in (200, 201) or not r_claim.json():
+                    results.append({"entreprise_id": ent_id, "ok": False,
+                                    "raison": f"PATCH pending claimed échoué: {r_claim.status_code}"})
+                    continue
                 results.append({"entreprise_id": ent_id, "ok": True, "action": "claimed"})
-                print(f"[claim-ownership] {email} -> entreprise {ent_id} dirigeant_id={auth_uid}")
+                print(f"[claim-ownership] {email} -> {ent_id} dirigeant={auth_uid}")
             any_ok = any(r["ok"] for r in results)
             return {"ok": any_ok, "results": results}
     except Exception as _e_co:
         print(f"[claim-ownership] {_e_co}")
         return {"ok": False, "erreur": "Erreur serveur."}
-
-
 @app.post("/inscription-facility")
+
+
 async def inscription_facility(body: dict, request: Request):
     """Inscription Facility trial. JWT obligatoire. Idempotente."""
     auth_header = request.headers.get("Authorization", "")
