@@ -1813,7 +1813,7 @@ async def stripe_webhook(request: Request):
 
                 return JSONResponse(status_code=503, content={"erreur": f"acquire_unknown:{_result}"})
 
-    except Exception as _ei:
+    except Exception as _e_acq:
 
         return JSONResponse(status_code=503, content={"erreur": "idempotence_db_exception"})
 
@@ -2359,7 +2359,7 @@ async def stripe_webhook(request: Request):
                         sub_status_real, date_debut_real, date_fin_real = _project_stripe_sub_data(
                             _sub_obj, PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
                         if sub_status_real is None or date_fin_real is None:
-                            await _fail(client, f"projection_failed_status={_stripe_status}")
+                            await _fail(_sa2, f"projection_failed_status={_stripe_status}")
                             return JSONResponse(status_code=503, content={"erreur": "stripe_projection_failed"})
 
                     else:
@@ -2576,13 +2576,13 @@ async def stripe_webhook(request: Request):
 
                 return JSONResponse(status_code=503, content={"erreur": "subject_unresolvable"})
 
-            starts_at = _dt_m.datetime.utcnow().isoformat()
+            starts_at_sc = starts_at_sc or _dt_m.datetime.utcnow().isoformat()  # ne pas ecraser si projection ok
 
             ent_ok, reason = await resolve_subject_and_upsert(
 
                 client, resolved_email, forfait, cust_id, sub_id, price_ids,
 
-                ends_at=ends_at, status_val=status_mapped, starts_at=starts_at
+                ends_at=ends_at_sc, status_val=status_mapped_sc, starts_at=starts_at_sc
 
             )
 
@@ -2678,26 +2678,22 @@ async def stripe_webhook(request: Request):
                 # Jamais annuler par stripe_customer_id : trop large
                 await _fail(client, f"sub_deleted_not_found:{sub_id}")
                 return JSONResponse(status_code=503, content={"erreur": "subscription_not_found"})
+        # Toutes les mutations sub.deleted verifiées dans le for
             for row in (rows or []):
-
-                await client.patch(
-
+                r_patch_sd = await client.patch(
                     f"{SUPABASE_URL}/rest/v1/product_entitlements",
-
                     params={"id": f"eq.{row['id']}"},
-
                     headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-
-                             "Content-Type": "application/json", "Prefer": "return=minimal"},
-
+                             "Content-Type": "application/json", "Prefer": "return=representation"},
                     json={"status": "canceled", "ends_at": _dt_m.datetime.utcnow().isoformat(),
-
-                          "metadata": {"event_id": event_id}}
-
+                           "metadata": {"event_id": event_id}}
                 )
-
-            await _complete(client)
-
+                if r_patch_sd.status_code not in (200, 201, 204) or not r_patch_sd.json():
+                    await _fail(client, f"sub_deleted_patch_failed:{row['id']}:{r_patch_sd.status_code}")
+                    return JSONResponse(status_code=503, content={"erreur": "patch_failed_sub_deleted"})
+            ok_c = await _complete(client)
+            if not ok_c:
+                return JSONResponse(status_code=503, content={"erreur": "complete_failed_sub_deleted"})
         return JSONResponse({"status": "ok", "action": "subscription_deleted"})
 
 
@@ -2712,49 +2708,38 @@ async def stripe_webhook(request: Request):
 
         email_inv= data_obj.get("customer_email", "") or ""
 
+        if not sub_id:
+            async with httpx.AsyncClient(timeout=5.0) as _hf:
+                await _fail(_hf, "invoice_paid_no_sub_id")
+            return JSONResponse(status_code=503, content={"erreur": "sub_id_manquant"})
         async with httpx.AsyncClient(timeout=10.0) as client:
-
-            if sub_id:
-
+            r_ip = await client.patch(
+                f"{SUPABASE_URL}/rest/v1/product_entitlements",
+                params={"stripe_subscription_id": f"eq.{sub_id}"},
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                         "Content-Type": "application/json", "Prefer": "return=representation"},
+                json={"status": "active",
+                       "metadata": {"event_id": event_id, "paid_at": _dt_m.datetime.utcnow().isoformat()}}
+            )
+            if r_ip.status_code not in (200, 201, 204):
+                await _fail(client, f"invoice_paid_patch_failed:{r_ip.status_code}")
+                return JSONResponse(status_code=503, content={"erreur": "patch_failed_invoice_paid"})
+            if not r_ip.json():
+                await _fail(client, f"invoice_paid_0_rows:{sub_id}")
+                return JSONResponse(status_code=503, content={"erreur": "entitlement_not_found_invoice_paid"})
+            email_inv = data_obj.get("customer_email", "") or ""
+            if email_inv:
                 await client.patch(
-
-                    f"{SUPABASE_URL}/rest/v1/product_entitlements",
-
-                    params={"stripe_subscription_id": f"eq.{sub_id}"},
-
+                    f"{SUPABASE_URL}/rest/v1/clients",
+                    params={"email": f"eq.{email_inv}"},
                     headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-
                              "Content-Type": "application/json", "Prefer": "return=minimal"},
-
-                    json={"status": "active",
-
-                          "metadata": {"event_id": event_id, "paid_at": _dt_m.datetime.utcnow().isoformat()}}
-
+                    json={"actif": True}
                 )
-
-                if email_inv:
-
-                    await client.patch(
-
-                        f"{SUPABASE_URL}/rest/v1/clients",
-
-                        params={"email": f"eq.{email_inv}"},
-
-                        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-
-                                 "Content-Type": "application/json", "Prefer": "return=minimal"},
-
-                        json={"actif": True}
-
-                    )
-
             ok_c = await _complete(client)
             if not ok_c:
                 return JSONResponse(status_code=503, content={"erreur": "complete_failed_invoice_paid"})
-
         return JSONResponse({"status": "ok", "action": "invoice_paid_active"})
-
-
 
     elif event_type in ("invoice.payment_failed", "invoice.payment_action_required"):
 
@@ -2764,33 +2749,29 @@ async def stripe_webhook(request: Request):
 
         sub_id    = (_sub_det_f.get("subscription") if _sub_det_f else None) or data_obj.get("subscription","")
 
+        if not sub_id:
+            async with httpx.AsyncClient(timeout=5.0) as _hf:
+                await _fail(_hf, "invoice_failed_no_sub_id")
+            return JSONResponse(status_code=503, content={"erreur": "sub_id_manquant"})
         async with httpx.AsyncClient(timeout=10.0) as client:
-
-            if sub_id:
-
-                await client.patch(
-
-                    f"{SUPABASE_URL}/rest/v1/product_entitlements",
-
-                    params={"stripe_subscription_id": f"eq.{sub_id}"},
-
-                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-
-                             "Content-Type": "application/json", "Prefer": "return=minimal"},
-
-                    json={"status": "past_due",
-
-                          "metadata": {"event_id": event_id, "failed_at": _dt_m.datetime.utcnow().isoformat()}}
-
-                )
-
+            r_if = await client.patch(
+                f"{SUPABASE_URL}/rest/v1/product_entitlements",
+                params={"stripe_subscription_id": f"eq.{sub_id}"},
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                         "Content-Type": "application/json", "Prefer": "return=representation"},
+                json={"status": "past_due",
+                       "metadata": {"event_id": event_id, "failed_at": _dt_m.datetime.utcnow().isoformat()}}
+            )
+            if r_if.status_code not in (200, 201, 204):
+                await _fail(client, f"invoice_failed_patch_failed:{r_if.status_code}")
+                return JSONResponse(status_code=503, content={"erreur": "patch_failed_invoice_failed"})
+            if not r_if.json():
+                await _fail(client, f"invoice_failed_0_rows:{sub_id}")
+                return JSONResponse(status_code=503, content={"erreur": "entitlement_not_found_invoice_failed"})
             ok_c = await _complete(client)
             if not ok_c:
                 return JSONResponse(status_code=503, content={"erreur": "complete_failed_invoice_failed"})
-
         return JSONResponse({"status": "ok", "action": "invoice_payment_failed_past_due"})
-
-
 
     async with httpx.AsyncClient(timeout=5.0) as hc:
 
