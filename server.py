@@ -1137,106 +1137,13 @@ async def verifier_forfait(token_recu, type_requete="eco"):
 
 
             # Consulter product_entitlements (source canonique) pour verifier le statut reel
+            # Pas d'entitlement canonique -> accès refusé.
+            # Les comptes migration legacy n'ont plus de fallback clients.forfait.
+            if ent_status in ("canceled", "expired", "suspended"):
+                return False, "Votre abonnement est annule. Souscrivez a nouveau sur forgedis.fr", "inactif"
+            if ent_status == "past_due":
+                return False, "Paiement en attente — verifiez votre moyen de paiement sur forgedis.fr", "past_due"
 
-            # Fallback legacy clients.forfait si aucun entitlement trouve (comptes migration)
-
-            user_email = client_data.get("email", "")
-
-            if user_email and forfait not in ("gratuit", "admin", "forgedis", "tous"):
-
-                try:
-
-                    product_target = "facility" if forfait == "facility" else ("kids" if forfait in ("kids_solo","kids_famille") else "industrial")
-
-                    ent_status = None
-
-                    if product_target == "industrial":
-
-                        # Industrial : droits portés par entreprise_id
-
-                        r_ent_e = await client.get(
-
-                            f"{SUPABASE_URL}/rest/v1/entreprises",
-
-                            params={"email_contact": f"eq.{user_email}", "select": "id"},
-
-                            headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
-
-                        )
-
-                        ent_e_rows = r_ent_e.json()
-
-                        if ent_e_rows:
-
-                            eid = ent_e_rows[0].get("id")
-
-                            r_ent = await client.get(
-
-                                f"{SUPABASE_URL}/rest/v1/product_entitlements",
-
-                                params={"entreprise_id": f"eq.{eid}", "product": "eq.industrial", "select": "status"},
-
-                                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
-
-                            )
-
-                            ents = r_ent.json()
-
-                            if ents:
-
-                                ent_status = ents[0].get("status", "active")
-
-                    else:
-
-                        # Facility/Kids : droits portés par user_id
-
-                        r_prof = await client.get(
-
-                            f"{SUPABASE_URL}/rest/v1/profiles",
-
-                            params={"email": f"eq.{user_email}", "select": "id"},
-
-                            headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
-
-                        )
-
-                        prof = r_prof.json()
-
-                        if prof:
-
-                            uid = prof[0].get("id")
-
-                            r_ent = await client.get(
-
-                                f"{SUPABASE_URL}/rest/v1/product_entitlements",
-
-                                params={"user_id": f"eq.{uid}", "product": f"eq.{product_target}", "select": "status"},
-
-                                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
-
-                            )
-
-                            ents = r_ent.json()
-
-                            if ents:
-
-                                ent_status = ents[0].get("status", "active")
-
-                    if ent_status in ("canceled", "expired", "suspended"):
-
-                        return False, "Votre abonnement est annule. Souscrivez a nouveau sur forgedis.fr", "inactif"
-
-                    if ent_status == "past_due":
-
-                        return False, "Paiement en attente — verifiez votre moyen de paiement sur forgedis.fr", "past_due"
-
-                except Exception as _ent_err:
-
-                    print(f"[verifier_forfait] WARN product_entitlements check: {_ent_err}")
-
-                    # Fallback legacy en cas d'erreur
-
-            taches = client_data.get("taches_ce_mois", 0)
 
             mois = client_data.get("mois_en_cours", "")
 
@@ -1740,6 +1647,58 @@ def _project_stripe_sub_data(sub_obj, price_to_forfait, industrial_base_price):
         return None, None, None
 
     return mapped_status, starts_at, ends_at
+
+
+# ── Mapping Stripe subscription.status → entreprises.statut_paiement ──
+def map_stripe_to_statut_paiement(stripe_status: str) -> str:
+    """Mapping canonique Stripe -> schéma live entreprises.statut_paiement."""
+    _MAP = {
+        "trialing":           "trialing",
+        "active":             "actif",
+        "past_due":           "impaye",
+        "unpaid":             "impaye",
+        "paused":             "suspendu",
+        "canceled":           "resilie",
+        "incomplete_expired": "resilie",
+        "incomplete":         "essai",   # paiement en cours
+    }
+    return _MAP.get(stripe_status, "essai")
+
+async def _sync_entreprise_statut(client, email: str, stripe_status: str):
+    """Synchronise entreprises.statut_paiement avec le statut Stripe réel."""
+    statut = map_stripe_to_statut_paiement(stripe_status)
+    try:
+        r_prof = await client.get(
+            f"{SUPABASE_URL}/rest/v1/profiles",
+            params={"email": f"eq.{email.lower().strip()}", "select": "id"},
+            headers={"apikey": SUPABASE_SERVICE_KEY,
+                     "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+        )
+        prof = r_prof.json()
+        if not prof:
+            return
+        uid = prof[0]["id"]
+        r_ent = await client.get(
+            f"{SUPABASE_URL}/rest/v1/entreprises",
+            params={"dirigeant_id": f"eq.{uid}", "select": "id"},
+            headers={"apikey": SUPABASE_SERVICE_KEY,
+                     "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+        )
+        ent = r_ent.json()
+        if not ent:
+            return
+        await client.patch(
+            f"{SUPABASE_URL}/rest/v1/entreprises",
+            params={"id": f"eq.{ent[0]['id']}"},
+            headers={"apikey": SUPABASE_SERVICE_KEY,
+                     "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                     "Content-Type": "application/json", "Prefer": "return=minimal"},
+            json={"statut_paiement": statut}
+        )
+    except Exception as _e_sync:
+        print(f"[sync_entreprise] err: {_e_sync}")
+
+
 
 @app.post("/stripe-webhook")
 
@@ -2543,7 +2502,7 @@ async def stripe_webhook(request: Request):
                                        "code": _nom[:20].upper().replace(" ", "_"),
                                        "nombre_employes": int(nb_employes) if str(nb_employes).isdigit() else 0,
                                        "montant_mensuel": montant / 100 if montant else 0,
-                                       "statut_paiement": "essai",
+                                       "statut_paiement": map_stripe_to_statut_paiement(sub_status_real or "trialing"),
                                        "stripe_customer_id": cust_id or None,
                                        "stripe_sub_id": sub_id or None}
                     if _dirigeant_id:
@@ -2561,7 +2520,7 @@ async def stripe_webhook(request: Request):
                             entreprise_id = _created[0].get("id") if _created else None
                     if entreprise_id and not _dirigeant_id:
                             # Pas de profile : créer pending_industrial_ownership
-                            await client.post(
+                            _r_pio = await client.post(
                                     f"{SUPABASE_URL}/rest/v1/pending_industrial_ownership",
                                     params={"on_conflict": "email,entreprise_id"},
                                     headers={"apikey": SUPABASE_SERVICE_KEY,
@@ -2574,6 +2533,9 @@ async def stripe_webhook(request: Request):
                                           "status": "pending",
                                           "metadata": {"nom": _nom, "forfait": "industrial"}}
                             )
+                            if _r_pio.status_code not in (200, 201, 204):
+                                await _fail(client, f"pending_ownership_post_failed:{_r_pio.status_code}")
+                                return JSONResponse(status_code=503, content={"erreur": "pending_ownership_failed"})
                             print(f"[checkout] pending_industrial_ownership créé pour {email}")
                 if not entreprise_id:
 
@@ -5768,6 +5730,123 @@ async def ensure_legacy_client(hx, email: str, forfait: str) -> dict:
         raise RuntimeError(f"ensure_legacy_client INSERT failed {r_ins.status_code}")
     return {"token": r_ins.json()[0]["token"], "action": "created"}
 
+
+@app.post("/industrial/claim-ownership")
+async def industrial_claim_ownership(body: dict, request: Request):
+    """
+    Réclame la propriété d'une entreprise Industrial après paiement Stripe.
+    Appelé par le dirigeant après avoir créé son compte Auth Supabase.
+    JWT obligatoire. Sécurisé : vérification entitlement + dirigeant_id NULL.
+    """
+    auth_header = request.headers.get("Authorization", "")
+    jwt_tok = auth_header[7:].strip() if auth_header.startswith("Bearer ") else body.get("jwt", "")
+    if not jwt_tok:
+        return {"ok": False, "erreur": "JWT Supabase requis."}
+    auth_uid, email, err_jwt = await _jwt_vers_identite(jwt_tok, request)
+    if err_jwt:
+        return {"ok": False, "erreur": err_jwt}
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return {"ok": False, "erreur": "Service indisponible."}
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as hx:
+            # Chercher le pending ownership pour cet email
+            r_pio = await hx.get(
+                f"{SUPABASE_URL}/rest/v1/pending_industrial_ownership",
+                params={"email": f"eq.{email.lower().strip()}",
+                        "status": "eq.pending", "select": "*"},
+                headers={"apikey": SUPABASE_SERVICE_KEY,
+                         "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+            )
+            claims = r_pio.json()
+            if not claims:
+                return {"ok": False, "erreur": "Aucun ownership Industrial en attente pour cet email."}
+            results = []
+            for claim in claims:
+                ent_id = claim.get("entreprise_id")
+                stripe_sub_id = claim.get("stripe_subscription_id")
+                if not ent_id:
+                    continue
+                # Vérifier que l'entitlement Industrial de cette entreprise est actif
+                ent_params = {"entreprise_id": f"eq.{ent_id}", "product": "eq.industrial",
+                              "select": "id,status,stripe_subscription_id"}
+                if stripe_sub_id:
+                    ent_params["stripe_subscription_id"] = f"eq.{stripe_sub_id}"
+                r_ent = await hx.get(
+                    f"{SUPABASE_URL}/rest/v1/product_entitlements",
+                    params=ent_params,
+                    headers={"apikey": SUPABASE_SERVICE_KEY,
+                             "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+                )
+                ents = [e for e in r_ent.json()
+                        if e.get("status") in ("trialing", "active")]
+                if not ents:
+                    results.append({"entreprise_id": ent_id, "ok": False,
+                                    "raison": "Entitlement Industrial non trouvé ou inactif."})
+                    continue
+                # Vérifier que dirigeant_id est NULL ou déjà auth_uid
+                r_ent_check = await hx.get(
+                    f"{SUPABASE_URL}/rest/v1/entreprises",
+                    params={"id": f"eq.{ent_id}", "select": "id,dirigeant_id"},
+                    headers={"apikey": SUPABASE_SERVICE_KEY,
+                             "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+                )
+                ent_rows = r_ent_check.json()
+                if not ent_rows:
+                    results.append({"entreprise_id": ent_id, "ok": False,
+                                    "raison": "Entreprise introuvable."})
+                    continue
+                existing_dir = ent_rows[0].get("dirigeant_id")
+                if existing_dir and existing_dir != auth_uid:
+                    results.append({"entreprise_id": ent_id, "ok": False,
+                                    "raison": "Cette entreprise a déjà un dirigeant différent."})
+                    continue
+                if existing_dir == auth_uid:
+                    # Idempotent : marquer claimed
+                    await hx.patch(
+                        f"{SUPABASE_URL}/rest/v1/pending_industrial_ownership",
+                        params={"id": f"eq.{claim['id']}"},
+                        headers={"apikey": SUPABASE_SERVICE_KEY,
+                                 "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                                 "Content-Type": "application/json",
+                                 "Prefer": "return=minimal"},
+                        json={"status": "claimed", "claimed_at": __import__("datetime").datetime.utcnow().isoformat()}
+                    )
+                    results.append({"entreprise_id": ent_id, "ok": True, "action": "already_claimed"})
+                    continue
+                # PATCH entreprises.dirigeant_id
+                r_patch = await hx.patch(
+                    f"{SUPABASE_URL}/rest/v1/entreprises",
+                    params={"id": f"eq.{ent_id}"},
+                    headers={"apikey": SUPABASE_SERVICE_KEY,
+                             "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                             "Content-Type": "application/json",
+                             "Prefer": "return=representation"},
+                    json={"dirigeant_id": auth_uid}
+                )
+                if r_patch.status_code not in (200, 201, 204):
+                    results.append({"entreprise_id": ent_id, "ok": False,
+                                    "raison": f"Erreur PATCH entreprise: {r_patch.status_code}"})
+                    continue
+                # Marquer claimed
+                import datetime as _dt_co
+                await hx.patch(
+                    f"{SUPABASE_URL}/rest/v1/pending_industrial_ownership",
+                    params={"id": f"eq.{claim['id']}"},
+                    headers={"apikey": SUPABASE_SERVICE_KEY,
+                             "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                             "Content-Type": "application/json",
+                             "Prefer": "return=minimal"},
+                    json={"status": "claimed", "claimed_at": _dt_co.datetime.utcnow().isoformat()}
+                )
+                results.append({"entreprise_id": ent_id, "ok": True, "action": "claimed"})
+                print(f"[claim-ownership] {email} -> entreprise {ent_id} dirigeant_id={auth_uid}")
+            any_ok = any(r["ok"] for r in results)
+            return {"ok": any_ok, "results": results}
+    except Exception as _e_co:
+        print(f"[claim-ownership] {_e_co}")
+        return {"ok": False, "erreur": "Erreur serveur."}
+
+
 @app.post("/inscription-facility")
 async def inscription_facility(body: dict, request: Request):
     """Inscription Facility trial. JWT obligatoire. Idempotente."""
@@ -5872,9 +5951,25 @@ async def inscription_industrial(body: dict, request: Request):
                     )
                     pe_rows = r_ex_pe.json()
                     if not pe_rows:
-                        # Entitlement manquant -> recréer (état partiel)
-                        starts_at_r = _dt_ii2.datetime.utcnow().isoformat()
-                        ends_at_r = (_dt_ii2.datetime.utcnow() + _dt_ii2.timedelta(days=14)).isoformat()
+                        # Entitlement manquant -> recréer SANS redémarrer le trial
+                        # Utiliser la date de création de l'entreprise comme début original
+                        r_ent_ts = await hx.get(
+                            f"{SUPABASE_URL}/rest/v1/entreprises",
+                            params={"id": f"eq.{entreprise_id}", "select": "created_at"},
+                            headers={"apikey": SUPABASE_SERVICE_KEY,
+                                     "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+                        )
+                        _ent_ts_data = r_ent_ts.json()
+                        _original_start = (_ent_ts_data[0].get("created_at") if _ent_ts_data
+                                           else None)
+                        if not _original_start:
+                            # Aucune preuve de date originale -> impossible de réparer sans créer un nouveau trial
+                            return {"ok": False, "erreur": "Impossible de réparer le trial: date originale introuvable. Contactez le support."}
+                        # ends_at = starts_at + 14 jours (date originale)
+                        import datetime as _dt_rp
+                        _start_dt = _dt_rp.datetime.fromisoformat(_original_start.replace("Z",""))
+                        starts_at_r = _original_start
+                        ends_at_r = (_start_dt + _dt_rp.timedelta(days=14)).isoformat()
                         await hx.post(
                             f"{SUPABASE_URL}/rest/v1/product_entitlements",
                             headers={"apikey": SUPABASE_SERVICE_KEY,
