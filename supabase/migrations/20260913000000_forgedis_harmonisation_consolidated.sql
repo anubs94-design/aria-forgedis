@@ -1,12 +1,11 @@
--- MIGRATION BASELINE NOTE
--- Ce fichier est un baseline documentaire des migrations FORGEDIS du 12-13 sept 2026.
--- Il NE DOIT PAS être appliqué via supabase db push car ces migrations sont déjà
--- appliquées individuellement dans Supabase (versions 20260912224932 à 20260913084923).
--- 
--- Pour appliquer les nouvelles migrations, utiliser UNIQUEMENT les fichiers
--- phase_h_* et suivants qui ont des timestamps distincts et non conflictuels.
+-- BASELINE DOCUMENTAIRE MIGRATIONS FORGEDIS (NE PAS APPLIQUER)
+-- Ce fichier documente le schéma de base au 13 sept 2026.
+-- Les migrations déjà appliquées dans Supabase sont listées ci-dessous.
+-- Ne jamais réécrire une migration déjà appliquée.
+-- Ne jamais modifier ce fichier pour corriger une migration distante.
+-- Utiliser de NOUVEAUX fichiers avec de NOUVEAUX timestamps pour toute correction.
 --
--- Migrations déjà appliquées dans Supabase (ne pas réappliquer) :
+-- LEDGER RÉEL SUPABASE (versions appliquées dans l'ordre) :
 -- 20260912224932 p0_rls_clients_close_public_access
 -- 20260912224939 p0_rls_stripe_events_close_public_select
 -- 20260912225003 phase_c_add_product_entitlements_table
@@ -23,5 +22,13 @@
 -- 20260913082354 phase_f_fix_unique_constraint_nondeferrable
 -- 20260913083326 phase_g_unique_subject_product_constraints
 -- 20260913083625 phase_g_portal_context_industrial_entreprise
--- 20260913084923 phase_g_fix_portal_context_v2
--- Suivantes : phase_h_* (timestamps 20260913090000+)
+-- 20260913084923 phase_g_fix_portal_context_v2 (ancienne version)
+-- 20260913090349 phase_h_acquire_stripe_event_atomic
+-- 20260913154439 phase_g_fix_portal_context_v2 (correction sal.user_id)
+-- 20260913154458 phase_h_fix_industrial_admin_tous
+-- 20260913155919 phase_h_revoke_stripe_rpc_public_access
+-- 20260913155948 phase_h_acquire_stripe_event_v2_returning
+--
+-- RÈGLE ABSOLUE : aucun supabase db push tant que le dépôt GitHub
+-- ne reflète pas exactement le ledger ci-dessus.
+-- Nouvelles migrations : timestamps à partir de 20260913160000+

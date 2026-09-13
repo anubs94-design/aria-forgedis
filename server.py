@@ -1636,6 +1636,72 @@ INDUSTRIAL_BASE_PRICE = "price_1Txb8dI54RQfwJiYhVgtBFWP"
 
 
 
+
+def _project_stripe_sub_data(sub_obj, price_to_forfait, industrial_base_price):
+    """
+    Projette un objet Subscription Stripe API 2026 vers (status, starts_at, ends_at).
+    - Cherche l'item correspondant au Price ID canonique (Industrial: base price en priorité).
+    - Ne prend jamais simplement 'le premier item ayant une période'.
+    - N'invente jamais de statut ou de dates.
+    Retourne (status: str | None, starts_at: str | None, ends_at: str | None).
+    Retourne (None, None, None) si données insuffisantes.
+    """
+    import datetime as _dt_proj
+    STRIPE_STATUS_MAP = {
+        "trialing": "trialing", "active": "active",
+        "past_due": "past_due", "canceled": "canceled",
+        "unpaid": "past_due", "incomplete": "past_due",
+        "incomplete_expired": "canceled", "paused": "suspended",
+    }
+    stripe_status = sub_obj.get("status", "")
+    if stripe_status not in STRIPE_STATUS_MAP:
+        return None, None, None
+
+    mapped_status = STRIPE_STATUS_MAP[stripe_status]
+    items = (sub_obj.get("items") or {}).get("data") or []
+
+    # Sélectionner l'item correspondant au Price ID canonique
+    anchor_item = None
+    for item in items:
+        price_id = (item.get("price") or {}).get("id", "")
+        if price_id in price_to_forfait:
+            forfait_item = price_to_forfait[price_id]
+            if forfait_item == "industrial" and price_id == industrial_base_price:
+                anchor_item = item
+                break
+            elif forfait_item != "industrial" and anchor_item is None:
+                anchor_item = item
+    if anchor_item is None and items:
+        # Dernier recours strict : premier item avec Price ID connu
+        for item in items:
+            price_id = (item.get("price") or {}).get("id", "")
+            if price_id in price_to_forfait:
+                anchor_item = item
+                break
+
+    if anchor_item is None:
+        return None, None, None
+
+    trial_end = sub_obj.get("trial_end")
+    period_end = anchor_item.get("current_period_end")
+    period_start = anchor_item.get("current_period_start")
+
+    ends_at = None
+    starts_at = None
+
+    if trial_end:
+        ends_at = _dt_proj.datetime.fromtimestamp(trial_end).isoformat()
+    elif period_end:
+        ends_at = _dt_proj.datetime.fromtimestamp(period_end).isoformat()
+
+    if period_start:
+        starts_at = _dt_proj.datetime.fromtimestamp(period_start).isoformat()
+
+    if ends_at is None:
+        return None, None, None
+
+    return mapped_status, starts_at, ends_at
+
 @app.post("/stripe-webhook")
 
 async def stripe_webhook(request: Request):
@@ -1756,29 +1822,23 @@ async def stripe_webhook(request: Request):
 
     # Helpers
 
-    async def _complete(hc):
-
+    async def _complete(hc) -> bool:
+        """Marque l'event completed. Cache seulement si RPC reussit."""
         try:
-
-            await hc.post(
-
+            r_c = await hc.post(
                 f"{SUPABASE_URL}/rest/v1/rpc/mark_stripe_event_complete",
-
                 headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-
                          "Content-Type": "application/json"},
-
                 json={"p_event_id": event_id}
-
             )
-
-            _stripe_events_traites.add(event_id)
-
+            if r_c.status_code in (200, 204):
+                _stripe_events_traites.add(event_id)
+                return True
+            print(f"[webhook] ERREUR _complete {event_id}: HTTP {r_c.status_code}")
+            return False
         except Exception as e:
-
-            print(f"[webhook] WARN _complete {event_id}: {e}")
-
-
+            print(f"[webhook] ERREUR _complete {event_id}: {e}")
+            return False
 
     async def _fail(hc, error):
 
@@ -2161,6 +2221,9 @@ async def stripe_webhook(request: Request):
     if event_type == "checkout.session.completed":
 
         email = data_obj.get("customer_email", "") or data_obj.get("customer_details", {}).get("email", "")
+        cust_id        = data_obj.get("customer", "")
+        sub_id         = data_obj.get("subscription", "")
+        session_id     = data_obj.get("id", "")
 
         if not email:
             # Résoudre via Customer Stripe avant d'ignorer
@@ -2188,11 +2251,11 @@ async def stripe_webhook(request: Request):
 
         montant        = data_obj.get("amount_total", 0)
 
-        cust_id        = data_obj.get("customer", "")
 
-        sub_id         = data_obj.get("subscription", "")
 
-        session_id     = data_obj.get("id", "")
+
+
+
 
         # Recuperer line_items via API Stripe (non inclus dans l'event)
 
@@ -2294,42 +2357,11 @@ async def stripe_webhook(request: Request):
 
                             return JSONResponse(status_code=503, content={"erreur": "stripe_status_inconnu"})
 
-                        sub_status_real = STRIPE_STATUS_MAP[_stripe_status]
-
-                        # Periodes : chercher l'item correspondant au Price ID de base
-
-                        _items = (_sub_obj.get("items") or {}).get("data") or []
-
-                        _anchor_item = None
-
-                        for _item in _items:
-
-                            _ipid = (_item.get("price") or {}).get("id", "")
-
-                            if _ipid in PRICE_TO_FORFAIT:
-
-                                if forfait in INDUSTRIAL and _ipid == INDUSTRIAL_BASE_PRICE:
-
-                                    _anchor_item = _item
-
-                                    break
-
-                                elif forfait not in INDUSTRIAL:
-
-                                    _anchor_item = _item
-
-                                    break
-
-                        if not _anchor_item and _items:
-
-                            _anchor_item = _items[0]  # Dernier recours : premier item
-
-                        _trial_end   = _sub_obj.get("trial_end")
-
-                        _period_end  = (_anchor_item or {}).get("current_period_end") or _sub_obj.get("current_period_end")
-
-                        _period_start= (_anchor_item or {}).get("current_period_start") or _sub_obj.get("current_period_start")
-
+                        sub_status_real, date_debut_real, date_fin_real = _project_stripe_sub_data(
+                            _sub_obj, PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
+                        if sub_status_real is None or date_fin_real is None:
+                            await _fail(hc_sub := hc if "hc" in dir() else _sa2, f"projection_failed_status={_stripe_status}")
+                            # retourner 503 sera géré par le bloc extérieur
                         if _trial_end:
 
                             date_fin_real = _dt_m.datetime.fromtimestamp(_trial_end).isoformat()
@@ -2566,7 +2598,13 @@ async def stripe_webhook(request: Request):
 
             )
 
-            await (_complete(client) if ent_ok else _fail(client, f"upsert:{reason}"))
+            if ent_ok:
+                ok_c = await _complete(client)
+                if not ok_c:
+                    return JSONResponse(status_code=503, content={"erreur": "complete_failed_sub_created"})
+            else:
+                await _fail(client, f"upsert_failed:{reason}")
+                return JSONResponse(status_code=503, content={"erreur": f"upsert_failed:{reason}"})
 
         return JSONResponse({"status": "ok", "action": "subscription_created"})
 
@@ -2600,25 +2638,23 @@ async def stripe_webhook(request: Request):
 
                 rows = r_f.json()
 
-                if rows:
-
-                    await client.patch(
-
-                        f"{SUPABASE_URL}/rest/v1/product_entitlements",
-
-                        params={"id": f"eq.{rows[0]['id']}"},
-
-                        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-
-                                 "Content-Type": "application/json", "Prefer": "return=minimal"},
-
-                        json={"status": status_mapped, "ends_at": ends_at,
-
-                              "metadata": {"event_id": event_id, "stripe_status": status_str}}
-
-                    )
-
-            await _complete(client)
+            if not rows:
+                await _fail(client, f"sub_updated_not_found:{sub_id}")
+                return JSONResponse(status_code=503, content={"erreur": "entitlement_not_found"})
+            r_patch_su = await client.patch(
+                f"{SUPABASE_URL}/rest/v1/product_entitlements",
+                params={"id": f"eq.{rows[0]['id']}"},
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                         "Content-Type": "application/json", "Prefer": "return=representation"},
+                json={"status": status_mapped, "ends_at": ends_at,
+                       "metadata": {"event_id": event_id, "stripe_status": status_str}}
+            )
+            if r_patch_su.status_code not in (200, 201, 204):
+                await _fail(client, f"sub_updated_patch_failed:{r_patch_su.status_code}")
+                return JSONResponse(status_code=503, content={"erreur": "patch_failed"})
+            ok_c = await _complete(client)
+            if not ok_c:
+                return JSONResponse(status_code=503, content={"erreur": "complete_failed_sub_updated"})
 
         return JSONResponse({"status": "ok", "action": f"subscription_updated_{status_mapped}"})
 
@@ -2722,7 +2758,9 @@ async def stripe_webhook(request: Request):
 
                     )
 
-            await _complete(client)
+            ok_c = await _complete(client)
+            if not ok_c:
+                return JSONResponse(status_code=503, content={"erreur": "complete_failed_invoice_paid"})
 
         return JSONResponse({"status": "ok", "action": "invoice_paid_active"})
 
@@ -2756,7 +2794,9 @@ async def stripe_webhook(request: Request):
 
                 )
 
-            await _complete(client)
+            ok_c = await _complete(client)
+            if not ok_c:
+                return JSONResponse(status_code=503, content={"erreur": "complete_failed_invoice_failed"})
 
         return JSONResponse({"status": "ok", "action": "invoice_payment_failed_past_due"})
 
@@ -3637,7 +3677,7 @@ async def portail_stripe(body: dict):
 
 
 
-    autorise, msg, forfait = await verifier_forfait(token)
+    autorise, msg, forfait = await verifier_acces(token, "facility")
 
     if not autorise:
 
@@ -3757,7 +3797,7 @@ async def historique(body: dict):
 
 
 
-    autorise, msg, forfait = await verifier_forfait(token, "eco")
+    autorise, msg, forfait = await verifier_acces(token, "facility")
 
     if not autorise:
 
@@ -3929,7 +3969,7 @@ async def supprimer_compte(body: dict):
 
 
 
-    autorise, msg, forfait = await verifier_forfait(token)
+    autorise, msg, forfait = await verifier_acces(token, "facility")
 
     if not autorise:
 
@@ -4091,7 +4131,7 @@ async def export_donnees(body: dict):
 
 
 
-    autorise, msg, forfait = await verifier_forfait(token)
+    autorise, msg, forfait = await verifier_acces(token, "facility")
 
     if not autorise:
 
@@ -4235,7 +4275,7 @@ async def verify_kids_access(body: dict):
 
 
 
-    autorise, msg_err, forfait = await verifier_forfait(token)
+    autorise, msg_err, forfait = await verifier_acces(token, "kids")
 
     if not autorise:
 
@@ -4243,9 +4283,7 @@ async def verify_kids_access(body: dict):
 
 
 
-    if forfait not in ("kids_solo", "kids_famille", "dev", "tous", "forgedis", "press_demo"):
-
-        return {"ok": False, "erreur": "Forfait insuffisant pour Aria Kids."}
+# [migré] contrôle produit délégué à verifier_acces
 
 
 
@@ -4327,9 +4365,7 @@ async def ask_kids(body: dict):
 
         return {"erreur": msg_err or "Token invalide ou forfait inactif."}
 
-    if forfait not in ("kids_solo", "kids_famille", "facility", "forgedis", "tous", "industrial", "dev", "erreur", "press_demo"):
-
-        return {"erreur": "Forfait insuffisant pour Aria Kids."}
+# [migré] contrôle produit délégué à verifier_acces
 
 
 
@@ -4877,7 +4913,7 @@ async def vision(body: dict):
 
         # Verifier dans Supabase si c'est un token client
 
-        autorise, msg, forfait = await verifier_forfait(token_recu, "reflexion")
+        autorise, msg, forfait = await verifier_acces(token_recu, "facility")
 
         if not autorise:
 
@@ -4969,15 +5005,13 @@ async def vision_kids(body: dict):
 
     # Vérifier le forfait Kids
 
-    autorise, msg, forfait = await verifier_forfait(token, "reflexion")
+    autorise, msg, forfait = await verifier_acces(token, "kids")
 
     if not autorise:
 
         return {"ok": False, "erreur": msg or "Accès refusé."}
 
-    if forfait not in ("kids_solo", "kids_famille", "dev", "tous", "press_demo"):
-
-        return {"ok": False, "erreur": "Forfait Kids requis."}
+# [migré] contrôle produit délégué à verifier_acces
 
 
 
@@ -5847,15 +5881,13 @@ async def kids_generer_question(body: dict):
 
 
 
-    autorise, msg_err, forfait = await verifier_forfait(token)
+    autorise, msg_err, forfait = await verifier_acces(token, "kids")
 
     if not autorise:
 
         return {"erreur": msg_err or "Token invalide."}
 
-    if forfait not in ("kids_solo", "kids_famille", "facility", "forgedis", "tous", "industrial", "dev", "erreur", "press_demo"):
-
-        return {"erreur": "Forfait insuffisant."}
+# [migré] contrôle produit délégué à verifier_acces
 
 
 
@@ -6067,17 +6099,13 @@ async def education_programmes(body: dict):
 
 
 
-    autorise, msg_err, forfait = await verifier_forfait(token)
+    autorise, msg_err, forfait = await verifier_acces(token, "kids")
 
     if not autorise:
 
         return {"erreur": msg_err or "Token invalide."}
 
-    if forfait not in ("kids_solo", "kids_famille", "facility", "forgedis", "tous",
-
-                       "industrial", "dev", "erreur", "press_demo"):
-
-        return {"erreur": "Forfait Kids requis."}
+# [migré] contrôle produit délégué à verifier_acces
 
 
 
@@ -6197,17 +6225,13 @@ async def education_etablissement(body: dict):
 
 
 
-    autorise, msg_err, forfait = await verifier_forfait(token)
+    autorise, msg_err, forfait = await verifier_acces(token, "kids")
 
     if not autorise:
 
         return {"erreur": msg_err or "Token invalide."}
 
-    if forfait not in ("kids_solo", "kids_famille", "facility", "forgedis", "tous",
-
-                       "industrial", "dev", "erreur", "press_demo"):
-
-        return {"erreur": "Forfait Kids requis."}
+# [migré] contrôle produit délégué à verifier_acces
 
 
 
@@ -6403,17 +6427,13 @@ async def education_resultats(body: dict):
 
 
 
-    autorise, msg_err, forfait = await verifier_forfait(token)
+    autorise, msg_err, forfait = await verifier_acces(token, "kids")
 
     if not autorise:
 
         return {"erreur": msg_err or "Token invalide."}
 
-    if forfait not in ("kids_solo", "kids_famille", "facility", "forgedis", "tous",
-
-                       "industrial", "dev", "erreur", "press_demo"):
-
-        return {"erreur": "Forfait Kids requis."}
+# [migré] contrôle produit délégué à verifier_acces
 
 
 
@@ -7033,15 +7053,13 @@ async def safety_signalement(body: dict):
 
     # 1. Vérification token
 
-    autorise, msg_err, forfait = await verifier_forfait(token)
+    autorise, msg_err, forfait = await verifier_acces(token, "kids")
 
     if not autorise:
 
         return {"erreur": msg_err or "Token invalide."}
 
-    if forfait not in ("kids_solo", "kids_famille", "forgedis", "tous", "dev", "erreur", "press_demo"):
-
-        return {"erreur": "Forfait Kids requis."}
+# [migré] contrôle produit délégué à verifier_acces
 
 
 
@@ -7237,7 +7255,7 @@ async def safety_test_config(body: dict):
 
     token = body.get("token", "")
 
-    autorise, _, forfait = await verifier_forfait(token)
+    autorise, _, forfait = await verifier_acces(token, "kids")
 
     if not autorise or forfait not in ("forgedis", "dev"):
 
@@ -7319,7 +7337,7 @@ async def jumelage_attente(body: dict):
 
 
 
-    autorise, msg_err, forfait = await verifier_forfait(token)
+    autorise, msg_err, forfait = await verifier_acces(token, "kids")
 
     if not autorise:
 
@@ -9485,7 +9503,7 @@ async def ticket_cloturer(body: dict):
 
 async def get_clients_entreprise(token: str = "", entreprise_id: str = ""):
 
-    autorise, msg, _ = await verifier_forfait(token)
+    autorise, msg, _ = await verifier_acces(token, "industrial")
 
     if not autorise: return {"erreur": msg}
 
@@ -9521,7 +9539,7 @@ async def creer_client_entreprise(body: dict):
 
     token = body.get("token", "")
 
-    autorise, msg, _ = await verifier_forfait(token)
+    autorise, msg, _ = await verifier_acces(token, "industrial")
 
     if not autorise: return {"erreur": msg}
 
@@ -9589,7 +9607,7 @@ async def modifier_client_entreprise(body: dict):
 
     token = body.get("token", "")
 
-    autorise, msg, _ = await verifier_forfait(token)
+    autorise, msg, _ = await verifier_acces(token, "industrial")
 
     if not autorise: return {"erreur": msg}
 
@@ -9641,7 +9659,7 @@ async def supprimer_client_entreprise(body: dict):
 
     token = body.get("token", "")
 
-    autorise, msg, _ = await verifier_forfait(token)
+    autorise, msg, _ = await verifier_acces(token, "industrial")
 
     if not autorise: return {"erreur": msg}
 
@@ -9687,7 +9705,7 @@ async def creer_tache_depuis_client(body: dict):
 
     token = body.get("token", "")
 
-    autorise, msg, _ = await verifier_forfait(token)
+    autorise, msg, _ = await verifier_acces(token, "industrial")
 
     if not autorise: return {"erreur": msg}
 
@@ -9809,7 +9827,7 @@ async def get_taches_client(token: str = "", client_id: str = ""):
 
     """Retourne toutes les tâches liées à un client spécifique."""
 
-    autorise, msg, _ = await verifier_forfait(token)
+    autorise, msg, _ = await verifier_acces(token, "industrial")
 
     if not autorise: return {"erreur": msg}
 
