@@ -589,12 +589,22 @@ async def client_token(body: dict, request: Request):
                 # Réclamer pending_claims pour ce nouvel utilisateur
                 try:
                     import datetime as _dt_claim
-                    r_uid = await client.get(
-                        f"{SUPABASE_URL}/auth/v1/admin/users",
-                        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
-                        params={"filter": f"email.eq.{email}"}
+                    # user_id déjà connu via JWT validé par _jwt_vers_email / _verifier_jwt_supabase
+                    # Ne pas refaire un lookup global — utiliser le sub du JWT
+                    r_prof = await client.get(
+                        f"{SUPABASE_URL}/rest/v1/profiles",
+                        params={"email": f"eq.{email.lower().strip()}", "select": "id"},
+                        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
                     )
-                    auth_users = r_uid.json().get("users", [])
+                    _prof_rows = r_prof.json()
+                    if _prof_rows and len(_prof_rows) == 1:
+                        new_uid = _prof_rows[0].get("id")
+                    else:
+                        new_uid = None
+                    if new_uid:
+                        auth_users = [{"id": new_uid}]
+                    else:
+                        auth_users = []
                     if auth_users:
                         new_uid = auth_users[0].get("id")
                         r_claims = await client.get(
@@ -603,20 +613,27 @@ async def client_token(body: dict, request: Request):
                             headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
                         )
                         for claim in (r_claims.json() or []):
-                            # Créer entitlement avec le vrai user_id
+                            # Recopier exactement l'état Stripe mémorisé dans le claim
+                            claim_meta = claim.get("metadata") or {}
+                            ent_payload = {
+                                "user_id": new_uid,
+                                "product": claim["product"],
+                                "plan": claim["plan"],
+                                "status": claim_meta.get("entitlement_status") or claim.get("status") or "trialing",
+                                "source": "stripe",
+                                "starts_at": claim_meta.get("starts_at") or _dt_claim.datetime.now().isoformat(),
+                                "ends_at": claim_meta.get("ends_at") or None,
+                                "stripe_customer_id": claim.get("stripe_customer_id"),
+                                "stripe_subscription_id": claim.get("stripe_subscription_id"),
+                                "metadata": {"claimed_from": claim["id"], "email": email}
+                            }
                             r_ent = await client.post(
                                 f"{SUPABASE_URL}/rest/v1/product_entitlements",
                                 headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
                                          "Content-Type": "application/json", "Prefer": "return=minimal"},
-                                json={"user_id": new_uid, "product": claim["product"], "plan": claim["plan"],
-                                      "status": "trialing", "source": "stripe",
-                                      "starts_at": _dt_claim.datetime.now().isoformat(),
-                                      "stripe_customer_id": claim.get("stripe_customer_id"),
-                                      "stripe_subscription_id": claim.get("stripe_subscription_id"),
-                                      "metadata": {"claimed_from": claim["id"], "email": email}}
+                                json=ent_payload
                             )
                             if r_ent.status_code in (200, 201):
-                                # Marquer le claim comme consommé
                                 await client.patch(
                                     f"{SUPABASE_URL}/rest/v1/pending_entitlement_claims",
                                     params={"id": f"eq.{claim['id']}"},
@@ -646,30 +663,37 @@ async def client_token(body: dict, request: Request):
             # Vérifier et consommer les pending_claims non encore consommés
             try:
                 import datetime as _dt_claim2
-                r_uid2 = await client.get(
-                    f"{SUPABASE_URL}/auth/v1/admin/users",
-                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
-                    params={"filter": f"email.eq.{email}"}
+                r_prof2 = await client.get(
+                    f"{SUPABASE_URL}/rest/v1/profiles",
+                    params={"email": f"eq.{email.lower().strip()}", "select": "id"},
+                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
                 )
-                auth_users2 = r_uid2.json().get("users", [])
-                if auth_users2:
-                    uid2 = auth_users2[0].get("id")
+                _prof2 = r_prof2.json()
+                uid2 = _prof2[0].get("id") if _prof2 and len(_prof2)==1 else None
+                if not uid2:
+                    print(f"[client-token] WARN reconnexion: uid2 indeterminable pour {email}")
                     r_claims2 = await client.get(
                         f"{SUPABASE_URL}/rest/v1/pending_entitlement_claims",
                         params={"email": f"eq.{email}", "status": "eq.pending", "select": "*"},
                         headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
                     )
                     for claim2 in (r_claims2.json() or []):
+                        claim2_meta = claim2.get("metadata") or {}
+                        ent2_payload = {
+                            "user_id": uid2, "product": claim2["product"], "plan": claim2["plan"],
+                            "status": claim2_meta.get("entitlement_status") or claim2.get("status") or "trialing",
+                            "source": "stripe",
+                            "starts_at": claim2_meta.get("starts_at") or _dt_claim2.datetime.now().isoformat(),
+                            "ends_at": claim2_meta.get("ends_at") or None,
+                            "stripe_customer_id": claim2.get("stripe_customer_id"),
+                            "stripe_subscription_id": claim2.get("stripe_subscription_id"),
+                            "metadata": {"claimed_from": claim2["id"], "email": email}
+                        }
                         r_ent2 = await client.post(
                             f"{SUPABASE_URL}/rest/v1/product_entitlements",
                             headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
                                      "Content-Type": "application/json", "Prefer": "return=minimal"},
-                            json={"user_id": uid2, "product": claim2["product"], "plan": claim2["plan"],
-                                  "status": "trialing", "source": "stripe",
-                                  "starts_at": _dt_claim2.datetime.now().isoformat(),
-                                  "stripe_customer_id": claim2.get("stripe_customer_id"),
-                                  "stripe_subscription_id": claim2.get("stripe_subscription_id"),
-                                  "metadata": {"claimed_from": claim2["id"], "email": email}}
+                            json=ent2_payload
                         )
                         if r_ent2.status_code in (200, 201):
                             await client.patch(
@@ -768,7 +792,17 @@ async def stripe_webhook(request: Request):
                     if _ex_status == "completed":
                         _stripe_events_traites.add(event_id)
                         return {"status": "already_processed", "event_id": event_id}
-                    # failed ou processing : retry autorise — incrementer attempt_count
+                    # Processing récent = possédé (lease 5min) : ne pas s'interposer
+                    if _ex_status == "processing" and _ex:
+                        _updated = _ex[0].get("updated_at") or _ex[0].get("processed_at") or ""
+                        if _updated:
+                            try:
+                                import datetime as _dtt
+                                _age = (_dtt.datetime.utcnow() - _dtt.datetime.fromisoformat(_updated.replace("Z",""))).total_seconds()
+                                if _age < 300:  # lease 5 minutes
+                                    return {"status": "processing_owned", "event_id": event_id}, 409
+                            except Exception: pass
+                    # failed ou processing stale : retry autorisé
                     _attempt = (_ex[0].get("attempt_count") or 1) + 1 if _ex else 2
                     await _ic.patch(
                         f"{SUPABASE_URL}/rest/v1/stripe_events",
@@ -815,14 +849,20 @@ async def stripe_webhook(request: Request):
         return None
 
     async def get_user_id(hc, email):
+        """Résout user_id depuis profiles.email (unicité garantie, pas users[0] global)."""
         try:
             r = await hc.get(
-                f"{SUPABASE_URL}/auth/v1/admin/users",
-                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
-                params={"filter": f"email.eq.{email}"}
+                f"{SUPABASE_URL}/rest/v1/profiles",
+                params={"email": f"eq.{email.lower().strip()}", "select": "id"},
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
             )
-            u = r.json().get("users", [])
-            return u[0].get("id") if u else None
+            rows = r.json()
+            if len(rows) == 1:
+                return rows[0].get("id")
+            if len(rows) > 1:
+                print(f"[webhook] ERREUR get_user_id: {len(rows)} profils pour {email} — ambiguïté, refus")
+                return None
+            return None
         except Exception as e:
             print(f"[webhook] get_user_id err: {e}")
             return None
@@ -914,8 +954,10 @@ async def stripe_webhook(request: Request):
             print(f"[webhook] EXCEPTION upsert_ent: {e}")
             return False
 
-    async def create_pending_claim(hc, email, forfait, cust_id, sub_id, price_ids, product_val, plan_val):
-        """Creer un pending claim quand pas de compte Auth — sans violer XOR."""
+    async def create_pending_claim(hc, email, forfait, cust_id, sub_id, price_ids, product_val, plan_val,
+                                   ent_status="trialing", starts_at=None, ends_at=None):
+        """Creer un pending claim quand pas de compte Auth — sans violer XOR.
+        Préserve l'état Stripe réel pour recopie exacte lors de la réclamation."""
         try:
             r = await hc.post(
                 f"{SUPABASE_URL}/rest/v1/pending_entitlement_claims",
@@ -925,7 +967,8 @@ async def stripe_webhook(request: Request):
                       "stripe_customer_id": cust_id or None,
                       "stripe_subscription_id": sub_id or None,
                       "stripe_price_ids": price_ids, "status": "pending",
-                      "metadata": {"forfait": forfait}}
+                      "metadata": {"forfait": forfait, "entitlement_status": ent_status,
+                                   "starts_at": starts_at, "ends_at": ends_at}}
             )
             if r.status_code not in (200, 201):
                 print(f"[webhook] WARN pending_claim {r.status_code}: {r.text[:200]}")
@@ -960,7 +1003,8 @@ async def stripe_webhook(request: Request):
             user_id = await get_user_id(hc, email)
             if not user_id:
                 # Pas de compte Auth -> pending claim (sans violation XOR)
-                ok = await create_pending_claim(hc, email, forfait, cust_id, sub_id, price_ids, product_val, plan_val)
+                ok = await create_pending_claim(hc, email, forfait, cust_id, sub_id, price_ids, product_val, plan_val,
+                                               ent_status=status_val, starts_at=starts_at, ends_at=ends_at)
                 return ok, "pending_claim"
             ok = await upsert_ent(hc, {
                 "user_id": user_id, "product": product_val, "plan": plan_val,
@@ -1029,21 +1073,47 @@ async def stripe_webhook(request: Request):
                     )
                     if _rs.status_code == 200:
                         _sub_obj = _rs.json()
-                        _stripe_status = _sub_obj.get("status", "trialing")
-                        _status_map = {"trialing": "trialing", "active": "active",
-                                       "past_due": "past_due", "canceled": "canceled", "unpaid": "past_due"}
-                        sub_status_real = _status_map.get(_stripe_status, "trialing")
-                        _trial_end = _sub_obj.get("trial_end")
-                        _period_end = _sub_obj.get("current_period_end")
-                        if _trial_end:
-                            date_fin_real = _dt_m.datetime.fromtimestamp(_trial_end).isoformat()
-                        elif _period_end:
-                            date_fin_real = _dt_m.datetime.fromtimestamp(_period_end).isoformat()
-                        _period_start = _sub_obj.get("current_period_start")
-                        if _period_start:
-                            date_debut_real = _dt_m.datetime.fromtimestamp(_period_start).isoformat()
+                        _stripe_status = _sub_obj.get("status", "")
+                        # Statuts fail-closed : inconnu ou restrictif -> failed, pas trialing inventé
+                        _OPEN_STATUSES = {"trialing","active"}
+                        _STATUS_MAP = {"trialing":"trialing","active":"active",
+                                       "past_due":"past_due","canceled":"canceled","unpaid":"past_due"}
+                        if _stripe_status not in _STATUS_MAP:
+                            print(f"[webhook] ERREUR statut Stripe inconnu: {_stripe_status} — fail closed")
+                            async with httpx.AsyncClient(timeout=5.0) as _mc2:
+                                await _db_event_fail(_mc2, event_id, f"stripe_status_inconnu:{_stripe_status}")
+                            return {"erreur": "stripe_status_inconnu"}, 500
+                        sub_status_real = _STATUS_MAP[_stripe_status]
+                        # Stripe 2026 Basil : périodes sur subscription items, pas sur subscription
+                        _items = (_sub_obj.get("items") or {}).get("data") or []
+                        _period_end_ts = None
+                        _period_start_ts = None
+                        _trial_end_ts = _sub_obj.get("trial_end")
+                        if _items:
+                            # Prendre l'item du Price autorisé (premier item connu)
+                            for _item in _items:
+                                _item_period = _item.get("current_period_end") or _item.get("billing_cycle_anchor")
+                                _item_start  = _item.get("current_period_start")
+                                if _item_period:
+                                    _period_end_ts   = _item_period
+                                    _period_start_ts = _item_start
+                                    break
+                        # Fallback sur champs subscription si items vides (ancienne API)
+                        if not _period_end_ts:
+                            _period_end_ts   = _sub_obj.get("current_period_end")
+                            _period_start_ts = _sub_obj.get("current_period_start")
+                        if _trial_end_ts:
+                            date_fin_real = _dt_m.datetime.fromtimestamp(_trial_end_ts).isoformat()
+                        elif _period_end_ts:
+                            date_fin_real = _dt_m.datetime.fromtimestamp(_period_end_ts).isoformat()
+                        if _period_start_ts:
+                            date_debut_real = _dt_m.datetime.fromtimestamp(_period_start_ts).isoformat()
                     else:
-                        print(f"[webhook] WARN sub Stripe {_rs.status_code} — fallback 14j trialing")
+                        # Panne API Stripe : fail closed, Stripe retry via HTTP 5xx
+                        print(f"[webhook] ERREUR sub Stripe {_rs.status_code} — fail closed pour retry")
+                        async with httpx.AsyncClient(timeout=5.0) as _mc2:
+                            await _db_event_fail(_mc2, event_id, f"stripe_api_{_rs.status_code}")
+                        return {"erreur": "stripe_api_indisponible"}, 503
             except Exception as _se:
                 print(f"[webhook] WARN sub Stripe exception: {_se} — fallback 14j trialing")
         async with httpx.AsyncClient(timeout=15.0) as client:
@@ -1128,17 +1198,34 @@ async def stripe_webhook(request: Request):
                 await _db_event_fail(hc, event_id, f"produit_inconnu price_ids={price_ids}")
             return {"status": "refus", "raison": "produit_inconnu"}
         status_mapped = {"trialing": "trialing", "active": "active"}.get(status_str, "trialing")
-        if SUPABASE_URL and SUPABASE_SERVICE_KEY and email:
+        if SUPABASE_URL and SUPABASE_SERVICE_KEY:
             async with httpx.AsyncClient(timeout=10.0) as client:
+                resolved_email = email
+                # Si pas d'email : résoudre via Customer Stripe
+                if not resolved_email and cust_id and STRIPE_SECRET_KEY:
+                    try:
+                        _rc = await client.get(
+                            f"https://api.stripe.com/v1/customers/{cust_id}",
+                            headers={"Authorization": f"Bearer {STRIPE_SECRET_KEY}"}
+                        )
+                        if _rc.status_code == 200:
+                            resolved_email = _rc.json().get("email", "")
+                        else:
+                            print(f"[webhook] sub.created customer {cust_id} introuvable: {_rc.status_code}")
+                    except Exception as _ce:
+                        print(f"[webhook] sub.created customer resolve err: {_ce}")
+                if not resolved_email:
+                    # Impossible de résoudre le sujet : failed/pending_resolution
+                    await _db_event_fail(client, event_id, f"sub_created_no_email_customer={cust_id}")
+                    return {"status": "erreur", "raison": "subject_unresolvable"}
                 ent_ok, reason = await resolve_subject_and_upsert(
-                    client, email, forfait, cust_id, sub_id, price_ids,
+                    client, resolved_email, forfait, cust_id, sub_id, price_ids,
                     ends_at=ends_at, status_val=status_mapped
                 )
-                await _db_event_complete(client, event_id)
-        else:
-            # Pas d'email dans l'objet subscription.created : ignorer proprement
-            async with httpx.AsyncClient(timeout=5.0) as hc:
-                await _db_event_complete(hc, event_id)
+                if ent_ok:
+                    await _db_event_complete(client, event_id)
+                else:
+                    await _db_event_fail(client, event_id, f"sub_created_upsert_failed:{reason}")
         return {"status": "ok", "action": "subscription_created"}
 
     # ── customer.subscription.updated ──────────────────────────────────────────
@@ -1205,8 +1292,12 @@ async def stripe_webhook(request: Request):
         return {"status": "ok", "action": "subscription_deleted"}
 
     # ── invoice.paid ────────────────────────────────────────────────────────────
-    elif event_type == "invoice.paid":
-        sub_id = data_obj.get("subscription", "")
+    elif event_type in ("invoice.paid", "invoice.payment_succeeded"):
+        # Stripe 2026: invoice.parent.subscription_details.subscription
+        # Fallback compat ancienne API: invoice.subscription
+        _parent = data_obj.get("parent") or {}
+        _sub_details = _parent.get("subscription_details") if _parent.get("type") == "subscription_details" else {}
+        sub_id = (_sub_details.get("subscription") if _sub_details else None) or data_obj.get("subscription", "")
         if SUPABASE_URL and SUPABASE_SERVICE_KEY and sub_id:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 await client.patch(
@@ -1230,7 +1321,9 @@ async def stripe_webhook(request: Request):
 
     # ── invoice.payment_failed ──────────────────────────────────────────────────
     elif event_type in ("invoice.payment_failed", "invoice.payment_action_required"):
-        sub_id = data_obj.get("subscription", "")
+        _parent_f = data_obj.get("parent") or {}
+        _sub_det_f = _parent_f.get("subscription_details") if _parent_f.get("type") == "subscription_details" else {}
+        sub_id = (_sub_det_f.get("subscription") if _sub_det_f else None) or data_obj.get("subscription", "")
         if SUPABASE_URL and SUPABASE_SERVICE_KEY and sub_id:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 await client.patch(
