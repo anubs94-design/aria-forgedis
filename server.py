@@ -2106,48 +2106,55 @@ async def stripe_webhook(request: Request):
 
 
     async def create_pending_claim(hc, email, forfait, cust_id, sub_id, price_ids,
-
-                                   product_val, plan_val, ent_status, starts_at, ends_at):
-
+                                    product_val, plan_val, ent_status, starts_at, ends_at):
+        """Upsert idempotent du pending claim par stripe_subscription_id ou email+product."""
         try:
-
+            # Vérifier si un claim existe déjà pour ce sub_id (évite UNIQUE violation)
+            existing_claim = None
+            if sub_id:
+                r_ex = await hc.get(
+                    f"{SUPABASE_URL}/rest/v1/pending_entitlement_claims",
+                    params={"stripe_subscription_id": f"eq.{sub_id}", "select": "id,status"},
+                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+                )
+                existing = r_ex.json()
+                if existing:
+                    existing_claim = existing[0]
+                    if existing_claim.get("status") == "claimed":
+                        # Déjà consommé : vérifier entitlement associé
+                        print(f"[pending_claim] claim {existing_claim['id']} déjà claimed pour sub_id={sub_id}")
+                        return True  # Cohérent, event résolu
+                    # Mettre à jour le claim existant (reconciliation)
+                    r_upd = await hc.patch(
+                        f"{SUPABASE_URL}/rest/v1/pending_entitlement_claims",
+                        params={"id": f"eq.{existing_claim['id']}"},
+                        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                                 "Content-Type": "application/json", "Prefer": "return=minimal"},
+                        json={"stripe_customer_id": cust_id or None,
+                              "status": "pending",
+                              "metadata": {"forfait": forfait, "entitlement_status": ent_status,
+                                           "starts_at": starts_at, "ends_at": ends_at, "reconciled": True}}
+                    )
+                    return r_upd.status_code in (200, 204)
+            # INSERT nouveau claim
             r = await hc.post(
-
                 f"{SUPABASE_URL}/rest/v1/pending_entitlement_claims",
-
                 headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-
                          "Content-Type": "application/json", "Prefer": "return=minimal"},
-
                 json={"email": email, "product": product_val, "plan": plan_val,
-
                       "stripe_customer_id": cust_id or None,
-
                       "stripe_subscription_id": sub_id or None,
-
                       "stripe_price_ids": price_ids, "status": "pending",
-
                       "metadata": {"forfait": forfait, "entitlement_status": ent_status,
-
                                    "starts_at": starts_at, "ends_at": ends_at}}
-
             )
-
             if r.status_code not in (200, 201):
-
-                print(f"[webhook] WARN pending_claim {r.status_code}: {r.text[:200]}")
-
+                print(f"[pending_claim] WARN INSERT {r.status_code}: {r.text[:200]}")
                 return False
-
             return True
-
         except Exception as e:
-
-            print(f"[webhook] EXCEPTION pending_claim: {e}")
-
+            print(f"[webhook] EXCEPTION create_pending_claim: {e}")
             return False
-
-
 
     async def resolve_subject_and_upsert(hc, email, forfait, cust_id, sub_id, price_ids,
 
@@ -2358,7 +2365,7 @@ async def stripe_webhook(request: Request):
 
                         sub_status_real, date_debut_real, date_fin_real = _project_stripe_sub_data(
                             _sub_obj, PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
-                        if sub_status_real is None or date_fin_real is None:
+                        if sub_status_real is None or date_fin_real is None or date_debut_real is None:
                             await _fail(_sa2, f"projection_failed_status={_stripe_status}")
                             return JSONResponse(status_code=503, content={"erreur": "stripe_projection_failed"})
 
@@ -2576,7 +2583,9 @@ async def stripe_webhook(request: Request):
 
                 return JSONResponse(status_code=503, content={"erreur": "subject_unresolvable"})
 
-            starts_at_sc = starts_at_sc or _dt_m.datetime.utcnow().isoformat()  # ne pas ecraser si projection ok
+            if starts_at_sc is None:
+                await _fail(client, f"sub_created_starts_at_missing")
+                return JSONResponse(status_code=503, content={"erreur": "starts_at_manquant"})
 
             ent_ok, reason = await resolve_subject_and_upsert(
 
@@ -2612,22 +2621,18 @@ async def stripe_webhook(request: Request):
             async with httpx.AsyncClient(timeout=5.0) as _hf:
                 await _fail(_hf, f"sub_updated_projection_failed:{status_str}")
             return JSONResponse(status_code=503, content={"erreur": "projection_failed_sub_updated"})
+        # sub_id obligatoire : rows est conditionnel sans lui -> NameError
+        if not sub_id:
+            async with httpx.AsyncClient(timeout=5.0) as _hf:
+                await _fail(_hf, "sub_updated_no_sub_id")
+            return JSONResponse(status_code=503, content={"erreur": "sub_id_manquant"})
         async with httpx.AsyncClient(timeout=10.0) as client:
-
-            if sub_id:
-
-                r_f = await client.get(
-
-                    f"{SUPABASE_URL}/rest/v1/product_entitlements",
-
-                    params={"stripe_subscription_id": f"eq.{sub_id}", "select": "id"},
-
-                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
-
-                )
-
-                rows = r_f.json()
-
+            r_f = await client.get(
+                f"{SUPABASE_URL}/rest/v1/product_entitlements",
+                params={"stripe_subscription_id": f"eq.{sub_id}", "select": "id"},
+                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+            )
+            rows = r_f.json()
             if not rows:
                 await _fail(client, f"sub_updated_not_found:{sub_id}")
                 return JSONResponse(status_code=503, content={"erreur": "entitlement_not_found"})
@@ -2639,17 +2644,13 @@ async def stripe_webhook(request: Request):
                 json={"status": status_mapped, "ends_at": ends_at,
                        "metadata": {"event_id": event_id, "stripe_status": status_str}}
             )
-            if r_patch_su.status_code not in (200, 201, 204):
+            if r_patch_su.status_code not in (200, 201, 204) or not r_patch_su.json():
                 await _fail(client, f"sub_updated_patch_failed:{r_patch_su.status_code}")
                 return JSONResponse(status_code=503, content={"erreur": "patch_failed"})
             ok_c = await _complete(client)
             if not ok_c:
                 return JSONResponse(status_code=503, content={"erreur": "complete_failed_sub_updated"})
-
         return JSONResponse({"status": "ok", "action": f"subscription_updated_{status_mapped}"})
-
-
-
     elif event_type == "customer.subscription.deleted":
 
         sub_id  = data_obj.get("id", "")
@@ -2804,8 +2805,9 @@ async def _check_president(token):
                 return False, None, "Compte inactif ou introuvable."
             row = rows[0]
             forfait = row.get("forfait", "")
-            if forfait not in ("industrial", "admin", "forgedis", "tous"):
-                return False, None, "Forfait Industrial requis."
+            # [déprécié] verifier_acces("industrial") a déjà validé l'entitlement en amont
+            # Ne plus contrôler clients.forfait ici
+
             email_p = row.get("email", "")
             eid = None
             if email_p:
@@ -2826,15 +2828,20 @@ async def _check_president(token):
                     if dir_p:
                         eid = dir_p[0].get("id")
                     else:
+                        # Salarie doit avoir un role President/Dirigeant explicite
                         r_sal_p = await client.get(
                             f"{SUPABASE_URL}/rest/v1/salaries",
-                            params={"user_id": f"eq.{uid_p}", "actif": "eq.true", "select": "entreprise_id"},
+                            params={"user_id": f"eq.{uid_p}", "actif": "eq.true", "select": "entreprise_id,role,poste"},
                             headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
                         )
                         sal_p = r_sal_p.json()
                         if sal_p:
+                            ROLES_PRESIDENT = {"dirigeant", "president", "directeur", "admin_industrial"}
+                            sal_role = (sal_p[0].get("role") or "").lower()
+                            sal_poste = (sal_p[0].get("poste") or "").lower()
+                            if sal_role not in ROLES_PRESIDENT and sal_poste not in ROLES_PRESIDENT:
+                                return False, None, "Role insuffisant (president/dirigeant requis)."
                             eid = sal_p[0].get("entreprise_id")
-            if not eid:
                 return False, None, "Entreprise non trouvee pour ce compte."
             return True, eid, None
     except Exception as e:
@@ -4407,6 +4414,9 @@ async def client_token_kids(body: dict):
 
     proxy_recu = body.get("proxy_token", "")
 
+    autorise, msg_err, _ = await verifier_acces(token, "kids")
+    if not autorise:
+        return {"erreur": msg_err}
     if not proxy_recu or proxy_recu != PROXY_TOKEN:
 
         return {"erreur": "Non autorise."}
@@ -4463,6 +4473,10 @@ async def get_profil_kids(token: str = ""):
 
         return {"erreur": "Token manquant."}
 
+    autorise, msg_err, _ = await verifier_acces(token, "kids")
+    if not autorise:
+        return {"erreur": msg_err}
+
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
 
         return {"erreur": "Configuration serveur manquante."}
@@ -4502,6 +4516,10 @@ async def post_profil_kids(body: dict):
     if not token:
 
         return {"erreur": "Token manquant."}
+
+    autorise, msg_err, _ = await verifier_acces(token, "kids")
+    if not autorise:
+        return {"erreur": msg_err}
 
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
 
@@ -4842,6 +4860,13 @@ async def devis_industrial(body: dict):
 async def sauvegarder_donnees(body: dict):
 
     """Sauvegarde les donnees d'un salarie Industrial dans Supabase (option cloud)."""
+
+    token = body.get("token", "")
+    if not token:
+        return {"erreur": "Token requis."}
+    autorise, msg_err, _ = await verifier_acces(token, "industrial")
+    if not autorise:
+        return {"erreur": msg_err}
 
     email_entreprise = body.get("email_entreprise", "")
 
@@ -5796,6 +5821,10 @@ async def get_devoirs(token: str = ""):
     if not token:
 
         return {"devoirs": []}
+
+    autorise, msg_err, _ = await verifier_acces(token, "kids")
+    if not autorise:
+        return {"devoirs": [], "erreur": msg_err}
 
     if token == PROXY_TOKEN:
 
