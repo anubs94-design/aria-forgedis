@@ -446,28 +446,48 @@ async def verifier_forfait(token_recu, type_requete="eco"):
             user_email = client_data.get("email", "")
             if user_email and forfait not in ("gratuit", "admin", "forgedis", "tous"):
                 try:
-                    # Trouver user_id via profiles.email
-                    r_prof = await client.get(
-                        f"{SUPABASE_URL}/rest/v1/profiles",
-                        params={"email": f"eq.{user_email}", "select": "id"},
-                        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
-                    )
-                    prof = r_prof.json()
-                    if prof:
-                        uid = prof[0].get("id")
-                        product_target = "facility" if forfait == "facility" else ("kids" if forfait in ("kids_solo","kids_famille") else "industrial")
-                        r_ent = await client.get(
-                            f"{SUPABASE_URL}/rest/v1/product_entitlements",
-                            params={"user_id": f"eq.{uid}", "product": f"eq.{product_target}", "select": "status"},
+                    product_target = "facility" if forfait == "facility" else ("kids" if forfait in ("kids_solo","kids_famille") else "industrial")
+                    ent_status = None
+                    if product_target == "industrial":
+                        # Industrial : droits portés par entreprise_id
+                        r_ent_e = await client.get(
+                            f"{SUPABASE_URL}/rest/v1/entreprises",
+                            params={"email_contact": f"eq.{user_email}", "select": "id"},
                             headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
                         )
-                        ents = r_ent.json()
-                        if ents:
-                            ent_status = ents[0].get("status", "active")
-                            if ent_status in ("canceled", "expired", "suspended"):
-                                return False, "Votre abonnement est annule. Souscrivez a nouveau sur forgedis.fr", "inactif"
-                            if ent_status == "past_due":
-                                return False, "Paiement en attente — verifiez votre moyen de paiement sur forgedis.fr", "past_due"
+                        ent_e_rows = r_ent_e.json()
+                        if ent_e_rows:
+                            eid = ent_e_rows[0].get("id")
+                            r_ent = await client.get(
+                                f"{SUPABASE_URL}/rest/v1/product_entitlements",
+                                params={"entreprise_id": f"eq.{eid}", "product": "eq.industrial", "select": "status"},
+                                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+                            )
+                            ents = r_ent.json()
+                            if ents:
+                                ent_status = ents[0].get("status", "active")
+                    else:
+                        # Facility/Kids : droits portés par user_id
+                        r_prof = await client.get(
+                            f"{SUPABASE_URL}/rest/v1/profiles",
+                            params={"email": f"eq.{user_email}", "select": "id"},
+                            headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+                        )
+                        prof = r_prof.json()
+                        if prof:
+                            uid = prof[0].get("id")
+                            r_ent = await client.get(
+                                f"{SUPABASE_URL}/rest/v1/product_entitlements",
+                                params={"user_id": f"eq.{uid}", "product": f"eq.{product_target}", "select": "status"},
+                                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+                            )
+                            ents = r_ent.json()
+                            if ents:
+                                ent_status = ents[0].get("status", "active")
+                    if ent_status in ("canceled", "expired", "suspended"):
+                        return False, "Votre abonnement est annule. Souscrivez a nouveau sur forgedis.fr", "inactif"
+                    if ent_status == "past_due":
+                        return False, "Paiement en attente — verifiez votre moyen de paiement sur forgedis.fr", "past_due"
                 except Exception as _ent_err:
                     print(f"[verifier_forfait] WARN product_entitlements check: {_ent_err}")
                     # Fallback legacy en cas d'erreur
@@ -566,6 +586,47 @@ async def client_token(body: dict, request: Request):
                 nouveau = r_create.json()
                 if not nouveau:
                     return {"erreur": "Impossible de creer le compte."}
+                # Réclamer pending_claims pour ce nouvel utilisateur
+                try:
+                    import datetime as _dt_claim
+                    r_uid = await client.get(
+                        f"{SUPABASE_URL}/auth/v1/admin/users",
+                        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
+                        params={"filter": f"email.eq.{email}"}
+                    )
+                    auth_users = r_uid.json().get("users", [])
+                    if auth_users:
+                        new_uid = auth_users[0].get("id")
+                        r_claims = await client.get(
+                            f"{SUPABASE_URL}/rest/v1/pending_entitlement_claims",
+                            params={"email": f"eq.{email}", "status": "eq.pending", "select": "*"},
+                            headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+                        )
+                        for claim in (r_claims.json() or []):
+                            # Créer entitlement avec le vrai user_id
+                            r_ent = await client.post(
+                                f"{SUPABASE_URL}/rest/v1/product_entitlements",
+                                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                                         "Content-Type": "application/json", "Prefer": "return=minimal"},
+                                json={"user_id": new_uid, "product": claim["product"], "plan": claim["plan"],
+                                      "status": "trialing", "source": "stripe",
+                                      "starts_at": _dt_claim.datetime.now().isoformat(),
+                                      "stripe_customer_id": claim.get("stripe_customer_id"),
+                                      "stripe_subscription_id": claim.get("stripe_subscription_id"),
+                                      "metadata": {"claimed_from": claim["id"], "email": email}}
+                            )
+                            if r_ent.status_code in (200, 201):
+                                # Marquer le claim comme consommé
+                                await client.patch(
+                                    f"{SUPABASE_URL}/rest/v1/pending_entitlement_claims",
+                                    params={"id": f"eq.{claim['id']}"},
+                                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                                             "Content-Type": "application/json", "Prefer": "return=minimal"},
+                                    json={"status": "claimed"}
+                                )
+                                print(f"[client-token] claim {claim['id']} consommé pour {email}")
+                except Exception as _ce:
+                    print(f"[client-token] WARN pending_claim: {_ce}")
                 return {"token": nouveau[0]["token"], "forfait": nouveau[0]["forfait"], "nouveau_compte": True}
             client_data = data[0]
             if not client_data.get("actif", False):
@@ -582,6 +643,45 @@ async def client_token(body: dict, request: Request):
                     poste = sal_data[0]["poste"]
             except Exception:
                 pass
+            # Vérifier et consommer les pending_claims non encore consommés
+            try:
+                import datetime as _dt_claim2
+                r_uid2 = await client.get(
+                    f"{SUPABASE_URL}/auth/v1/admin/users",
+                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
+                    params={"filter": f"email.eq.{email}"}
+                )
+                auth_users2 = r_uid2.json().get("users", [])
+                if auth_users2:
+                    uid2 = auth_users2[0].get("id")
+                    r_claims2 = await client.get(
+                        f"{SUPABASE_URL}/rest/v1/pending_entitlement_claims",
+                        params={"email": f"eq.{email}", "status": "eq.pending", "select": "*"},
+                        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+                    )
+                    for claim2 in (r_claims2.json() or []):
+                        r_ent2 = await client.post(
+                            f"{SUPABASE_URL}/rest/v1/product_entitlements",
+                            headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                                     "Content-Type": "application/json", "Prefer": "return=minimal"},
+                            json={"user_id": uid2, "product": claim2["product"], "plan": claim2["plan"],
+                                  "status": "trialing", "source": "stripe",
+                                  "starts_at": _dt_claim2.datetime.now().isoformat(),
+                                  "stripe_customer_id": claim2.get("stripe_customer_id"),
+                                  "stripe_subscription_id": claim2.get("stripe_subscription_id"),
+                                  "metadata": {"claimed_from": claim2["id"], "email": email}}
+                        )
+                        if r_ent2.status_code in (200, 201):
+                            await client.patch(
+                                f"{SUPABASE_URL}/rest/v1/pending_entitlement_claims",
+                                params={"id": f"eq.{claim2['id']}"},
+                                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                                         "Content-Type": "application/json", "Prefer": "return=minimal"},
+                                json={"status": "claimed"}
+                            )
+                            print(f"[client-token] claim {claim2['id']} consommé (reconnexion) pour {email}")
+            except Exception as _ce2:
+                print(f"[client-token] WARN pending_claim reconnexion: {_ce2}")
             return {"token": client_data["token"], "forfait": client_data["forfait"], "poste": poste}
     except Exception as e:
         return {"erreur": str(e)}
@@ -742,35 +842,64 @@ async def stripe_webhook(request: Request):
 
     async def upsert_ent(hc, payload):
         """
-        Upsert deterministe :
-        - si stripe_subscription_id connu : fetch existant -> PATCH si trouve, POST sinon
-        - sinon : POST direct
-        Index unique partiel sur stripe_subscription_id empeche les doublons.
+        Upsert deterministe — un seul entitlement par sujet+produit.
+        Ordre de recherche :
+          1. stripe_subscription_id (exact)
+          2. (user_id, product) ou (entreprise_id, product) — pour convertir migration
+          3. si introuvable -> INSERT
+        Migration existante -> convertie vers source='stripe' avec les Stripe IDs.
         """
         sub_id_val = payload.get("stripe_subscription_id")
+        uid        = payload.get("user_id")
+        eid        = payload.get("entreprise_id")
+        product    = payload.get("product")
         try:
+            existing_id = None
+            # 1. Chercher par stripe_subscription_id
             if sub_id_val:
-                # Chercher un entitlement existant pour ce sub_id
-                r_find = await hc.get(
+                r_f = await hc.get(
                     f"{SUPABASE_URL}/rest/v1/product_entitlements",
                     params={"stripe_subscription_id": f"eq.{sub_id_val}", "select": "id"},
                     headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
                 )
-                existing = r_find.json()
-                if existing:
-                    # Mettre a jour l'entitlement existant
-                    r = await hc.patch(
+                rows = r_f.json()
+                if rows:
+                    existing_id = rows[0]["id"]
+            # 2. Chercher par (sujet, product) — trouve les entitlements migration
+            if not existing_id and product:
+                if uid:
+                    r_f2 = await hc.get(
                         f"{SUPABASE_URL}/rest/v1/product_entitlements",
-                        params={"id": f"eq.{existing[0]['id']}"},
-                        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                                 "Content-Type": "application/json", "Prefer": "return=minimal"},
-                        json={k: v for k, v in payload.items() if k not in ("user_id","entreprise_id")}
+                        params={"user_id": f"eq.{uid}", "product": f"eq.{product}", "select": "id,source"},
+                        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
                     )
-                    if r.status_code not in (200, 204):
-                        print(f"[webhook] ERREUR patch_ent {r.status_code}: {r.text[:300]}")
-                        return False
-                    return True
-            # Creer un nouvel entitlement
+                    rows2 = r_f2.json()
+                    if rows2:
+                        existing_id = rows2[0]["id"]
+                elif eid:
+                    r_f2 = await hc.get(
+                        f"{SUPABASE_URL}/rest/v1/product_entitlements",
+                        params={"entreprise_id": f"eq.{eid}", "product": f"eq.{product}", "select": "id,source"},
+                        headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+                    )
+                    rows2 = r_f2.json()
+                    if rows2:
+                        existing_id = rows2[0]["id"]
+            if existing_id:
+                # PATCH : mettre a jour l'entitlement existant (y compris migration -> stripe)
+                patch_data = {k: v for k, v in payload.items() if k not in ("user_id","entreprise_id")}
+                r = await hc.patch(
+                    f"{SUPABASE_URL}/rest/v1/product_entitlements",
+                    params={"id": f"eq.{existing_id}"},
+                    headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                             "Content-Type": "application/json", "Prefer": "return=minimal"},
+                    json=patch_data
+                )
+                if r.status_code not in (200, 204):
+                    print(f"[webhook] ERREUR patch_ent {r.status_code}: {r.text[:300]}")
+                    return False
+                return True
+            # 3. INSERT
             r = await hc.post(
                 f"{SUPABASE_URL}/rest/v1/product_entitlements",
                 headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
@@ -806,7 +935,7 @@ async def stripe_webhook(request: Request):
             print(f"[webhook] EXCEPTION pending_claim: {e}")
             return False
 
-    async def resolve_subject_and_upsert(hc, email, forfait, cust_id, sub_id, price_ids, ends_at=None, status_val="trialing"):
+    async def resolve_subject_and_upsert(hc, email, forfait, cust_id, sub_id, price_ids, ends_at=None, status_val="trialing", starts_at=None):
         """
         Resoudre user_id ou entreprise_id, puis upsert entitlement.
         Si sujet absent -> pending_claim (sans violer XOR).
@@ -822,7 +951,7 @@ async def stripe_webhook(request: Request):
             ok = await upsert_ent(hc, {
                 "entreprise_id": entreprise_id, "product": product_val, "plan": plan_val,
                 "status": status_val, "source": "stripe",
-                "starts_at": _dt_m.datetime.now().isoformat(), "ends_at": ends_at,
+                "starts_at": starts_at or _dt_m.datetime.now().isoformat(), "ends_at": ends_at,
                 "stripe_customer_id": cust_id or None, "stripe_subscription_id": sub_id or None,
                 "metadata": {"event_id": event_id, "email": email, "price_ids": price_ids}
             })
@@ -836,7 +965,7 @@ async def stripe_webhook(request: Request):
             ok = await upsert_ent(hc, {
                 "user_id": user_id, "product": product_val, "plan": plan_val,
                 "status": status_val, "source": "stripe",
-                "starts_at": _dt_m.datetime.now().isoformat(), "ends_at": ends_at,
+                "starts_at": starts_at or _dt_m.datetime.now().isoformat(), "ends_at": ends_at,
                 "stripe_customer_id": cust_id or None, "stripe_subscription_id": sub_id or None,
                 "metadata": {"event_id": event_id, "email": email, "price_ids": price_ids}
             })
@@ -886,8 +1015,37 @@ async def stripe_webhook(request: Request):
             return {"status": "refus", "raison": "produit_inconnu", "price_ids": price_ids}
         if not (SUPABASE_URL and SUPABASE_SERVICE_KEY):
             return {"status": "skip", "raison": "supabase_non_configure"}
-        token           = "aria_" + secrets_mod.token_hex(32)
-        date_fin_essai  = (_dt_m.datetime.now() + _dt_m.timedelta(days=14)).isoformat()
+        token = "aria_" + secrets_mod.token_hex(32)
+        # Récupérer la vraie Subscription Stripe pour statut/dates autoritaires
+        sub_status_real  = "trialing"
+        date_debut_real  = _dt_m.datetime.now().isoformat()
+        date_fin_real    = (_dt_m.datetime.now() + _dt_m.timedelta(days=14)).isoformat()
+        if sub_id and STRIPE_SECRET_KEY:
+            try:
+                async with httpx.AsyncClient(timeout=8.0) as _sub_api:
+                    _rs = await _sub_api.get(
+                        f"https://api.stripe.com/v1/subscriptions/{sub_id}",
+                        headers={"Authorization": f"Bearer {STRIPE_SECRET_KEY}"}
+                    )
+                    if _rs.status_code == 200:
+                        _sub_obj = _rs.json()
+                        _stripe_status = _sub_obj.get("status", "trialing")
+                        _status_map = {"trialing": "trialing", "active": "active",
+                                       "past_due": "past_due", "canceled": "canceled", "unpaid": "past_due"}
+                        sub_status_real = _status_map.get(_stripe_status, "trialing")
+                        _trial_end = _sub_obj.get("trial_end")
+                        _period_end = _sub_obj.get("current_period_end")
+                        if _trial_end:
+                            date_fin_real = _dt_m.datetime.fromtimestamp(_trial_end).isoformat()
+                        elif _period_end:
+                            date_fin_real = _dt_m.datetime.fromtimestamp(_period_end).isoformat()
+                        _period_start = _sub_obj.get("current_period_start")
+                        if _period_start:
+                            date_debut_real = _dt_m.datetime.fromtimestamp(_period_start).isoformat()
+                    else:
+                        print(f"[webhook] WARN sub Stripe {_rs.status_code} — fallback 14j trialing")
+            except Exception as _se:
+                print(f"[webhook] WARN sub Stripe exception: {_se} — fallback 14j trialing")
         async with httpx.AsyncClient(timeout=15.0) as client:
             # Mettre a jour clients (table legacy pendant migration)
             r_ex = await client.get(
@@ -922,6 +1080,7 @@ async def stripe_webhook(request: Request):
                         headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
                                  "Content-Type": "application/json", "Prefer": "return=representation"},
                         json={"email_contact": email, "nom": nom_entreprise or email.split("@")[0],
+                              "code": (nom_entreprise or email.split("@")[0])[:20].upper().replace(" ","_"),
                               "nombre_employes": int(nb_employes) if str(nb_employes).isdigit() else 0,
                               "montant_mensuel": montant / 100 if montant else 0,
                               "statut_paiement": "essai",
@@ -939,7 +1098,8 @@ async def stripe_webhook(request: Request):
             # Creer/mettre a jour l'entitlement
             ent_ok, reason = await resolve_subject_and_upsert(
                 client, email, forfait, cust_id, sub_id, price_ids,
-                ends_at=date_fin_essai, status_val="trialing"
+                ends_at=date_fin_real, status_val=sub_status_real,
+                starts_at=date_debut_real
             )
             if not ent_ok and reason == "entreprise_id_indeterminable":
                 await _db_event_fail(client, event_id, reason)
