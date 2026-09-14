@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -124,6 +124,34 @@ body{
 
   <div class="divider-link">
     <a href="/connexion.html">← Connexion Aria Facility / Kids</a>
+  </div>
+  <div class="divider-link" style="margin-top:8px;">
+    <a href="#" onclick="modeProprietaire(); return false;">🔑 Accès propriétaire (après paiement Stripe)</a>
+  </div>
+</div>
+
+<div id="overlay-prop" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.88);z-index:100;align-items:center;justify-content:center;">
+  <div style="background:#1a1f2e;border-radius:16px;padding:32px;max-width:440px;width:92%;border:1px solid rgba(255,255,255,.12);">
+    <div style="font-size:1.1rem;font-weight:700;color:#e2e8f0;margin-bottom:6px;">Acc&egrave;s propri&eacute;taire Industrial</div>
+    <div style="font-size:12px;color:#94a3b8;margin-bottom:16px;">Connectez-vous ou cr&eacute;ez votre compte apr&egrave;s paiement Stripe.</div>
+    <div style="display:flex;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:18px;">
+      <button id="prop-tab-login" onclick="_propTab('login')" style="flex:1;padding:8px;background:none;border:none;border-bottom:2px solid #6366f1;color:#e2e8f0;font-size:13px;font-weight:700;cursor:pointer;">J'ai d&eacute;j&agrave; un compte</button>
+      <button id="prop-tab-signup" onclick="_propTab('signup')" style="flex:1;padding:8px;background:none;border:none;border-bottom:2px solid transparent;color:#94a3b8;font-size:13px;cursor:pointer;">Cr&eacute;er mon compte</button>
+    </div>
+    <div id="prop-login-section">
+      <input type="email" id="prop-email" placeholder="votre@email.com" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0d1117;color:#e2e8f0;font-size:14px;box-sizing:border-box;margin-bottom:10px;">
+      <input type="password" id="prop-mdp" placeholder="Mot de passe" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0d1117;color:#e2e8f0;font-size:14px;box-sizing:border-box;margin-bottom:14px;">
+      <button onclick="claimerProprietaire()" style="width:100%;padding:11px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;font-size:14px;font-weight:600;cursor:pointer;">Se connecter et r&eacute;clamer &rarr;</button>
+    </div>
+    <div id="prop-signup-section" style="display:none;">
+      <input type="email" id="prop-signup-email" placeholder="votre@email.com" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0d1117;color:#e2e8f0;font-size:14px;box-sizing:border-box;margin-bottom:10px;">
+      <input type="password" id="prop-signup-mdp" placeholder="Mot de passe (8 car. min.)" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0d1117;color:#e2e8f0;font-size:14px;box-sizing:border-box;margin-bottom:10px;">
+      <input type="password" id="prop-signup-mdp2" placeholder="Confirmer le mot de passe" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0d1117;color:#e2e8f0;font-size:14px;box-sizing:border-box;margin-bottom:14px;">
+      <button onclick="signupProprietaire()" style="width:100%;padding:11px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;font-size:14px;font-weight:600;cursor:pointer;">Cr&eacute;er mon compte &rarr;</button>
+    </div>
+    <div id="prop-error" style="display:none;color:#f87171;font-size:13px;margin-top:12px;"></div>
+    <div id="prop-success" style="display:none;color:#34d399;font-size:13px;margin-top:12px;"></div>
+    <div style="text-align:center;margin-top:12px;"><button onclick="fermerProp()" style="background:none;border:none;color:#64748b;font-size:12px;cursor:pointer;">Annuler</button></div>
   </div>
 </div>
 
@@ -328,5 +356,100 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 </script>
 <script src="/aria-i18n.js"></script>
+<script>
+// Bootstrap proprietaire — balise SANS src : execucion garantie
+var SUPABASE_URL_PROP="https://dvlrilklbspuckbplglz.supabase.co";
+var SUPABASE_KEY_PROP="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2bHJpbGtsYnNwdWNrYnBsZ2x6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNzYyNjIsImV4cCI6MjA5Njk1MjI2Mn0.lC1rt8bvfIpi1c78L8OWGXjjYhXzqzNkIgykHTle6eM";
+var RELAY_URL="https://aria-forgelis.onrender.com";
+function modeProprietaire(){var o=document.getElementById("overlay-prop");if(o)o.style.display="flex";_propTab("login");}
+function fermerProp(){var o=document.getElementById("overlay-prop");if(o)o.style.display="none";_propClear();}
+function _propClear(){["prop-error","prop-success"].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display="none";});}
+function _propErr(m){var e=document.getElementById("prop-error");if(e){e.textContent=m;e.style.display="block";}}
+function _propOk(m){var e=document.getElementById("prop-success");if(e){e.textContent=m;e.style.display="block";}}
+function _propTab(mode){
+  var L=document.getElementById("prop-login-section"),S=document.getElementById("prop-signup-section");
+  var tL=document.getElementById("prop-tab-login"),tS=document.getElementById("prop-tab-signup");
+  if(!L||!S)return; _propClear();
+  if(mode==="login"){L.style.display="";S.style.display="none";
+    if(tL)tL.style.borderBottom="2px solid #6366f1";if(tS)tS.style.borderBottom="2px solid transparent";}
+  else{L.style.display="none";S.style.display="";
+    if(tS)tS.style.borderBottom="2px solid #6366f1";if(tL)tL.style.borderBottom="2px solid transparent";}
+}
+async function _sLogin(e,p){return(await fetch(SUPABASE_URL_PROP+"/auth/v1/token?grant_type=password",{method:"POST",headers:{"apikey":SUPABASE_KEY_PROP,"Content-Type":"application/json"},body:JSON.stringify({email:e,password:p})})).json();}
+async function _sSignup(e,p){return(await fetch(SUPABASE_URL_PROP+"/auth/v1/signup",{method:"POST",headers:{"apikey":SUPABASE_KEY_PROP,"Content-Type":"application/json"},body:JSON.stringify({email:e,password:p})})).json();}
+async function _doClaim(jwt){return(await fetch(RELAY_URL+"/industrial/claim-ownership",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+jwt},body:JSON.stringify({jwt})})).json();}
+async function _finish(jwt,c){
+  var ok=(c.results||[]).filter(function(r){return r.ok;});
+  if(!ok.length){_propErr((c.results||[]).map(function(r){return r.raison||"";}).join(", ")||c.erreur||"Claim echoue.");return;}
+  var eid=ok[0].entreprise_id||"";
+  try{
+    var sr=await fetch(RELAY_URL+"/industrial/owner-session",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+jwt},
+      body:JSON.stringify({jwt:jwt,entreprise_id:eid})
+    });
+    var sd=await sr.json();
+    if(!sr.ok||!sd.ok||!sd.session||!sd.session.salarie_id){
+      _propErr(sd.erreur||"Session dirigeant impossible.");return;
+    }
+    var s=sd.session;
+    localStorage.setItem("aria_industrial_owner_jwt",jwt);
+    localStorage.setItem("aria_industrial_email",s.email||"");
+    localStorage.setItem("aria_industrial_poste","dirigeant");
+    localStorage.setItem("aria_industrial_nom",s.nom||"");
+    localStorage.setItem("aria_session_active","dirigeant");
+    localStorage.setItem("aria_industrial_token",s.salarie_id);
+    localStorage.setItem("aria_industrial_entreprise_id",s.entreprise_id);
+    localStorage.setItem("aria_industrial_role","dirigeant");
+    localStorage.setItem("aria_industrial_session",JSON.stringify(s));
+    if(sd.client_token){localStorage.setItem("aria_industrial_client_token",sd.client_token);}
+    _propOk("Propriete verifiee. Ouverture de votre espace dirigeant...");
+    setTimeout(function(){window.location="/poste-dirigeant.html";},900);
+  }catch(e){_propErr("Erreur session dirigeant: "+(e.message||e));}
+}
+async function claimerProprietaire(){
+  var email=(document.getElementById("prop-email")||{}).value||"";
+  var mdp=(document.getElementById("prop-mdp")||{}).value||"";
+  _propClear();
+  if(!email||!email.includes("@")){_propErr("Email requis.");return;}
+  if(!mdp||mdp.length<6){_propErr("Mot de passe requis.");return;}
+  try{
+    var d=await _sLogin(email,mdp);
+    if(!d.access_token){_propErr(d.error_description||d.msg||"Identifiants incorrects.");return;}
+    _propOk("Connexion OK, verification ownership...");
+    var c=await _doClaim(d.access_token);
+    if(!c.ok){_propErr((c.results||[]).map(function(r){return r.raison||"";}).join(", ")||c.erreur||"Claim echoue.");return;}
+    await _finish(d.access_token,c);
+  }catch(e){_propErr("Erreur reseau: "+(e.message||e));}
+}
+async function signupProprietaire(){
+  var email=(document.getElementById("prop-signup-email")||{}).value||"";
+  var p1=(document.getElementById("prop-signup-mdp")||{}).value||"";
+  var p2=(document.getElementById("prop-signup-mdp2")||{}).value||"";
+  _propClear();
+  if(!email||!email.includes("@")){_propErr("Email requis.");return;}
+  if(!p1||p1.length<8){_propErr("Mot de passe min. 8 caracteres.");return;}
+  if(p1!==p2){_propErr("Mots de passe differents.");return;}
+  try{
+    var d=await _sSignup(email,p1);
+    if(d.error||d.msg){_propErr(d.error_description||d.msg||"Erreur inscription.");return;}
+    if(d.access_token){
+      _propOk("Compte cree! Verification ownership...");
+      var c=await _doClaim(d.access_token);
+      if(!c.ok){_propErr((c.results||[]).map(function(r){return r.raison||"";}).join(", ")||c.erreur||"Claim echoue.");return;}
+      await _finish(d.access_token,c);
+    } else {
+      _propOk("Compte cree! Verifiez votre email, puis utilisez J'ai deja un compte.");
+    }
+  }catch(e){_propErr("Erreur reseau: "+(e.message||e));}
+}
+
+document.addEventListener("DOMContentLoaded",function(){
+  try{
+    var q=new URLSearchParams(window.location.search);
+    if(q.get("owner")==="1"||q.get("success")==="1"){modeProprietaire();}
+  }catch(e){}
+});
+</script>
 </body>
 </html>

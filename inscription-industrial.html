@@ -173,20 +173,27 @@ function activerEssai(email, token){
   showLoading('Activation de votre essai...');
   fetch(RELAY+ENDPOINT,{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({email:email,token:token,forfait:FORFAIT})
+    headers:{'Content-Type':'application/json',
+             'Authorization':'Bearer '+token},
+    body:JSON.stringify({jwt:token})
   })
-  .then(function(r){return r.json();})
-  .then(function(data){
-    // Sauvegarder email pour la prochaine page
+  .then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});})
+  .then(function(res){
+    if(!res.ok||!res.d.ok){
+      var errMsg=res.d.erreur||'Erreur activation Industrial.';
+      document.getElementById('msg-error').textContent=errMsg;
+      document.getElementById('msg-error').style.display='block';
+      showError(errMsg);
+      return;
+    }
     localStorage.setItem('aria_email',email);
-    if(token) localStorage.setItem('aria_access_token',token);
+    localStorage.setItem('aria_access_token',token);
+    if(res.d.token) localStorage.setItem('aria_token',res.d.token);
     showOnboarding();
   })
-  .catch(function(){
-    // Même si le relay échoue, le compte est créé — onboarding quand même
-    localStorage.setItem('aria_email',email);
-    showOnboarding();
+  .catch(function(err){
+    console.error('Relay error:',err);
+    showError('Erreur réseau. Activation Industrial échouée. Réessayez.');
   });
 }
 

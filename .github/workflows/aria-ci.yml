@@ -1,0 +1,63 @@
+name: ARIA CI
+
+on:
+  push:
+    branches:
+      - forgedis-public-redesign
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_URL: https://test.supabase.co
+      SUPABASE_SERVICE_KEY: test_service_key
+      STRIPE_SECRET_KEY: sk_test_fake
+      STRIPE_WEBHOOK_SECRET: whsec_test
+      GOOGLE_TTS_API_KEY: test
+      PROXY_TOKEN: test
+      CLAUDE_API_KEY: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pyflakes bcrypt
+
+      - name: Compile server
+        run: python -m py_compile server.py
+
+      - name: Undefined-name scan
+        id: lint
+        continue-on-error: true
+        run: |
+          pyflakes server.py | tee /tmp/pyflakes.txt
+          ! grep -E 'undefined name' /tmp/pyflakes.txt
+
+      - name: Run tests
+        run: pytest -q
+
+      - name: Enforce undefined-name gate
+        if: always()
+        run: |
+          if [ -f /tmp/pyflakes.txt ] && grep -E 'undefined name' /tmp/pyflakes.txt; then
+            echo 'Undefined names detected in server.py'
+            exit 1
+          fi
+
+# Charlie: this workflow is the independent merge gate for the redesign branch.
