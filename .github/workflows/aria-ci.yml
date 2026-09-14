@@ -42,8 +42,20 @@ jobs:
       - name: Compile server
         run: python -m py_compile server.py
 
-      - name: Undefined-name check
-        run: pyflakes server.py | tee /tmp/pyflakes.txt; ! grep -E 'undefined name' /tmp/pyflakes.txt
+      - name: Undefined-name scan
+        id: lint
+        continue-on-error: true
+        run: |
+          pyflakes server.py | tee /tmp/pyflakes.txt
+          ! grep -E 'undefined name' /tmp/pyflakes.txt
 
       - name: Run tests
         run: pytest -q
+
+      - name: Enforce undefined-name gate
+        if: always()
+        run: |
+          if [ -f /tmp/pyflakes.txt ] && grep -E 'undefined name' /tmp/pyflakes.txt; then
+            echo 'Undefined names detected in server.py'
+            exit 1
+          fi
