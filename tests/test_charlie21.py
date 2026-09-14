@@ -122,7 +122,7 @@ def test_pending_claim_mark_is_verified():
 
 
 def test_pending_industrial_subscription_unique_migration_present():
-    path = ROOT / "supabase" / "migrations" / "20260914010000_phase_k_pending_industrial_subscription_unique.sql"
+    path = ROOT / "supabase" / "migrations" / "20260914013014_phase_k_pending_industrial_subscription_unique.sql"
     assert path.exists()
     sql = path.read_text(encoding="utf-8")
     assert "unique index" in sql.lower()
