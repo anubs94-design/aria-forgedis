@@ -22,3 +22,5 @@ def test_installation_token_bound_only_after_access_check():
     assert b.index('verifier_acces(aria_token, "facility")') < b.index('"token_installation": tok_inst')
     assert '"Prefer": "return=representation"' in b
     assert 'r_bind.status_code' in b
+
+# Final independent CI trigger after canonical enrollment patch.
