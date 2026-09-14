@@ -107,7 +107,7 @@ class TestProjectStripeSubData:
                                  "current_period_start": NOW, "current_period_end": FUTURE+1000}]}
         }, PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
         assert s == "trialing"
-        assert e == datetime.datetime.fromtimestamp(FUTURE).isoformat()
+        assert e == datetime.datetime.fromtimestamp(FUTURE, datetime.timezone.utc).isoformat()
 
     def test_unknown_status_None(self):
         s, _, _ = _project_stripe_sub_data({
