@@ -1,0 +1,41 @@
+name: Charlie UTC test repair
+
+on:
+  push:
+    branches:
+      - forgedis-public-redesign
+    paths:
+      - .github/workflows/charlie-fix-utc-test.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: forgedis-public-redesign
+          fetch-depth: 0
+      - name: Update stale timezone expectation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('tests/test_handlers_p0.py')
+          s=p.read_text(encoding='utf-8')
+          old='assert e == datetime.datetime.fromtimestamp(FUTURE).isoformat()'
+          new='assert e == datetime.datetime.fromtimestamp(FUTURE, datetime.timezone.utc).isoformat()'
+          if s.count(old) != 1:
+              raise SystemExit(f'expected 1 stale timestamp assertion, found {s.count(old)}')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+          rm -f .github/workflows/charlie-fix-utc-test.yml
+      - name: Commit
+        run: |
+          git config user.name "Charlie CI"
+          git config user.email "actions@users.noreply.github.com"
+          git add tests/test_handlers_p0.py .github/workflows/charlie-fix-utc-test.yml
+          git diff --cached --check
+          git commit -m "test: expect UTC-aware Stripe timestamps"
+          git push origin HEAD:forgedis-public-redesign
