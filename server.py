@@ -885,7 +885,7 @@ async def verifier_acces(token: str, product: str, capability: str = "") -> tupl
 
     Industrial    : entitlement porte par entreprise_id
 
-    clients.forfait : fallback migration uniquement si aucun entitlement canonique
+    clients : compatibilite/token uniquement, jamais source de droits produit
 
 
 
@@ -937,7 +937,6 @@ async def verifier_acces(token: str, product: str, capability: str = "") -> tupl
 
             email  = client_data.get("email", "")
 
-            forfait_legacy = client_data.get("forfait", "gratuit")
 
             # 2. Chercher entitlement canonique pour ce produit
 
@@ -1143,52 +1142,40 @@ async def verifier_forfait(token_recu, type_requete="eco"):
 
             client_data = data[0]
 
+            forfait_legacy = client_data.get("forfait", "gratuit")
+            try:
+                taches = int(client_data.get("taches_ce_mois", 0) or 0)
+            except (TypeError, ValueError):
+                taches = 0
 
-
-            if not client_data.get("actif", False):
-
-                return False, "Votre abonnement est inactif. Contactez le support.", "inactif"
-
-
-
-            forfait = client_data.get("forfait", "gratuit")
-
-
-
-            # Les offres payantes sont autorisees uniquement par l'entitlement canonique.
-            # Le forfait gratuit conserve seulement son quota eco historique.
-            if forfait != "gratuit":
-                ok_canon, msg_canon, _ = await verifier_acces(token_recu, "facility")
-                if not ok_canon:
+            # Autorite commerciale: product_entitlements Facility.
+            # Le legacy ne peut accorder que le palier gratuit si aucun entitlement n'existe.
+            ok_canon, msg_canon, canon_state = await verifier_acces(token_recu, "facility")
+            if ok_canon:
+                forfait = "facility"
+            elif canon_state == "no_entitlement":
+                if forfait_legacy != "gratuit":
                     return False, msg_canon or "Abonnement Facility requis.", "inactif"
+                if not client_data.get("actif", False):
+                    return False, "Votre compte gratuit est inactif. Contactez le support.", "inactif"
+                forfait = "gratuit"
+            else:
+                # blocked / unknown / erreur: jamais de repli vers clients.forfait.
+                return False, msg_canon or "Verification d'abonnement impossible.", "inactif"
 
             mois = client_data.get("mois_en_cours", "")
 
-
-
             import datetime
-
             mois_actuel = datetime.datetime.now().strftime("%Y-%m")
-
             if mois != mois_actuel:
-
                 taches = 0
-
                 mois = mois_actuel
 
-
-
             if forfait == "gratuit":
-
                 if type_requete == "reflexion":
-
                     return False, "Le pilotage PC est reserve a Aria Facility (12,99 euros/mois). Passez a Facility pour debloquer toutes les fonctions.", "gratuit"
-
                 if taches >= 30:
-
                     return False, "Vous avez utilise vos 30 eco-taches du mois. Passez a Aria Facility pour continuer.", "gratuit"
-
-
 
             # Incrementer le compteur
 
@@ -1418,19 +1405,23 @@ async def _claim_pending_entitlements(hc, auth_uid: str, email: str):
 
             if success:
 
-                await hc.patch(
+                r_mark = await hc.patch(
 
                     f"{SUPABASE_URL}/rest/v1/pending_entitlement_claims",
 
-                    params={"id": f"eq.{claim['id']}"},
+                    params={"id": f"eq.{claim['id']}", "status": "eq.pending"},
 
                     headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
 
-                             "Content-Type": "application/json", "Prefer": "return=minimal"},
+                             "Content-Type": "application/json", "Prefer": "return=representation"},
 
                     json={"status": "claimed"}
 
                 )
+
+                if r_mark.status_code not in (200, 201) or not r_mark.json():
+                    print(f"[client-token] WARN claim {claim['id']} entitlement upsert OK mais consommation pending echouee")
+                    continue
 
                 print(f"[client-token] claim {claim['id']} consomme pour {email} -> {product_val}/{ent_status}")
 
@@ -1625,12 +1616,12 @@ def _project_stripe_sub_data(sub_obj, price_to_forfait, industrial_base_price):
     starts_at = None
 
     if trial_end:
-        ends_at = _dt_proj.datetime.fromtimestamp(trial_end).isoformat()
+        ends_at = _dt_proj.datetime.fromtimestamp(trial_end, _dt_proj.timezone.utc).isoformat()
     elif period_end:
-        ends_at = _dt_proj.datetime.fromtimestamp(period_end).isoformat()
+        ends_at = _dt_proj.datetime.fromtimestamp(period_end, _dt_proj.timezone.utc).isoformat()
 
     if period_start:
-        starts_at = _dt_proj.datetime.fromtimestamp(period_start).isoformat()
+        starts_at = _dt_proj.datetime.fromtimestamp(period_start, _dt_proj.timezone.utc).isoformat()
 
     if ends_at is None:
         return None, None, None
@@ -2499,6 +2490,7 @@ async def stripe_webhook(request: Request):
             if forfait in INDUSTRIAL:
 
                 entreprise_id = await get_entreprise_id(client, email)
+                entreprise_preexistante = bool(entreprise_id)
 
                 if not entreprise_id:
                     _nom = nom_entreprise or email.split("@")[0]
@@ -2511,11 +2503,15 @@ async def stripe_webhook(request: Request):
                     )
                     _prof_co = _r_prof_co.json()
                     _dirigeant_id = _prof_co[0]["id"] if len(_prof_co) == 1 else None
+                    _mapped_sp = map_stripe_to_statut_paiement(_stripe_status)
+                    if _mapped_sp is None:
+                        await _fail(client, f"industrial_unknown_stripe_status:{_stripe_status}")
+                        return JSONResponse(status_code=503, content={"erreur": "stripe_status_inconnu"})
                     _ent_payload = {"email_contact": email, "nom": _nom,
                                        "code": _nom[:20].upper().replace(" ", "_"),
                                        "nombre_employes": int(nb_employes) if str(nb_employes).isdigit() else 0,
                                        "montant_mensuel": montant / 100 if montant else 0,
-                                       "statut_paiement": map_stripe_to_statut_paiement(sub_status_real or "trialing"),
+                                       "statut_paiement": _mapped_sp,
                                        "stripe_customer_id": cust_id or None,
                                        "stripe_sub_id": sub_id or None}
                     if _dirigeant_id:
@@ -2550,6 +2546,69 @@ async def stripe_webhook(request: Request):
                                 await _fail(client, f"pending_ownership_post_failed:{_r_pio.status_code}")
                                 return JSONResponse(status_code=503, content={"erreur": "pending_ownership_failed"})
                             print(f"[checkout] pending_industrial_ownership créé pour {email}")
+
+                if entreprise_preexistante and entreprise_id:
+                    _r_existing_company = await client.get(
+                        f"{SUPABASE_URL}/rest/v1/entreprises",
+                        params={"id": f"eq.{entreprise_id}", "select": "id,dirigeant_id"},
+                        headers={"apikey": SUPABASE_SERVICE_KEY,
+                                 "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+                    )
+                    _existing_company_rows = _r_existing_company.json() if _r_existing_company.status_code == 200 else []
+                    if len(_existing_company_rows) != 1:
+                        await _fail(client, "existing_industrial_company_unresolvable")
+                        return JSONResponse(status_code=503, content={"erreur": "entreprise_existante_invalide"})
+                    _existing_owner = _existing_company_rows[0].get("dirigeant_id")
+                    _r_prof_existing = await client.get(
+                        f"{SUPABASE_URL}/rest/v1/profiles",
+                        params={"email": f"eq.{email.lower().strip()}", "select": "id"},
+                        headers={"apikey": SUPABASE_SERVICE_KEY,
+                                 "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+                    )
+                    _prof_existing = _r_prof_existing.json() if _r_prof_existing.status_code == 200 else []
+                    _existing_uid = _prof_existing[0].get("id") if len(_prof_existing) == 1 else None
+                    if not _existing_owner and _existing_uid:
+                        _r_claim_existing = await client.patch(
+                            f"{SUPABASE_URL}/rest/v1/entreprises",
+                            params={"id": f"eq.{entreprise_id}", "dirigeant_id": "is.null"},
+                            headers={"apikey": SUPABASE_SERVICE_KEY,
+                                     "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                                     "Content-Type": "application/json",
+                                     "Prefer": "return=representation"},
+                            json={"dirigeant_id": _existing_uid}
+                        )
+                        if _r_claim_existing.status_code not in (200, 201) or not _r_claim_existing.json():
+                            # Race: accept only if the winner is the same authenticated profile.
+                            _r_owner_recheck = await client.get(
+                                f"{SUPABASE_URL}/rest/v1/entreprises",
+                                params={"id": f"eq.{entreprise_id}", "select": "dirigeant_id"},
+                                headers={"apikey": SUPABASE_SERVICE_KEY,
+                                         "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
+                            )
+                            _owner_recheck_rows = _r_owner_recheck.json() if _r_owner_recheck.status_code == 200 else []
+                            _owner_recheck = _owner_recheck_rows[0].get("dirigeant_id") if len(_owner_recheck_rows) == 1 else None
+                            if _owner_recheck != _existing_uid:
+                                await _fail(client, "existing_industrial_owner_race")
+                                return JSONResponse(status_code=503, content={"erreur": "ownership_conflict"})
+                    elif not _existing_owner and not _existing_uid:
+                        _r_pio_existing = await client.post(
+                            f"{SUPABASE_URL}/rest/v1/pending_industrial_ownership",
+                            params={"on_conflict": "email,entreprise_id"},
+                            headers={"apikey": SUPABASE_SERVICE_KEY,
+                                     "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                                     "Content-Type": "application/json",
+                                     "Prefer": "resolution=merge-duplicates,return=representation"},
+                            json={"email": email, "entreprise_id": entreprise_id,
+                                  "stripe_subscription_id": sub_id or None,
+                                  "stripe_customer_id": cust_id or None,
+                                  "status": "pending",
+                                  "metadata": {"nom": nom_entreprise or email.split("@")[0],
+                                               "forfait": "industrial", "existing_company": True}}
+                        )
+                        if _r_pio_existing.status_code not in (200, 201) or not _r_pio_existing.json():
+                            await _fail(client, f"pending_existing_ownership_failed:{_r_pio_existing.status_code}")
+                            return JSONResponse(status_code=503, content={"erreur": "pending_ownership_failed"})
+
                 if not entreprise_id:
 
                     await _fail(client, "entreprise_id_indeterminable")
@@ -2732,6 +2791,11 @@ async def stripe_webhook(request: Request):
 
         cust_id = data_obj.get("customer", "")
 
+        # L'evenement deleted est autoritaire pour le statut. La date de fin n'est
+        # remplacee que si Stripe fournit une periode exploitable.
+        _sd_status, _sd_starts, _sd_ends = _project_stripe_sub_data(
+            data_obj, PRICE_TO_FORFAIT, INDUSTRIAL_BASE_PRICE)
+
         async with httpx.AsyncClient(timeout=10.0) as client:
 
             rows = []
@@ -2761,8 +2825,9 @@ async def stripe_webhook(request: Request):
                     params={"id": f"eq.{row['id']}"},
                     headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
                              "Content-Type": "application/json", "Prefer": "return=representation"},
-                    json={"status": "canceled", "ends_at": _dt_m.datetime.utcnow().isoformat(),
-                           "metadata": {"event_id": event_id}}
+                    json={**{"status": "canceled",
+                              "metadata": {"event_id": event_id, "stripe_status": data_obj.get("status", "canceled")}},
+                          **({"ends_at": _sd_ends} if _sd_ends else {})}
                 )
                 if r_patch_sd.status_code not in (200, 201, 204) or not r_patch_sd.json():
                     await _fail(client, f"sub_deleted_patch_failed:{row['id']}:{r_patch_sd.status_code}")
@@ -4439,11 +4504,9 @@ async def verify_kids_access(body: dict):
 
                 "ok": True,
 
-                "forfait": cl.get("forfait", forfait),  # forfait depuis Supabase, jamais du client
-
+                "forfait": forfait,  # valeur canonique issue de verifier_acces
                 "email": cl.get("email", ""),
-
-                "actif": cl.get("actif", False),
+                "actif": True,  # verifier_acces a deja valide le droit Kids
 
                 "trial_restant": trial_restant,
 
@@ -4577,28 +4640,9 @@ async def client_token_kids(body: dict, request: Request):
             ends_ctk = ent_ctk.get("ends_at")
             if ends_ctk and is_expired(ends_ctk):
                 return {"erreur": "Abonnement Kids expire."}
-            # Récupérer ou créer le token client legacy
-            r_cl = await hx.get(
-                f"{SUPABASE_URL}/rest/v1/clients",
-                params={"email": f"eq.{email}", "select": "token,forfait,actif"},
-                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
-            )
-            cl_rows = r_cl.json()
-            if cl_rows and cl_rows[0].get("actif"):
-                return {"token": cl_rows[0]["token"], "forfait": "kids", "source": "entitlement"}
-            # Créer le compte legacy si absent
-            import secrets as _sec_ctk
-            new_tok = "aria_" + _sec_ctk.token_hex(32)
-            r_ins = await hx.post(
-                f"{SUPABASE_URL}/rest/v1/clients",
-                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                         "Content-Type": "application/json", "Prefer": "return=representation"},
-                json={"email": email, "token": new_tok, "forfait": "kids_solo", "actif": True}
-            )
-            if r_ins.status_code not in (200, 201):
-                return {"erreur": "Impossible de créer le compte."}
-# [déplacé avant check entitlement]
-            return {"token": new_tok, "forfait": "kids", "source": "entitlement"}
+            # Token legacy = compatibilite uniquement, apres validation canonique Kids.
+            legacy = await ensure_legacy_client(hx, email, "kids_solo")
+            return {"token": legacy["token"], "forfait": "kids", "source": "entitlement"}
     except Exception as _e_ctk:
         print(f"[client-token-kids] {_e_ctk}")
         return {"erreur": "Erreur serveur."}
@@ -5739,13 +5783,15 @@ async def ensure_legacy_client(hx, email: str, forfait: str) -> dict:
     """Crée ou réactive le compte client legacy. Jamais double INSERT sur email."""
     r_get = await hx.get(
         f"{SUPABASE_URL}/rest/v1/clients",
-        params={"email": f"eq.{email}", "select": "token,forfait,actif"},
+        params={"email": f"eq.{email}", "select": "token,forfait,actif,suppression_demandee"},
         headers={"apikey": SUPABASE_SERVICE_KEY,
                  "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
     )
     existing = r_get.json()
     if existing:
-        # Réactiver si nécessaire
+        if existing[0].get("suppression_demandee"):
+            raise RuntimeError("Compte en cours de suppression: reactivation automatique interdite")
+        # Réactiver le conteneur legacy si nécessaire; les droits restent canoniques ailleurs.
         if not existing[0].get("actif"):
             await hx.patch(
                 f"{SUPABASE_URL}/rest/v1/clients",
