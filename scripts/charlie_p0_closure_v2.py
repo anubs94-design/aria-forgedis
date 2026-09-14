@@ -21,7 +21,8 @@ src = src[:vk_start] + vk2 + src[vk_end:]
 
 # 4) Kids token compatibility'''
 
-text2, n = pattern.subn(replacement, text, count=1)
+# Callable replacement keeps backslashes literal inside the generated Python source.
+text2, n = pattern.subn(lambda _m: replacement, text, count=1)
 if n != 1:
     raise RuntimeError(f"could not rewrite closure script section 3: {n}")
 
