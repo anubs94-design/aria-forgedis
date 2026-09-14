@@ -52,12 +52,9 @@ def test_html_functions_in_standalone_script():
     with open(HTML_FILE, encoding='utf-8') as f:
         html = f.read()
     for fn in ['modeProprietaire', 'claimerProprietaire', 'fermerProp', 'signupProprietaire']:
-        # Trouver la position de la fonction
         fn_pos = html.find(f'function {fn}')
         assert fn_pos >= 0, f"function {fn} absente"
-        # Trouver la balise script enclosante
         script_start = html.rfind('<script', 0, fn_pos)
-        # La balise script ne doit pas avoir src=
         script_tag = html[script_start:html.find('>', script_start)+1]
         assert 'src=' not in script_tag, \
             f"function {fn} est dans <script src> — JS non exécuté ! Tag: {script_tag}"
@@ -72,19 +69,18 @@ def test_html_signup_mode_present():
     assert 'prop-signup-mdp' in html, "Champ mdp signup absent"
     assert 'signupProprietaire' in html, "Fonction signupProprietaire absente"
 
-def test_html_redirect_to_industrial_not_industrial_html():
-    """La redirection post-claim pointe vers /industrial (app), pas /industrial.html (marketing)."""
+def test_html_redirect_to_server_authorized_dirigeant_session():
+    """Après claim, le frontend obtient une vraie session serveur puis ouvre le poste dirigeant."""
     if not os.path.exists(HTML_FILE):
         pytest.skip()
     with open(HTML_FILE, encoding='utf-8') as f:
         html = f.read()
-    assert "'/industrial'" in html or '"/industrial"' in html, \
-        "Redirection vers /industrial absente"
-    # Vérifier que les redirections window.location vont vers /industrial et non /industrial.html
+    assert '/industrial/owner-session' in html, "Bootstrap owner-session serveur absent"
     redirects = re.findall(r"window\.location\s*=\s*['\"]([^'\"]+)['\"]", html)
-    for dest in redirects:
-        assert not dest.endswith('.html'), \
-            f"Redirection vers {dest!r} — doit pointer vers /industrial, pas {dest!r}"
+    assert '/poste-dirigeant.html' in redirects, \
+        f"Redirection vers le poste dirigeant absente: {redirects}"
+    assert '/industrial.html' not in redirects, \
+        f"Le flux propriétaire ne doit pas revenir vers la vitrine marketing: {redirects}"
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -171,7 +167,6 @@ def test_inscription_industrial_checks_status_before_trial_exists():
     m = re.search(r'async def inscription_industrial\(.*?(?=\nasync def |\n@app)', src, re.DOTALL)
     code = m.group(0)
     trial_sp_idx = code.find('TRIAL_SP')
-    # trial_is_valid ou is_expired doit être présent avant trial_exists
     tv_idx = code.find('trial_is_valid', trial_sp_idx)
     ex_idx = code.find('is_expired', trial_sp_idx)
     trial_exists_idx = code.find('"trial_exists"')
@@ -182,7 +177,6 @@ def test_inscription_industrial_checks_status_before_trial_exists():
 def test_trial_is_valid_covers_industrial_scenario():
     """Scenario exact P0: canceled + date future → False."""
     future = (dt.datetime.utcnow() + dt.timedelta(days=10)).isoformat() + "Z"
-    # Ce scénario causait trial_exists avec l'ancien code
     assert srv.trial_is_valid("canceled", future) is False, \
         "canceled + date future doit retourner False"
     assert srv.trial_is_valid("past_due", future) is False, \
