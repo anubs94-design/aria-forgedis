@@ -1,0 +1,40 @@
+name: Charlie P0 closure
+
+on:
+  push:
+    branches:
+      - forgedis-public-redesign
+    paths:
+      - scripts/charlie_p0_closure.py
+      - .github/workflows/charlie-p0-closure.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: forgedis-public-redesign
+          fetch-depth: 0
+
+      - name: Apply deterministic closure patch
+        run: python scripts/charlie_p0_closure.py
+
+      - name: Remove one-shot patch machinery
+        run: |
+          rm -f scripts/charlie_p0_closure.py
+          rm -f .github/workflows/charlie-p0-closure.yml
+
+      - name: Commit closure
+        run: |
+          git config user.name "Charlie CI"
+          git config user.email "actions@users.noreply.github.com"
+          git add server.py tests/test_charlie21.py supabase/migrations/20260914010000_phase_k_pending_industrial_subscription_unique.sql scripts/charlie_p0_closure.py .github/workflows/charlie-p0-closure.yml
+          git diff --cached --check
+          git commit -m "fix(P0): close canonical entitlements and Industrial ownership edges"
+          git push origin HEAD:forgedis-public-redesign
