@@ -1,0 +1,100 @@
+name: Charlie enrollment canonicalization
+
+on:
+  push:
+    branches:
+      - forgedis-public-redesign
+    paths:
+      - .github/workflows/charlie-enrollment-canonical.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: forgedis-public-redesign
+          fetch-depth: 0
+      - name: Patch enrollment and add regressions
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('server.py')
+          s=p.read_text(encoding='utf-8')
+          pattern=re.compile(r'@app\.post\("/enroler-installation"\)\n\nasync def enroler_installation\(body: dict, request: Request\):.*?(?=\n@app\.post\("/tts"\))', re.S)
+          new='''@app.post("/enroler-installation")
+
+async def enroler_installation(body: dict, request: Request):
+    """Enrole une installation Facility apres identite JWT et droit canonique valide.
+
+    clients ne sert ici qu'a fournir le token applicatif de compatibilite.
+    Les droits commerciaux proviennent exclusivement de product_entitlements via verifier_acces().
+    """
+    auth_header = request.headers.get("Authorization", "")
+    jwt_token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else ""
+    email, erreur = await _jwt_vers_email(jwt_token, request)
+    if erreur:
+        return {"erreur": erreur}
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return {"erreur": "Service indisponible."}
+
+    import secrets as _sec2
+    tok_inst = "aria_inst_" + _sec2.token_hex(24)
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as hx2:
+            # Conteneur legacy/token uniquement. Sa colonne forfait/actif n'accorde aucun droit.
+            legacy = await ensure_legacy_client(hx2, email, "gratuit")
+            aria_token = legacy.get("token", "")
+            if not aria_token:
+                return {"erreur": "Token de compatibilite introuvable."}
+
+            autorise, msg_acces, forfait = await verifier_acces(aria_token, "facility")
+            if not autorise:
+                return {"erreur": msg_acces or "Abonnement Facility requis."}
+
+            # Ecrire le token d'installation seulement APRES validation du droit Facility.
+            r_bind = await hx2.patch(
+                f"{SUPABASE_URL}/rest/v1/clients",
+                params={"email": f"eq.{email}", "token": f"eq.{aria_token}"},
+                headers={"apikey": SUPABASE_SERVICE_KEY,
+                         "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                         "Content-Type": "application/json",
+                         "Prefer": "return=representation"},
+                json={"token_installation": tok_inst}
+            )
+            if r_bind.status_code not in (200, 201) or not r_bind.json():
+                return {"erreur": "Liaison de l'installation impossible. Reessayez."}
+
+        return {
+            "token_installation": tok_inst,
+            "token": aria_token,
+            "forfait": forfait,
+            "email": email,
+        }
+    except Exception as e:
+        print(f"[ENROL] {e}")
+        return {"erreur": "Enrolement impossible. Reessayez."}
+
+'''
+          s2,n=pattern.subn(new,s,count=1)
+          if n!=1:
+              raise SystemExit(f'enrollment block replacement count={n}')
+          p.write_text(s2,encoding='utf-8')
+
+          t=Path('tests/test_charlie22.py')
+          t.write_text('''"""Charlie 22 — Facility enrollment must use canonical entitlements."""\nfrom pathlib import Path\nimport re\n\nROOT=Path(__file__).resolve().parents[1]\nSRC=(ROOT/"server.py").read_text(encoding="utf-8")\n\ndef _block():\n    m=re.search(r'async def enroler_installation\\(.*?(?=\\n@app\\.post\\(\"/tts\"\\))',SRC,re.S)\n    assert m\n    return m.group(0)\n\ndef test_enrollment_uses_canonical_facility_authorization():\n    b=_block()\n    assert 'ensure_legacy_client' in b\n    assert 'verifier_acces(aria_token, "facility")' in b\n    assert 'rows[0].get("actif")' not in b\n    assert 'rows[0].get("forfait"' not in b\n\ndef test_installation_token_bound_only_after_access_check():\n    b=_block()\n    assert b.index('verifier_acces(aria_token, "facility")') < b.index('"token_installation": tok_inst')\n    assert '"Prefer": "return=representation"' in b\n    assert 'r_bind.status_code' in b\n''',encoding='utf-8')
+          PY
+          rm -f .github/workflows/charlie-enrollment-canonical.yml
+      - name: Commit
+        run: |
+          git config user.name "Charlie CI"
+          git config user.email "actions@users.noreply.github.com"
+          git add server.py tests/test_charlie22.py .github/workflows/charlie-enrollment-canonical.yml
+          git diff --cached --check
+          git commit -m "fix(P0): make Facility enrollment entitlement-authoritative"
+          git push origin HEAD:forgedis-public-redesign
