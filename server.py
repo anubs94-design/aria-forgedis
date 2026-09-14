@@ -296,99 +296,56 @@ def is_expired(ends_at_value) -> bool:
 @app.post("/enroler-installation")
 
 async def enroler_installation(body: dict, request: Request):
+    """Enrole une installation Facility apres identite JWT et droit canonique valide.
 
-    """JWT valide => token_installation unique genere et lie a l email.
-
-    Chaque PC Aria recoit un identifiant unique lors du premier demarrage.
-
-    Un PC compromise ne peut pas usurper l identite d un autre client.
-
+    clients ne sert ici qu'a fournir le token applicatif de compatibilite.
+    Les droits commerciaux proviennent exclusivement de product_entitlements via verifier_acces().
     """
-
-    auth_header = request.headers.get("Authorization","")
-
+    auth_header = request.headers.get("Authorization", "")
     jwt_token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else ""
-
     email, erreur = await _jwt_vers_email(jwt_token, request)
-
     if erreur:
-
         return {"erreur": erreur}
-
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
-
         return {"erreur": "Service indisponible."}
 
     import secrets as _sec2
-
     tok_inst = "aria_inst_" + _sec2.token_hex(24)
 
     try:
-
         async with httpx.AsyncClient(timeout=10.0) as hx2:
+            # Conteneur legacy/token uniquement. Sa colonne forfait/actif n'accorde aucun droit.
+            legacy = await ensure_legacy_client(hx2, email, "gratuit")
+            aria_token = legacy.get("token", "")
+            if not aria_token:
+                return {"erreur": "Token de compatibilite introuvable."}
 
-            # 1. Stocker token_installation — lie a l email verifie par JWT
+            autorise, msg_acces, forfait = await verifier_acces(aria_token, "facility")
+            if not autorise:
+                return {"erreur": msg_acces or "Abonnement Facility requis."}
 
-            await hx2.patch(
-
+            # Ecrire le token d'installation seulement APRES validation du droit Facility.
+            r_bind = await hx2.patch(
                 f"{SUPABASE_URL}/rest/v1/clients",
-
-                params={"email": f"eq.{email}"},
-
-                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-
-                         "Content-Type": "application/json", "Prefer": "return=minimal"},
-
+                params={"email": f"eq.{email}", "token": f"eq.{aria_token}"},
+                headers={"apikey": SUPABASE_SERVICE_KEY,
+                         "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                         "Content-Type": "application/json",
+                         "Prefer": "return=representation"},
                 json={"token_installation": tok_inst}
-
             )
-
-            # 2. Recuperer token Aria + forfait du compte
-
-            r_cli = await hx2.get(
-
-                f"{SUPABASE_URL}/rest/v1/clients",
-
-                params={"email": f"eq.{email}", "select": "token,forfait,actif"},
-
-                headers={"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
-
-            )
-
-            rows = r_cli.json() if isinstance(r_cli.json(), list) else []
-
-            if not rows:
-
-                return {"erreur": "Compte introuvable."}
-
-            if not rows[0].get("actif"):
-
-                return {"erreur": "Compte inactif. Verifiez votre abonnement."}
-
-            aria_token = rows[0]["token"]
-
-            forfait    = rows[0].get("forfait", "gratuit")
+            if r_bind.status_code not in (200, 201) or not r_bind.json():
+                return {"erreur": "Liaison de l'installation impossible. Reessayez."}
 
         return {
-
             "token_installation": tok_inst,
-
-            "token":   aria_token,
-
+            "token": aria_token,
             "forfait": forfait,
-
-            "email":   email
-
+            "email": email,
         }
-
     except Exception as e:
-
         print(f"[ENROL] {e}")
-
         return {"erreur": "Enrolement impossible. Reessayez."}
-
-
-
 
 
 @app.post("/tts")
