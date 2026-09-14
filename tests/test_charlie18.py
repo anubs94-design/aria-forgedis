@@ -55,9 +55,12 @@ def test_facility_trial_exists_checks_expiry():
     # La branche trial_exists doit vérifier l'expiration avant de retourner ok=True
     trial_idx = code.find('"trial_exists"')
     expired_idx = code.find('is_expired')
-    assert expired_idx >= 0, "inscription_facility doit appeler is_expired"
-    assert expired_idx < trial_idx, \
-        f"is_expired ({expired_idx}) doit précéder trial_exists ({trial_idx})"
+    valid_idx = code.find('trial_is_valid')
+    assert expired_idx >= 0 or valid_idx >= 0, "inscription_facility doit appeler is_expired ou trial_is_valid"
+    # La vérification de validité doit précéder trial_exists
+    check_idx = min(i for i in [expired_idx, valid_idx] if i >= 0)
+    assert check_idx < trial_idx, \
+        f"vérification expiration ({check_idx}) doit précéder trial_exists ({trial_idx})"
 
 def test_facility_expired_trial_returns_ok_false():
     async def _():
@@ -105,7 +108,7 @@ def test_industrial_trial_existing_checks_expiry():
     # Avant le repair, doit vérifier l'expiration du trial existant
     trial_sp_idx = code.find('TRIAL_SP')
     is_expired_idx = code.find('is_expired', trial_sp_idx)
-    assert is_expired_idx >= 0, "inscription_industrial doit appeler is_expired sur trial existant"
+    assert is_expired_idx >= 0 or "trial_is_valid" in code[trial_sp_idx:], "inscription_industrial doit appeler is_expired ou trial_is_valid"
     # L'is_expired doit précéder la réparation (avant 'Entitlement manquant')
     repair_idx = code.find('Entitlement manquant')
     assert is_expired_idx < repair_idx, \

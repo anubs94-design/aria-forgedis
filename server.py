@@ -261,6 +261,23 @@ def parse_utc_timestamp(value: str):
     except Exception:
         return None  # parsing invalide = None = refus en amont
 
+def trial_is_valid(status, ends_at_value) -> bool:
+    """
+    Retourne True si un entitlement trial est valide :
+      - status doit être trialing ou active
+      - ends_at doit être présent ET non expiré
+    Fail-closed : toute autre combinaison retourne False.
+    """
+    if status not in ("trialing", "active"):
+        return False
+    if not ends_at_value:
+        return False  # Trial sans date de fin = refus (fail-closed)
+    dt = parse_utc_timestamp(ends_at_value)
+    if dt is None:
+        return False  # Parsing invalide = refus
+    from datetime import datetime as _dt_tv, timezone as _tz_tv
+    return dt > _dt_tv.now(_tz_tv.utc)
+
 def is_expired(ends_at_value) -> bool:
     """
     Retourne True si ends_at est expiré ou non parseable (fail-closed).
@@ -5931,12 +5948,13 @@ async def inscription_facility(body: dict, request: Request):
             existing_ents = r_ex.json()
             if existing_ents:
                 ex = existing_ents[0]
-                if ex.get("source") == "trial" and ex.get("status") in ("trialing","active"):
-                    # Vérifier que le trial n'est pas expiré
-                    if is_expired(ex.get("ends_at")):
-                        return {"ok": False, "erreur": "Essai Facility déjà expiré."}
+                if ex.get("source") == "trial" and trial_is_valid(
+                        ex.get("status"), ex.get("ends_at")):
                     cl = await ensure_legacy_client(hx, email, "facility")
                     return {"ok": True, "token": cl["token"], "action": "trial_exists"}
+                if ex.get("source") == "trial" and ex.get("status") in ("trialing","active"):
+                    # Trial actif mais expiré
+                    return {"ok": False, "erreur": "Essai Facility déjà expiré."}
                 if ex.get("source") != "trial":
                     return {"ok": False, "erreur": "Abonnement payant Facility déjà actif."}
                 # Trial expiré : non renouvelable automatiquement
@@ -6010,9 +6028,12 @@ async def inscription_industrial(body: dict, request: Request):
                                  "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"}
                     )
                     pe_rows = r_ex_pe.json()
-                    # Vérifier si entitlement existant est expiré
-                    if pe_rows and is_expired(pe_rows[0].get("ends_at")):
-                        return {"ok": False, "erreur": "L'essai Industrial a expiré. Souscrivez sur forgedis.fr."}
+                    # Vérifier si entitlement existant est valide (statut + expiration)
+                    if pe_rows:
+                        _pe = pe_rows[0]
+                        if not trial_is_valid(_pe.get("status"), _pe.get("ends_at")):
+                            # Entitlement présent mais invalide (canceled, past_due, expiré, etc.)
+                            return {"ok": False, "erreur": "L'essai Industrial est invalide ou expiré. Souscrivez sur forgedis.fr."}
                     if not pe_rows:
                         # Entitlement manquant -> recréer SANS redémarrer le trial
                         # Utiliser la date de création de l'entreprise comme début original

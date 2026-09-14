@@ -130,24 +130,28 @@ body{
   </div>
 </div>
 
-<div id="overlay-prop" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:100;align-items:center;justify-content:center;">
-  <div style="background:#1a1f2e;border-radius:16px;padding:32px;max-width:420px;width:90%;border:1px solid rgba(255,255,255,.1);">
-    <div style="font-size:1.2rem;font-weight:700;color:#e2e8f0;margin-bottom:8px;">Accès propriétaire Industrial</div>
-    <div style="font-size:13px;color:#94a3b8;margin-bottom:20px;">Connectez-vous avec votre compte Supabase pour réclamer la propriété après paiement Stripe.</div>
-    <div class="field" style="margin-bottom:12px;">
-      <label style="font-size:12px;color:#94a3b8;">Email Supabase</label>
-      <input type="email" id="prop-email" placeholder="votre@email.com" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0d1117;color:#e2e8f0;font-size:14px;">
+<div id="overlay-prop" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.88);z-index:100;align-items:center;justify-content:center;">
+  <div style="background:#1a1f2e;border-radius:16px;padding:32px;max-width:440px;width:92%;border:1px solid rgba(255,255,255,.12);">
+    <div style="font-size:1.1rem;font-weight:700;color:#e2e8f0;margin-bottom:6px;">Acc&egrave;s propri&eacute;taire Industrial</div>
+    <div style="font-size:12px;color:#94a3b8;margin-bottom:16px;">Connectez-vous ou cr&eacute;ez votre compte apr&egrave;s paiement Stripe.</div>
+    <div style="display:flex;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:18px;">
+      <button id="prop-tab-login" onclick="_propTab('login')" style="flex:1;padding:8px;background:none;border:none;border-bottom:2px solid #6366f1;color:#e2e8f0;font-size:13px;font-weight:700;cursor:pointer;">J'ai d&eacute;j&agrave; un compte</button>
+      <button id="prop-tab-signup" onclick="_propTab('signup')" style="flex:1;padding:8px;background:none;border:none;border-bottom:2px solid transparent;color:#94a3b8;font-size:13px;cursor:pointer;">Cr&eacute;er mon compte</button>
     </div>
-    <div class="field" style="margin-bottom:16px;">
-      <label style="font-size:12px;color:#94a3b8;">Mot de passe Supabase</label>
-      <input type="password" id="prop-mdp" placeholder="••••••••" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0d1117;color:#e2e8f0;font-size:14px;">
+    <div id="prop-login-section">
+      <input type="email" id="prop-email" placeholder="votre@email.com" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0d1117;color:#e2e8f0;font-size:14px;box-sizing:border-box;margin-bottom:10px;">
+      <input type="password" id="prop-mdp" placeholder="Mot de passe" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0d1117;color:#e2e8f0;font-size:14px;box-sizing:border-box;margin-bottom:14px;">
+      <button onclick="claimerProprietaire()" style="width:100%;padding:11px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;font-size:14px;font-weight:600;cursor:pointer;">Se connecter et r&eacute;clamer &rarr;</button>
     </div>
-    <div id="prop-error" style="display:none;color:#f87171;font-size:13px;margin-bottom:12px;"></div>
-    <div id="prop-success" style="display:none;color:#34d399;font-size:13px;margin-bottom:12px;"></div>
-    <div style="display:flex;gap:8px;">
-      <button onclick="claimerProprietaire()" style="flex:1;padding:12px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;font-size:14px;font-weight:600;cursor:pointer;">Réclamer la propriété →</button>
-      <button onclick="fermerProp()" style="padding:12px 16px;border-radius:8px;background:rgba(255,255,255,.1);color:#e2e8f0;border:none;font-size:14px;cursor:pointer;">Annuler</button>
+    <div id="prop-signup-section" style="display:none;">
+      <input type="email" id="prop-signup-email" placeholder="votre@email.com" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0d1117;color:#e2e8f0;font-size:14px;box-sizing:border-box;margin-bottom:10px;">
+      <input type="password" id="prop-signup-mdp" placeholder="Mot de passe (8 car. min.)" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0d1117;color:#e2e8f0;font-size:14px;box-sizing:border-box;margin-bottom:10px;">
+      <input type="password" id="prop-signup-mdp2" placeholder="Confirmer le mot de passe" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0d1117;color:#e2e8f0;font-size:14px;box-sizing:border-box;margin-bottom:14px;">
+      <button onclick="signupProprietaire()" style="width:100%;padding:11px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;font-size:14px;font-weight:600;cursor:pointer;">Cr&eacute;er mon compte &rarr;</button>
     </div>
+    <div id="prop-error" style="display:none;color:#f87171;font-size:13px;margin-top:12px;"></div>
+    <div id="prop-success" style="display:none;color:#34d399;font-size:13px;margin-top:12px;"></div>
+    <div style="text-align:center;margin-top:12px;"><button onclick="fermerProp()" style="background:none;border:none;color:#64748b;font-size:12px;cursor:pointer;">Annuler</button></div>
   </div>
 </div>
 
@@ -351,73 +355,76 @@ document.addEventListener('DOMContentLoaded', function(){
   }catch(e){}
 });
 </script>
-<script src="/aria-i18n.js">
-// ── Bootstrap propriétaire Industrial ─────────────────────────────────
-function modeProprietaire(){
-  var ol = document.getElementById("overlay-prop");
-  if(ol){ ol.style.display="flex"; }
+<script src="/aria-i18n.js"></script>
+<script>
+// Bootstrap proprietaire — balise SANS src : execucion garantie
+var SUPABASE_URL_PROP="https://dvlrilklbspuckbplglz.supabase.co";
+var SUPABASE_KEY_PROP="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2bHJpbGtsYnNwdWNrYnBsZ2x6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNzYyNjIsImV4cCI6MjA5Njk1MjI2Mn0.lC1rt8bvfIpi1c78L8OWGXjjYhXzqzNkIgykHTle6eM";
+var RELAY_URL="https://aria-forgelis.onrender.com";
+function modeProprietaire(){var o=document.getElementById("overlay-prop");if(o)o.style.display="flex";_propTab("login");}
+function fermerProp(){var o=document.getElementById("overlay-prop");if(o)o.style.display="none";_propClear();}
+function _propClear(){["prop-error","prop-success"].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display="none";});}
+function _propErr(m){var e=document.getElementById("prop-error");if(e){e.textContent=m;e.style.display="block";}}
+function _propOk(m){var e=document.getElementById("prop-success");if(e){e.textContent=m;e.style.display="block";}}
+function _propTab(mode){
+  var L=document.getElementById("prop-login-section"),S=document.getElementById("prop-signup-section");
+  var tL=document.getElementById("prop-tab-login"),tS=document.getElementById("prop-tab-signup");
+  if(!L||!S)return; _propClear();
+  if(mode==="login"){L.style.display="";S.style.display="none";
+    if(tL)tL.style.borderBottom="2px solid #6366f1";if(tS)tS.style.borderBottom="2px solid transparent";}
+  else{L.style.display="none";S.style.display="";
+    if(tS)tS.style.borderBottom="2px solid #6366f1";if(tL)tL.style.borderBottom="2px solid transparent";}
 }
-
-function fermerProp(){
-  var ol = document.getElementById("overlay-prop");
-  if(ol){ ol.style.display="none"; }
-  document.getElementById("prop-error").style.display = "none";
-  document.getElementById("prop-success").style.display = "none";
+async function _sLogin(e,p){return(await fetch(SUPABASE_URL_PROP+"/auth/v1/token?grant_type=password",{method:"POST",headers:{"apikey":SUPABASE_KEY_PROP,"Content-Type":"application/json"},body:JSON.stringify({email:e,password:p})})).json();}
+async function _sSignup(e,p){return(await fetch(SUPABASE_URL_PROP+"/auth/v1/signup",{method:"POST",headers:{"apikey":SUPABASE_KEY_PROP,"Content-Type":"application/json"},body:JSON.stringify({email:e,password:p})})).json();}
+async function _doClaim(jwt){return(await fetch(RELAY_URL+"/industrial/claim-ownership",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+jwt},body:JSON.stringify({jwt})})).json();}
+async function _finish(jwt,c){
+  var ok=(c.results||[]).filter(function(r){return r.ok;});
+  if(!ok.length){_propErr((c.results||[]).map(function(r){return r.raison||"";}).join(", ")||c.erreur||"Claim echoue.");return;}
+  var eid=ok[0].entreprise_id||"";
+  try{localStorage.setItem("aria_industrial_owner_jwt",jwt);
+    localStorage.setItem("aria_industrial_entreprise_id",eid);
+    localStorage.setItem("aria_industrial_role","dirigeant");
+    localStorage.setItem("aria_session_active","dirigeant");}catch(ex){}
+  _propOk("Propriete reclamee! Redirection...");
+  setTimeout(function(){window.location="/industrial";},1500);
 }
-
 async function claimerProprietaire(){
-  var email = (document.getElementById("prop-email").value||"").trim();
-  var mdp   = (document.getElementById("prop-mdp").value||"");
-  var errEl = document.getElementById("prop-error");
-  var okEl  = document.getElementById("prop-success");
-  errEl.style.display = "none"; okEl.style.display = "none";
-  if(!email || !email.includes("@")){ errEl.textContent="Email requis."; errEl.style.display="block"; return; }
-  if(!mdp || mdp.length < 6){ errEl.textContent="Mot de passe requis."; errEl.style.display="block"; return; }
+  var email=(document.getElementById("prop-email")||{}).value||"";
+  var mdp=(document.getElementById("prop-mdp")||{}).value||"";
+  _propClear();
+  if(!email||!email.includes("@")){_propErr("Email requis.");return;}
+  if(!mdp||mdp.length<6){_propErr("Mot de passe requis.");return;}
   try{
-    var authResp = await fetch(SUPABASE_URL + "/auth/v1/token?grant_type=password", {
-      method:"POST",
-      headers:{"apikey": SUPABASE_KEY, "Content-Type":"application/json"},
-      body: JSON.stringify({email: email, password: mdp})
-    });
-    var authData = await authResp.json();
-    if(!authData.access_token){
-      errEl.textContent = authData.error_description || authData.msg || "Email ou mot de passe incorrect.";
-      errEl.style.display = "block"; return;
-    }
-    var jwt = authData.access_token;
-    var claimResp = await fetch("https://aria-forgelis.onrender.com/industrial/claim-ownership", {
-      method:"POST",
-      headers:{"Content-Type":"application/json", "Authorization":"Bearer " + jwt},
-      body: JSON.stringify({jwt: jwt})
-    });
-    var claimData = await claimResp.json();
-    if(!claimData.ok){
-      var raison = "";
-      if(claimData.results && claimData.results.length){
-        raison = claimData.results.map(function(r){ return r.raison||""; }).join(", ");
-      }
-      errEl.textContent = raison || claimData.erreur || "Claim échoué.";
-      errEl.style.display = "block"; return;
-    }
-    var claimed = (claimData.results || []).filter(function(r){ return r.ok; });
-    var ent_id  = claimed.length ? claimed[0].entreprise_id : "";
-    try{
-      localStorage.setItem("aria_industrial_owner_jwt", jwt);
-      localStorage.setItem("aria_industrial_entreprise_id", ent_id);
-      localStorage.setItem("aria_industrial_role", "dirigeant");
-      localStorage.setItem("aria_industrial_session", JSON.stringify({
-        role:"dirigeant", entreprise_id: ent_id, email: email, owner: true
-      }));
-    }catch(e){}
-    okEl.textContent = "✅ Propriété réclamée ! Redirection...";
-    okEl.style.display = "block";
-    setTimeout(function(){ window.location = "/industrial.html?owner=1"; }, 1800);
-  }catch(e){
-    errEl.textContent = "Erreur réseau : " + (e.message||e);
-    errEl.style.display = "block";
-  }
+    var d=await _sLogin(email,mdp);
+    if(!d.access_token){_propErr(d.error_description||d.msg||"Identifiants incorrects.");return;}
+    _propOk("Connexion OK, verification ownership...");
+    var c=await _doClaim(d.access_token);
+    if(!c.ok){_propErr((c.results||[]).map(function(r){return r.raison||"";}).join(", ")||c.erreur||"Claim echoue.");return;}
+    await _finish(d.access_token,c);
+  }catch(e){_propErr("Erreur reseau: "+(e.message||e));}
 }
-
+async function signupProprietaire(){
+  var email=(document.getElementById("prop-signup-email")||{}).value||"";
+  var p1=(document.getElementById("prop-signup-mdp")||{}).value||"";
+  var p2=(document.getElementById("prop-signup-mdp2")||{}).value||"";
+  _propClear();
+  if(!email||!email.includes("@")){_propErr("Email requis.");return;}
+  if(!p1||p1.length<8){_propErr("Mot de passe min. 8 caracteres.");return;}
+  if(p1!==p2){_propErr("Mots de passe differents.");return;}
+  try{
+    var d=await _sSignup(email,p1);
+    if(d.error||d.msg){_propErr(d.error_description||d.msg||"Erreur inscription.");return;}
+    if(d.access_token){
+      _propOk("Compte cree! Verification ownership...");
+      var c=await _doClaim(d.access_token);
+      if(!c.ok){_propErr((c.results||[]).map(function(r){return r.raison||"";}).join(", ")||c.erreur||"Claim echoue.");return;}
+      await _finish(d.access_token,c);
+    } else {
+      _propOk("Compte cree! Verifiez votre email, puis utilisez J'ai deja un compte.");
+    }
+  }catch(e){_propErr("Erreur reseau: "+(e.message||e));}
+}
 </script>
 </body>
 </html>
