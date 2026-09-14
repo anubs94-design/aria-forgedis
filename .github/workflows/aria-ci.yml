@@ -59,3 +59,5 @@ jobs:
             echo 'Undefined names detected in server.py'
             exit 1
           fi
+
+# Charlie: this workflow is the independent merge gate for the redesign branch.
