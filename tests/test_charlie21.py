@@ -127,3 +127,5 @@ def test_pending_industrial_subscription_unique_migration_present():
     sql = path.read_text(encoding="utf-8")
     assert "unique index" in sql.lower()
     assert "stripe_subscription_id" in sql
+
+# CI gate trigger after generated P0 closure commit.
